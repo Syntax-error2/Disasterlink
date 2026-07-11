@@ -1,0 +1,161 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+/* =========================================
+   1. SHADCN THEME MAPPING
+   ========================================= */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-ring: var(--ring);
+  
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  
+  --font-sans: 'Geist Variable', system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+}
+
+/* =========================================
+   2. LIGHT MODE (Crisp, Clean, High Contrast)
+   ========================================= */
+:root {
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.14 0 0);
+  
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.14 0 0);
+  
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.14 0 0);
+  
+  /* DisasterLink Red as Primary */
+  --primary: oklch(0.55 0.2 25); 
+  --primary-foreground: oklch(0.99 0 0);
+  
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.2 0 0);
+  
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.55 0 0);
+  
+  --accent: oklch(0.96 0 0);
+  --accent-foreground: oklch(0.2 0 0);
+  
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  
+  --border: oklch(0.92 0 0);
+  --input: oklch(0.92 0 0);
+  --ring: oklch(0.55 0.2 25);
+  
+  --radius: 0.75rem; /* Slightly rounder, modern corners */
+}
+
+/* =========================================
+   3. DARK MODE (Deep Zinc, Sleek, Premium)
+   ========================================= */
+.dark {
+  --background: oklch(0.13 0 0); /* Very deep gray, almost black */
+  --foreground: oklch(0.98 0 0);
+  
+  --card: oklch(0.16 0 0); /* Slightly elevated from background */
+  --card-foreground: oklch(0.98 0 0);
+  
+  --popover: oklch(0.16 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+  
+  --primary: oklch(0.65 0.2 25); /* Brighter red for dark mode contrast */
+  --primary-foreground: oklch(0.99 0 0);
+  
+  --secondary: oklch(0.22 0 0);
+  --secondary-foreground: oklch(0.98 0 0);
+  
+  --muted: oklch(0.22 0 0);
+  --muted-foreground: oklch(0.65 0 0);
+  
+  --accent: oklch(0.22 0 0);
+  --accent-foreground: oklch(0.98 0 0);
+  
+  --border: oklch(0.22 0 0);
+  --input: oklch(0.22 0 0);
+  --ring: oklch(0.65 0.2 25);
+}
+
+/* =========================================
+   4. BASE HTML & BODY STYLES
+   ========================================= */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* This makes the dark/light mode toggle buttery smooth */
+    transition: background-color 0.3s ease, color 0.3s ease; 
+  }
+  
+  /* Custom Selection Color */
+  ::selection {
+    background-color: oklch(0.55 0.2 25 / 0.2);
+    color: inherit;
+  }
+}
+
+/* =========================================
+   5. CUSTOM UI SCROLLBARS
+   ========================================= */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-300 dark:bg-zinc-700 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-zinc-400 dark:bg-zinc-600;
+}
+
+/* =========================================
+   6. ENTERPRISE LEAFLET MAP TWEAKS
+   ========================================= */
+/* Modern rounded popups */
+.leaflet-popup-content-wrapper {
+  /* Fix: Moved the ! to the front of the utility classes for Tailwind v4 */
+  @apply !bg-white dark:!bg-[#18181b] !text-zinc-900 dark:!text-zinc-50;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* Fix the little triangle pointer on popups for dark mode */
+.dark .leaflet-popup-tip {
+  background-color: #18181b !important;
+}
+
+.leaflet-popup-content {
+  margin: 14px !important;
+  font-family: var(--font-sans) !important;
+}
+
+/* Remove default blue outline on map focus */
+.leaflet-container:focus {
+  outline: none !important;
+}
