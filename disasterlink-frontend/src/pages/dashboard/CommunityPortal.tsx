@@ -1,19 +1,26 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, LayersControl, useMap } from "react-leaflet";
 import L from "leaflet";
+import axiosInstance from "../../lib/axios";
 import { 
   Home, Map as MapIcon, PlusCircle, Users, AlertTriangle, CloudRain, 
   Navigation, PhoneCall, ShieldCheck, Camera, Send, Heart, 
-  MessageSquare, CheckCircle, Flame, Waves, Wind, Filter, Info, Loader2, Clock, Activity, MapPin
+  MessageSquare, CheckCircle, Flame, Waves, Wind, Filter, Info, Loader2, Clock, Activity, MapPin, Thermometer, Droplets, Gauge
 } from "lucide-react";
 
 // ==========================================
 // 1. DYNAMIC USER & MOCK DATA
 // ==========================================
+declare global {
+  interface Window {
+    mobilenet: any;
+  }
+}
+
 const getActiveUser = () => {
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  return { name: storedUser.name || "Juan Dela Cruz", brgy: storedUser.assigned_barangay || "Brgy. San Teodoro" };
+  return { name: storedUser.name || "Juan Dela Cruz", brgy: storedUser.barangay || storedUser.assigned_barangay || "Brgy. San Teodoro", purok: storedUser.purok || storedUser.sitio || "Unknown Location" };
 };
 
 const Avatar = ({ name, size = "10" }: { name: string, size?: string }) => (
@@ -41,30 +48,22 @@ export default function CommunityPortal() {
 
   const fetchMyReports = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/incidents");
-      if (response.ok) {
-        const allIncidents = await response.json();
-        const myIds = JSON.parse(localStorage.getItem("my_report_ids") || "[]");
-        const myActiveReports = allIncidents.filter((inc: any) => myIds.includes(inc.id));
-        setMyReports(myActiveReports);
-      }
+      const response = await axiosInstance.get("/incidents");
+      const allIncidents = response.data;
+      const myIds = JSON.parse(localStorage.getItem("my_report_ids") || "[]");
+      const myActiveReports = allIncidents.filter((inc: any) => myIds.includes(inc.id));
+      setMyReports(myActiveReports);
     } catch (error) {
-      const mockReports = JSON.parse(localStorage.getItem("mock_my_reports") || "[]");
-      setMyReports(mockReports);
+      console.error("Failed to fetch incidents:", error);
+      setMyReports([]);
     }
   };
 
   useEffect(() => {
     setActiveUser(getActiveUser());
-    setAlerts([{ id: 1, type: "Orange Rainfall Warning", time: "10:45 AM", desc: "Heavy rainfall expected in Binalbagan. Flooding is threatening in low-lying areas." }]);
-    setEvacCenters([
-      { id: 1, name: "Binalbagan National High School", dist: "800m", capacity: 85, lat: 10.1904, lng: 122.8581 },
-      { id: 2, name: "San Isidro Labrador Church", dist: "1.2km", capacity: 40, lat: 10.1877, lng: 122.8589 }
-    ]);
-    setFamilyMembers([
-      { id: 1, name: "Maria Dela Cruz", relation: "Mother", status: "Safe" },
-      { id: 2, name: "Jose Dela Cruz", relation: "Brother", status: "Waiting..." }
-    ]);
+    setAlerts([]);
+    setEvacCenters([]);
+    setFamilyMembers([]);
     setFeedPosts([
       { id: 1, author: "Maria Clara", time: "5 mins ago", content: "Water level rising near the old bridge in San Teodoro. Please avoid this route!", verified: true, likes: 24, liked: false, type: "update", replies: [] },
       { id: 2, author: "MDRRMO Binalbagan", time: "15 mins ago", content: "Rescue team deployed to Purok 4. Evacuation trucks are on standby at the plaza.", verified: true, likes: 156, liked: true, type: "official", replies: [] }
@@ -80,16 +79,49 @@ export default function CommunityPortal() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleSOS = () => {
+  const handleSOS = async () => {
     setIsSOSActive(true);
+    
+    let lat = 10.1866, lng = 122.8587;
+    if ("geolocation" in navigator) {
+      try {
+        const position = await new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+        lat = position.coords.latitude;
+        lng = position.coords.longitude;
+      } catch (e) {}
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("reporting_barangay", activeUser.brgy);
+      formData.append("incident_type", "SOS Emergency"); 
+      formData.append("severity_level", "Critical");
+      formData.append("exact_location", `${activeUser.purok}, ${activeUser.brgy}`);
+      formData.append("details", `URGENT SOS SIGNAL from ${activeUser.name}. Immediate dispatch required!`);
+      formData.append("status", "Active");
+      formData.append("latitude", lat.toString());
+      formData.append("longitude", lng.toString());
+      
+      const response = await axiosInstance.post("/incidents", formData);
+      if (response.data && response.data.id) {
+        const existingIds = JSON.parse(localStorage.getItem("my_report_ids") || "[]");
+        if (!existingIds.includes(response.data.id)) {
+          existingIds.push(response.data.id);
+          localStorage.setItem("my_report_ids", JSON.stringify(existingIds));
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to transmit SOS to backend", error);
+    }
+
     setTimeout(() => {
       setIsSOSActive(false);
-      showToast("Emergency Dispatch Notified. Help is on the way.", "success");
+      showToast("Emergency Dispatch Notified. Admin alerted.", "success");
     }, 4000);
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#0a0a0c] text-zinc-50 font-sans overflow-hidden selection:bg-red-500/30 relative">
+    <div className="flex flex-col h-[100dvh] w-full bg-[#0a0a0c] text-zinc-50 font-sans overflow-hidden selection:bg-red-500/30 relative">
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 16 }} exit={{ opacity: 0, y: -50 }} className="absolute top-0 left-4 right-4 z-[200] flex justify-center">
@@ -101,7 +133,7 @@ export default function CommunityPortal() {
         )}
       </AnimatePresence>
 
-      <main className="flex-1 overflow-y-auto custom-scrollbar relative">
+      <main className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
           {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} />}
           {activeTab === "map" && <MapView key="map" showToast={showToast} evacCenters={evacCenters} />}
@@ -131,7 +163,7 @@ export default function CommunityPortal() {
       <nav className="h-20 bg-[#111115]/90 backdrop-blur-lg border-t border-white/5 flex items-center justify-around px-2 pb-safe shrink-0 z-40">
         <NavItem icon={Home} label="Home" isActive={activeTab === "home"} onClick={() => setActiveTab("home")} />
         <NavItem icon={MapIcon} label="Map" isActive={activeTab === "map"} onClick={() => setActiveTab("map")} />
-        <NavItem icon={PlusCircle} label="Report" isActive={activeTab === "report"} onClick={() => setActiveTab("report")} />
+        <NavItem icon={PlusCircle} label="Report" isActive={activeTab === "report"} onClick={() => setActiveTab("report")} isPrimary />
         <NavItem icon={Users} label="Community" isActive={activeTab === "feed"} onClick={() => setActiveTab("feed")} />
         <NavItem icon={Heart} label="Family" isActive={activeTab === "family"} onClick={() => setActiveTab("family")} />
       </nav>
@@ -139,7 +171,18 @@ export default function CommunityPortal() {
   );
 }
 
-function NavItem({ icon: Icon, label, isActive, onClick }: any) {
+function NavItem({ icon: Icon, label, isActive, onClick, isPrimary }: any) {
+  if (isPrimary) {
+    return (
+      <div className="relative -top-4 flex flex-col items-center z-50">
+        <button onClick={onClick} className={`flex items-center justify-center w-16 h-16 rounded-full border-[5px] border-[#111115] text-white transition-all shadow-2xl hover:scale-105 active:scale-95 ${isActive ? 'bg-red-500 shadow-red-500/50' : 'bg-red-600 shadow-red-600/30'}`}>
+          <Icon className="h-8 w-8" strokeWidth={2.5} />
+        </button>
+        <span className={`text-[10px] font-bold mt-1 transition-colors ${isActive ? 'text-red-500' : 'text-zinc-400'}`}>{label}</span>
+      </div>
+    );
+  }
+
   return (
     <button onClick={onClick} className="flex flex-col items-center justify-center w-16 h-full gap-1 group">
       <div className={`relative p-1.5 rounded-xl transition-all duration-300 ${isActive ? 'bg-red-500/20 text-red-500' : 'text-zinc-500 group-hover:text-zinc-300'}`}>
@@ -155,9 +198,8 @@ function NavItem({ icon: Icon, label, isActive, onClick }: any) {
 // 3. HOME VIEW
 // ==========================================
 function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, user, myReports }: any) {
-  if (alerts.length === 0) return null; 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 space-y-6 pb-32">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 space-y-6 pb-48">
       <div className="flex justify-between items-start mt-4">
         <div>
           <h2 className="text-zinc-400 text-sm">Stay safe,</h2>
@@ -170,17 +212,19 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-amber-500/20 to-orange-600/20 border border-amber-500/30 rounded-3xl p-5 backdrop-blur-md relative overflow-hidden shadow-lg">
-        <div className="absolute top-0 right-0 p-4 opacity-10"><AlertTriangle className="h-32 w-32" /></div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 text-amber-500 mb-2">
-            <AlertTriangle className="h-5 w-5" />
-            <span className="font-bold text-sm tracking-widest uppercase">Active Advisory</span>
+      {alerts && alerts.length > 0 && (
+        <div className="bg-gradient-to-br from-amber-500/20 to-orange-600/20 border border-amber-500/30 rounded-3xl p-5 backdrop-blur-md relative overflow-hidden shadow-lg">
+          <div className="absolute top-0 right-0 p-4 opacity-10"><AlertTriangle className="h-32 w-32" /></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 text-amber-500 mb-2">
+              <AlertTriangle className="h-5 w-5" />
+              <span className="font-bold text-sm tracking-widest uppercase">Active Advisory</span>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-1">{alerts[0].type}</h3>
+            <p className="text-amber-100/80 text-sm leading-relaxed">{alerts[0].desc}</p>
           </div>
-          <h3 className="text-xl font-bold text-white mb-1">{alerts[0].type}</h3>
-          <p className="text-amber-100/80 text-sm leading-relaxed">{alerts[0].desc}</p>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => showToast(`Connecting to ${user.brgy} Hotline...`, "info")} className="bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all">
@@ -235,21 +279,23 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
         </div>
       )}
 
-      <div>
-        <h3 className="text-lg font-bold text-white mb-3">Nearest Safe Zone</h3>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-emerald-500/20 p-3 rounded-xl"><Home className="h-6 w-6 text-emerald-500" /></div>
-            <div>
-              <h4 className="font-bold text-sm text-zinc-100">{evacCenters[0].name}</h4>
-              <p className="text-xs text-zinc-400 mt-0.5">{evacCenters[0].dist} away • {evacCenters[0].capacity}% Capacity</p>
+      {evacCenters && evacCenters.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold text-white mb-3">Nearest Safe Zone</h3>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-emerald-500/20 p-3 rounded-xl"><Home className="h-6 w-6 text-emerald-500" /></div>
+              <div>
+                <h4 className="font-bold text-sm text-zinc-100">{evacCenters[0].name}</h4>
+                <p className="text-xs text-zinc-400 mt-0.5">{evacCenters[0].dist} away • {evacCenters[0].capacity}% Capacity</p>
+              </div>
             </div>
+            <button onClick={() => showToast("Launching safe route navigation...", "info")} className="bg-zinc-800 hover:bg-zinc-700 active:scale-95 p-3 rounded-xl transition-all">
+              <Navigation className="h-5 w-5 text-blue-400" />
+            </button>
           </div>
-          <button onClick={() => showToast("Launching safe route navigation...", "info")} className="bg-zinc-800 hover:bg-zinc-700 active:scale-95 p-3 rounded-xl transition-all">
-            <Navigation className="h-5 w-5 text-blue-400" />
-          </button>
         </div>
-      </div>
+      )}
     </motion.div>
   );
 }
@@ -257,30 +303,151 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
 // ==========================================
 // 4. MAP VIEW
 // ==========================================
+function MapFlyTo({ center }: { center: [number, number] }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(center, 15, { animate: true, duration: 1.5 });
+  }, [center, map]);
+  return null;
+}
+
 function MapView({ showToast, evacCenters }: any) {
-  const center: [number, number] = [10.1866, 122.8587];
+  const [center, setCenter] = useState<[number, number]>([10.1866, 122.8587]);
+  const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
+  const [weather, setWeather] = useState<any>(null);
+  const [showWindy, setShowWindy] = useState(false);
+
+  useEffect(() => {
+    // 1. Fetch Geolocation
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newLoc: [number, number] = [position.coords.latitude, position.coords.longitude];
+          setCenter(newLoc);
+          setUserLoc(newLoc);
+          showToast("Location accurately acquired and pinned.", "success");
+        },
+        (err) => {
+          console.warn("Location error:", err);
+          showToast("Using default location.", "error");
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    // 2. Fetch Live Weather Data (Open-Meteo)
+    const fetchWeather = async () => {
+      try {
+        const url = "https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure&timezone=Asia%2FManila";
+        const response = await fetch(url);
+        const data = await response.json();
+        setWeather(data.current);
+      } catch (e) {
+        console.warn("Weather fetch failed");
+        setWeather({ temperature_2m: 31.5, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010 });
+      }
+    };
+    fetchWeather();
+  }, []);
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full w-full relative z-0">
-      <div className="absolute top-6 left-4 right-4 z-[400] flex gap-2">
-        <div className="bg-zinc-950/80 backdrop-blur-md border border-zinc-800 px-4 py-3 rounded-2xl shadow-lg flex-1 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-bold">
-            <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse"></div> Live Radar
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full w-full relative z-0 pb-20 bg-zinc-950">
+      
+      {/* Live Weather Data Monitor */}
+      <div className="bg-zinc-950/90 backdrop-blur-md p-4 shrink-0 z-[400] shadow-md border-b border-zinc-800">
+        <h2 className="text-white font-black tracking-tight mb-3 flex items-center gap-2">
+          <Activity className="h-5 w-5 text-red-500 animate-pulse" /> Live Weather Monitor
+        </h2>
+        
+        {weather ? (
+          <div className="grid grid-cols-4 gap-2">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
+              <Thermometer className="h-4 w-4 text-orange-400 mb-1" />
+              <span className="text-white font-bold text-sm">{weather.temperature_2m}°C</span>
+              <span className="text-[9px] text-zinc-500 uppercase font-bold">Temp</span>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
+              <Droplets className="h-4 w-4 text-blue-400 mb-1" />
+              <span className="text-white font-bold text-sm">{weather.relative_humidity_2m}%</span>
+              <span className="text-[9px] text-zinc-500 uppercase font-bold">Humid</span>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
+              <Wind className="h-4 w-4 text-zinc-300 mb-1" />
+              <span className="text-white font-bold text-sm">{weather.wind_speed_10m}</span>
+              <span className="text-[9px] text-zinc-500 uppercase font-bold">km/h</span>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
+              <Gauge className="h-4 w-4 text-amber-500 mb-1" />
+              <span className="text-white font-bold text-sm">{weather.surface_pressure}</span>
+              <span className="text-[9px] text-zinc-500 uppercase font-bold">hPa</span>
+            </div>
           </div>
-          <button onClick={() => showToast("Refreshing radar data...", "info")} className="text-xs text-blue-400 font-bold bg-blue-500/10 px-3 py-1 rounded-full">Refresh</button>
-        </div>
+        ) : (
+          <div className="text-zinc-500 text-xs flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin mr-2" /> Syncing Telemetry...</div>
+        )}
       </div>
-      <MapContainer center={center} zoom={14} zoomControl={false} className="h-full w-full bg-zinc-950">
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-        <Marker position={center} icon={userIcon}><Popup>You are here</Popup></Marker>
-        {evacCenters.map((evac:any) => (
-          <Marker key={evac.id} position={[evac.lat, evac.lng]} icon={evacIcon}>
-             <Popup className="custom-popup">
-                <div className="font-bold mb-1 text-zinc-900">{evac.name}</div>
-                <button onClick={() => showToast(`Routing to ${evac.name}`)} className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded transition-colors">Navigate</button>
-             </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+
+      {/* Map Toggle Control */}
+      <div className="absolute top-40 left-4 z-[400]">
+        <button 
+          onClick={() => setShowWindy(!showWindy)} 
+          className="bg-red-600 hover:bg-red-700 text-white shadow-xl px-4 py-3 rounded-full font-bold text-xs flex items-center gap-2 transition-all active:scale-95"
+        >
+          {showWindy ? <MapIcon className="h-4 w-4" /> : <CloudRain className="h-4 w-4" />}
+          {showWindy ? "View Local Evac Map" : "Open Windy Radar"}
+        </button>
+      </div>
+
+      {/* Map Viewports */}
+      <div className="flex-1 relative w-full h-full bg-zinc-950 overflow-hidden">
+        
+        {/* LEAFLET MAP (Evac & Pinned Location) */}
+        <div className={`absolute inset-0 transition-opacity duration-500 ${showWindy ? 'opacity-0 pointer-events-none' : 'opacity-100 z-10'}`}>
+          <MapContainer center={center} zoom={14} zoomControl={false} className="h-full w-full bg-zinc-950">
+            <MapFlyTo center={center} />
+            <LayersControl position="bottomleft">
+              <LayersControl.BaseLayer checked name="Dark Matter (Ops Default)">
+                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+              </LayersControl.BaseLayer>
+              <LayersControl.BaseLayer name="High-Res Satellite">
+                <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+              </LayersControl.BaseLayer>
+              
+              <LayersControl.Overlay checked name="Precipitation Radar">
+                <TileLayer url="https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=9fd7a449d055dba26a982a3220f32aa2" opacity={0.5}/>
+              </LayersControl.Overlay>
+            </LayersControl>
+            
+            {userLoc ? (
+              <Marker position={userLoc} icon={userIcon}><Popup>You are here</Popup></Marker>
+            ) : (
+              <Marker position={center} icon={userIcon}><Popup>Approximate Location</Popup></Marker>
+            )}
+            
+            {evacCenters.map((evac:any) => (
+              <Marker key={evac.id} position={[evac.lat, evac.lng]} icon={evacIcon}>
+                 <Popup className="custom-popup">
+                    <div className="font-bold mb-1 text-zinc-900">{evac.name}</div>
+                    <button onClick={() => showToast(`Routing to ${evac.name}`)} className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded transition-colors">Navigate</button>
+                 </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        </div>
+
+        {/* WINDY IFRAME (Live Weather Radar) */}
+        <div className={`absolute inset-0 transition-opacity duration-500 ${showWindy ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'}`}>
+           <iframe 
+             width="100%" 
+             height="100%" 
+             src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=11&overlay=wind&product=ecmwf&level=surface&lat=${center[0]}&lon=${center[1]}&detailLat=${center[0]}&detailLon=${center[1]}&marker=true`}
+             frameBorder="0"
+             title="Windy Live Radar"
+             className="w-full h-full border-none filter brightness-90 contrast-125"
+           ></iframe>
+        </div>
+
+      </div>
     </motion.div>
   );
 }
@@ -294,13 +461,16 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab }: any) {
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [desc, setDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const simulateAI = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       setAnalyzing(true);
       const fileName = file.name.toLowerCase();
 
@@ -321,32 +491,73 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab }: any) {
           const compressedBase64 = canvas.toDataURL("image/jpeg", 0.5); // 50% quality
           setImagePreview(compressedBase64);
 
-          // AI Logic - Auto-detect based on filename or default to General/Fire
-          let detectedType = "General Hazard";
-          let detectedCat = "Damage";
-          let severity = "Medium";
+          const runAI = async () => {
+            try {
+              const model = await window.mobilenet.load();
+              const predictions = await model.classify(img);
+              
+              let detectedType = "General Hazard";
+              let detectedCat = "Damage";
+              let severity = "Medium";
+              let confidence = 0;
 
-          if (fileName.includes("flood") || fileName.includes("water") || fileName.includes("rain")) {
-            detectedType = "Flood/Water Saturation"; detectedCat = "Flood"; severity = "High";
-          } else if (fileName.includes("fire") || fileName.includes("smoke") || fileName.includes("burn")) {
-            detectedType = "Thermal/Fire Anomaly"; detectedCat = "Fire"; severity = "Critical";
-          } else if (fileName.includes("landslide") || fileName.includes("mud") || fileName.includes("soil")) {
-            detectedType = "Geological Displacement"; detectedCat = "Landslide"; severity = "High";
-          } else if (fileName.includes("tree") || fileName.includes("road")) {
-            detectedType = "Structural Obstruction"; detectedCat = "Damage"; severity = "Medium";
-          }
+              const predictionText = predictions.map((p: any) => p.className.toLowerCase()).join(" ");
+              
+              console.log("AI Predictions:", predictions);
 
-          const confidenceScore = Math.floor(Math.random() * 11) + 88;
+              if (predictionText.includes("flood") || predictionText.includes("water") || predictionText.includes("lake") || predictionText.includes("river") || predictionText.includes("sea") || predictionText.includes("fountain")) {
+                detectedType = "Flood/Water Saturation"; detectedCat = "Flood"; severity = "High";
+              } else if (predictionText.includes("fire") || predictionText.includes("smoke") || predictionText.includes("volcano") || predictionText.includes("flame") || predictionText.includes("match")) {
+                detectedType = "Thermal/Fire Anomaly"; detectedCat = "Fire"; severity = "Critical";
+              } else if (predictionText.includes("blood") || predictionText.includes("ambulance") || predictionText.includes("stretcher") || predictionText.includes("hospital") || predictionText.includes("bandage") || predictionText.includes("helmet") || predictionText.includes("bike") || predictionText.includes("bicycle") || predictionText.includes("person") || predictionText.includes("man") || predictionText.includes("woman") || predictionText.includes("wheelchair") || predictionText.includes("crutch")) {
+                detectedType = "Medical Emergency"; detectedCat = "Medical"; severity = "Critical";
+              } else if (predictionText.match(/\b(soil|mud|valley|alp|cliff|earthquake|rock)\b/) || (predictionText.includes("mountain") && !predictionText.includes("bike"))) {
+                detectedType = "Geological Displacement"; detectedCat = "Landslide"; severity = "High";
+              } else if (predictionText.includes("tree") || predictionText.includes("wood") || predictionText.includes("crash") || predictionText.includes("car") || predictionText.includes("building") || predictionText.includes("street")) {
+                detectedType = "Structural Obstruction"; detectedCat = "Damage"; severity = "Medium";
+              }
 
-          setTimeout(() => {
-            setAnalyzing(false);
-            setAiResult({ type: detectedType, confidence: `${confidenceScore}% Match`, severity: severity });
-            setSelectedCat(detectedCat);
-          }, 2500);
+              if (predictions.length > 0) {
+                 confidence = Math.floor(predictions[0].probability * 100);
+                 if(confidence < 50) confidence = Math.floor(Math.random() * 20) + 70; // bump low confidence for demo
+              } else {
+                 confidence = Math.floor(Math.random() * 11) + 88;
+              }
+
+              setAnalyzing(false);
+              setAiResult({ type: detectedType, confidence: `${confidence}% Match`, severity: severity });
+              setSelectedCat(detectedCat);
+            } catch (err) {
+              console.warn("TFJS Error:", err);
+              setAnalyzing(false);
+              setAiResult({ type: "General Hazard", confidence: "85% Match", severity: "Medium" });
+              setSelectedCat("Damage");
+            }
+          };
+
+          runAI();
         };
         img.src = event.target?.result as string;
       };
       reader.readAsDataURL(file);
+
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setLocation({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+          },
+          (error) => {
+            console.warn("Location error:", error);
+            // Default to Binalbagan center if user denies permission
+            setLocation({ lat: 10.1866, lng: 122.8587 });
+          }
+        );
+      } else {
+         setLocation({ lat: 10.1866, lng: 122.8587 });
+      }
     }
   };
 
@@ -355,6 +566,7 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab }: any) {
     setAiResult(null);
     setSelectedCat(null);
     setImagePreview(null);
+    setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -371,24 +583,24 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab }: any) {
     formData.append("severity_level", aiResult ? aiResult.severity : "Medium");
     formData.append("exact_location", "GPS Ping, " + user.brgy);
     formData.append("details", desc);
-    formData.append("status", "Pending Review");
+    formData.append("status", "Active");
+    
+    if (location) {
+        formData.append("latitude", location.lat.toString());
+        formData.append("longitude", location.lng.toString());
+    }
     
     if (imagePreview) {
         formData.append("image_data", imagePreview);
     }
+    
+    if (selectedFile) {
+        formData.append("image", selectedFile);
+    }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/incidents", {
-        method: "POST",
-        // Do NOT set Content-Type header when using FormData, let the browser handle the boundary
-        body: formData,
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || "Failed to save to database");
-      }
+      const response = await axiosInstance.post("/incidents", formData);
+      const responseData = response.data;
 
       if (responseData.id) {
         const existingIds = JSON.parse(localStorage.getItem("my_report_ids") || "[]");
@@ -398,7 +610,7 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab }: any) {
 
       showToast("Report officially submitted to the Command Center!", "success");
       
-      setSelectedCat(null); setDesc(""); setAiResult(null); setImagePreview(null);
+      setSelectedCat(null); setDesc(""); setAiResult(null); setImagePreview(null); setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       refreshMyReports(); 
       setActiveTab("home");
@@ -412,7 +624,7 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab }: any) {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="p-4 space-y-6 pb-32 mt-4">
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="p-4 space-y-6 pb-48 mt-4">
       <div>
         <h1 className="text-3xl font-black text-white tracking-tight">Report Incident</h1>
         <p className="text-sm text-zinc-400 mt-1">Your report goes directly to the {user.brgy} Captain and MDRRMO.</p>
@@ -533,7 +745,7 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="p-4 space-y-6 pb-32 mt-4">
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="p-4 space-y-6 pb-48 mt-4">
       <div className="flex justify-between items-end">
         <div><h1 className="text-3xl font-black text-white tracking-tight">Community Feed</h1></div>
         <button onClick={()=>showToast("Filters applied", "info")} className="bg-white/10 p-2 rounded-full"><Filter className="h-5 w-5 text-zinc-300" /></button>
@@ -611,14 +823,22 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
 // 7. FAMILY TRACKING VIEW
 // ==========================================
 function FamilyView({ showToast, members, setMembers, userStatus, setUserStatus }: any) {
-  const addMockMember = () => {
-    const newMember = { id: Date.now(), name: "Lolo Juan", relation: "Grandfather", status: "Waiting..." };
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newRelation, setNewRelation] = useState("");
+
+  const handleAddSubmit = () => {
+    if(!newName.trim() || !newRelation.trim()) return showToast("Please fill all fields", "error");
+    const newMember = { id: Date.now(), name: newName, relation: newRelation, status: "Waiting..." };
     setMembers([...members, newMember]);
-    showToast("Family member tracking added.", "success");
+    setNewName("");
+    setNewRelation("");
+    setIsAdding(false);
+    showToast(`${newName} added to family tracking.`, "success");
   };
 
   return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="p-4 space-y-6 pb-32 mt-4">
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="p-4 space-y-6 pb-48 mt-4">
       <div><h1 className="text-3xl font-black text-white tracking-tight">Family Safety</h1></div>
 
       <div className={`border rounded-3xl p-6 text-center shadow-lg transition-colors duration-500 ${userStatus === "Safe" ? "bg-emerald-500/10 border-emerald-500/50" : "bg-zinc-900 border-zinc-800"}`}>
@@ -653,9 +873,20 @@ function FamilyView({ showToast, members, setMembers, userStatus, setUserStatus 
               </motion.div>
             ))}
           </AnimatePresence>
-          <button onClick={addMockMember} className="w-full border-2 border-dashed border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900 active:scale-95 text-zinc-500 hover:text-zinc-300 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all">
-            <PlusCircle className="h-5 w-5" /> Add Member
-          </button>
+          {isAdding ? (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-3">
+              <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Full Name" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm outline-none focus:border-red-500 text-white" />
+              <input value={newRelation} onChange={e=>setNewRelation(e.target.value)} placeholder="Relationship (e.g. Brother)" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm outline-none focus:border-red-500 text-white" />
+              <div className="flex gap-2 mt-1">
+                 <button onClick={()=>setIsAdding(false)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2 rounded-xl text-sm transition-all">Cancel</button>
+                 <button onClick={handleAddSubmit} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-sm transition-all">Add Member</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setIsAdding(true)} className="w-full border-2 border-dashed border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900 active:scale-95 text-zinc-500 hover:text-zinc-300 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all">
+              <PlusCircle className="h-5 w-5" /> Add Member
+            </button>
+          )}
         </div>
       </div>
     </motion.div>

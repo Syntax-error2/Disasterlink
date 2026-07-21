@@ -4,14 +4,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Download, Loader2, RefreshCw, AlertCircle, Send, X, CheckCircle, Eye, ShieldAlert, CameraOff } from "lucide-react";
+import { Search, Download, Loader2, RefreshCw, AlertCircle, Send, X, CheckCircle, Eye, ShieldAlert, CameraOff, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import axiosInstance from "../../lib/axios";
 
 export default function IncidentReports() {
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [timeFilter, setTimeFilter] = useState("Today");
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   
+  const filterOptions = [
+    { value: 'Today', label: 'Today (Active)' },
+    { value: 'Yesterday', label: 'Yesterday' },
+    { value: 'Past 7 Days', label: 'Past 7 Days' },
+    { value: 'All Time', label: 'All Time (Archive)' },
+    { value: 'Custom', label: 'Custom Range...' }
+  ];
+
   // Dispatch Modal State
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
@@ -22,9 +34,8 @@ export default function IncidentReports() {
   const fetchIncidents = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/incidents');
-      if (!response.ok) throw new Error("Network response was not ok");
-      const data = await response.json();
+      const response = await axiosInstance.get('/incidents');
+      const data = response.data;
       setReports(data);
     } catch (error) {
       console.warn("API Offline, check Laravel server.");
@@ -61,10 +72,8 @@ export default function IncidentReports() {
     
     try {
       // Real PATCH request to update database
-      await fetch(`http://127.0.0.1:8000/api/incidents/${selectedIncident.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: `Dispatched: ${selectedResponder}` })
+      await axiosInstance.patch(`/incidents/${selectedIncident.id}`, {
+        status: `Dispatched: ${selectedResponder}`
       });
       
       // Update local state to reflect change instantly
@@ -79,10 +88,47 @@ export default function IncidentReports() {
     }
   };
 
-  const filteredReports = reports.filter(r => 
-    r.incident_type?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    r.reporting_barangay?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredReports = reports.filter(r => {
+    const matchesSearch = r.incident_type?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          r.reporting_barangay?.toLowerCase().includes(searchQuery.toLowerCase());
+                          
+    if (!r.created_at) return matchesSearch;
+
+    const incidentDate = new Date(r.created_at);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - incidentDate.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Or strictly by calendar day
+    const incidentDay = new Date(incidentDate.getFullYear(), incidentDate.getMonth(), incidentDate.getDate());
+    const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const calendarDiffDays = Math.floor((currentDay.getTime() - incidentDay.getTime()) / (1000 * 60 * 60 * 24));
+
+    let matchesTime = true;
+    if (timeFilter === "Today") {
+      matchesTime = calendarDiffDays === 0;
+    } else if (timeFilter === "Yesterday") {
+      matchesTime = calendarDiffDays === 1;
+    } else if (timeFilter === "Past 7 Days") {
+      matchesTime = calendarDiffDays <= 7;
+    } else if (timeFilter === "Custom") {
+      if (dateRange.start && dateRange.end) {
+        const start = new Date(dateRange.start);
+        const end = new Date(dateRange.end);
+        end.setHours(23, 59, 59, 999);
+        matchesTime = incidentDate >= start && incidentDate <= end;
+      } else if (dateRange.start) {
+        const start = new Date(dateRange.start);
+        matchesTime = incidentDate >= start;
+      } else if (dateRange.end) {
+        const end = new Date(dateRange.end);
+        end.setHours(23, 59, 59, 999);
+        matchesTime = incidentDate <= end;
+      }
+    }
+
+    return matchesSearch && matchesTime;
+  });
 
   return (
     <div className="flex flex-col gap-6 pb-8 animate-in fade-in duration-500 font-sans relative">
@@ -199,10 +245,69 @@ export default function IncidentReports() {
       </div>
 
       <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-[#111115] overflow-hidden">
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-50/50 dark:bg-zinc-900/30">
-          <div className="relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-            <Input placeholder="Search Location or Category..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:ring-red-500" />
+        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-zinc-50/50 dark:bg-zinc-900/30">
+          <div className="flex w-full xl:max-w-3xl gap-3 flex-col sm:flex-row">
+            <div className="relative flex-1 sm:max-w-[280px]">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+              <Input placeholder="Search Location or Category..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-10 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:ring-red-500 shadow-sm" />
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md h-10 shadow-sm overflow-visible focus-within:ring-1 focus-within:ring-red-500 transition-all">
+              
+              <div className="relative h-full flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
+                  className="bg-transparent border-none h-full px-3 text-sm outline-none font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-2 whitespace-nowrap"
+                >
+                  {filterOptions.find(o => o.value === timeFilter)?.label}
+                  <ChevronDown className={`h-4 w-4 text-zinc-500 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                <AnimatePresence>
+                  {dropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-[#111115] border border-zinc-200 dark:border-zinc-800 rounded-md shadow-xl z-[200] overflow-hidden"
+                    >
+                      {filterOptions.map((opt) => (
+                        <div
+                          key={opt.value}
+                          onClick={() => {
+                            setTimeFilter(opt.value);
+                            setDropdownOpen(false);
+                          }}
+                          className={`px-4 py-2.5 text-sm cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/50 ${timeFilter === opt.value ? 'font-black text-red-600 bg-red-50/50 dark:bg-red-900/10' : 'text-zinc-700 dark:text-zinc-300 font-medium'}`}
+                        >
+                          {opt.label}
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {timeFilter === "Custom" && (
+                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center h-full px-2 sm:border-l border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                  <input 
+                    type="date" 
+                    value={dateRange.start}
+                    onChange={(e) => setDateRange(prev => ({...prev, start: e.target.value}))}
+                    className="bg-transparent border-none text-xs px-2 h-full text-zinc-700 dark:text-zinc-300 outline-none cursor-pointer"
+                  />
+                  <span className="text-zinc-400 text-[10px] font-black uppercase mx-1">to</span>
+                  <input 
+                    type="date" 
+                    value={dateRange.end}
+                    onChange={(e) => setDateRange(prev => ({...prev, end: e.target.value}))}
+                    className="bg-transparent border-none text-xs px-2 h-full text-zinc-700 dark:text-zinc-300 outline-none cursor-pointer"
+                  />
+                </motion.div>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-zinc-500">
             <AlertCircle className="h-4 w-4 text-amber-500" /> 
@@ -233,7 +338,12 @@ export default function IncidentReports() {
                   <TableRow key={r.id} className="border-zinc-200 dark:border-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                     <TableCell className="font-mono text-xs font-bold text-zinc-500 px-6">#{r.id}</TableCell>
                     <TableCell className="text-sm text-zinc-600 dark:text-zinc-300 font-medium">
-                      {r.created_at ? new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just Now'}
+                      {r.created_at ? (
+                        <div className="flex flex-col">
+                          <span className="font-bold text-zinc-900 dark:text-zinc-100">{new Date(r.created_at).toLocaleDateString([], {month: 'short', day: 'numeric', year: 'numeric'})}</span>
+                          <span className="text-[10px] text-zinc-500">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        </div>
+                      ) : 'Just Now'}
                     </TableCell>
                     <TableCell className="font-bold text-zinc-900 dark:text-zinc-100">{r.incident_type}</TableCell>
                     <TableCell className="text-sm text-zinc-600 dark:text-zinc-300">
@@ -246,13 +356,13 @@ export default function IncidentReports() {
                     </TableCell>
                     <TableCell className="text-sm font-bold text-blue-500">{r.status}</TableCell>
                     <TableCell className="text-right px-6">
-                      {r.status === "Pending Review" ? (
+                      {!r.status.includes("Dispatched") && !r.status.includes("Resolved") ? (
                         <Button onClick={() => handleOpenDispatch(r)} size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs font-bold shadow-md flex items-center gap-1.5 ml-auto">
-                          <Eye className="h-3.5 w-3.5" /> Assess & Serve
+                          <ShieldAlert className="h-3.5 w-3.5" /> Deploy Responder
                         </Button>
                       ) : (
                         <Button variant="outline" size="sm" disabled className="h-8 text-xs border-emerald-500/30 text-emerald-500 bg-emerald-500/10 ml-auto">
-                          <CheckCircle className="h-3 w-3 mr-1" /> Active
+                          <CheckCircle className="h-3 w-3 mr-1" /> {r.status.includes("Dispatched") ? "Dispatched" : "Resolved"}
                         </Button>
                       )}
                     </TableCell>

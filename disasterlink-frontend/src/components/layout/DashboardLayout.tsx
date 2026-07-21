@@ -20,17 +20,9 @@ import {
   AlertTriangle,
   Info
 } from "lucide-react";
+import axiosInstance from "../../lib/axios";
 
-// --- MOCK NOTIFICATION DATABASE ---
-// In production, this would come from your Laravel Backend via an API fetch
-const MOCK_NOTIFICATIONS = [
-  { id: 1, type: 'critical', title: "Critical Landslide Reported", message: "New report filed in Brgy. Payao.", time: "2 mins ago", read: false, targetRole: 'all', targetBrgy: 'Brgy. Payao' },
-  { id: 2, type: 'info', title: "Unit Dispatched", message: "Alpha-1 is en route to San Teodoro incident.", time: "15 mins ago", read: false, targetRole: 'all', targetBrgy: 'Brgy. San Teodoro' },
-  { id: 3, type: 'system', title: "Weather API Synced", message: "PAGASA meteorological data successfully updated.", time: "1 hr ago", read: true, targetRole: 'admin', targetBrgy: 'all' },
-  { id: 4, type: 'warning', title: "Evacuation Capacity", message: "San Isidro Church is currently at 80% capacity.", time: "2 hrs ago", read: false, targetRole: 'all', targetBrgy: 'Brgy. San Teodoro' },
-  { id: 5, type: 'critical', title: "Flood Warning", message: "Water levels rising near the main bridge.", time: "3 hrs ago", read: true, targetRole: 'all', targetBrgy: 'Brgy. San Teodoro' },
-];
-
+// No mock notifications, dynamic only
 export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -44,6 +36,18 @@ export default function DashboardLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [readIds, setReadIds] = useState<Set<string | number>>(() => {
+    const saved = localStorage.getItem('readNotificationIds');
+    if (saved) {
+      try { return new Set(JSON.parse(saved)); } catch (e) {}
+    }
+    return new Set();
+  });
+
+  useEffect(() => {
+    localStorage.setItem('readNotificationIds', JSON.stringify(Array.from(readIds)));
+  }, [readIds]);
+
   // 2. Fetch User & Filter Notifications on Load
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -54,19 +58,49 @@ export default function DashboardLayout() {
         department: storedUser.department || storedUser.role.replace('_', ' '),
         assigned_barangay: storedUser.assigned_barangay || 'all'
       });
-
-      // Filter notifications based on user criteria
-      const filteredNotifs = MOCK_NOTIFICATIONS.filter(n => {
-        const isAdmin = storedUser.role === 'admin' || storedUser.role === 'mdrrmo_staff';
-        // Admins see everything. Captains only see 'all' targeting or their specific barangay.
-        if (isAdmin) return true;
-        if (n.targetBrgy === 'all' || n.targetBrgy === storedUser.assigned_barangay) return true;
-        return false;
-      });
-      
-      setNotifications(filteredNotifs);
     }
-  }, []);
+
+    const fetchLiveNotifications = async () => {
+      try {
+        const response = await axiosInstance.get('/incidents');
+        const data = response.data;
+        const liveNotifs = data.map((inc: any) => ({
+          id: `live-${inc.id}`,
+          type: (inc.severity_level === 'Critical' || inc.exact_location === 'SOS EMERGENCY PING') ? 'critical' : 'warning',
+          title: inc.exact_location === 'SOS EMERGENCY PING' ? 'SOS Emergency Ping' : `${inc.severity_level} ${inc.incident_type}`,
+          message: `${inc.exact_location} - ${inc.details}`,
+          time: new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          read: false,
+          targetRole: 'all',
+          targetBrgy: inc.reporting_barangay
+        })).filter((n: any) => n.type === 'critical').slice(0, 5);
+
+        // Fetch dynamic broadcast history
+        const savedBroadcasts = JSON.parse(localStorage.getItem("broadcast_history") || "[]");
+        const broadcastNotifs = savedBroadcasts.map((b: any) => ({
+          id: `broadcast-${b.id}`,
+          type: 'info',
+          title: `BROADCAST: ${b.title}`,
+          message: b.message,
+          time: new Date(b.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          read: false,
+          targetRole: 'all',
+          targetBrgy: b.targetArea
+        }));
+
+        setNotifications(prev => {
+          // Re-apply read state to prevent resetting
+          const applyRead = (arr: any[]) => arr.map(n => ({...n, read: readIds.has(n.id)}));
+          
+          return [...applyRead(broadcastNotifs), ...applyRead(liveNotifs)];
+        });
+      } catch (e) {}
+    };
+
+    fetchLiveNotifications();
+    const interval = setInterval(fetchLiveNotifications, 10000);
+    return () => clearInterval(interval);
+  }, [readIds]);
 
   // Handle clicking outside the notification dropdown to close it
   useEffect(() => {
@@ -96,12 +130,18 @@ export default function DashboardLayout() {
   // 4. Notification Actions
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: number) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+  const markAsRead = (id: string | number) => {
+    setReadIds(prev => new Set([...prev, id]));
+  };
+
+  const handleNotificationClick = (notif: any) => {
+    markAsRead(notif.id);
+    setShowNotifications(false);
+    navigate('/reports');
   };
 
   const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+    setReadIds(prev => new Set([...prev, ...notifications.map(n => n.id)]));
   };
 
   // 5. Fully Functional Secure Logout
@@ -262,7 +302,7 @@ export default function DashboardLayout() {
                         notifications.map((notif) => (
                           <div 
                             key={notif.id} 
-                            onClick={() => markAsRead(notif.id)}
+                            onClick={() => handleNotificationClick(notif)}
                             className={`p-4 border-b border-zinc-100 dark:border-zinc-800/50 cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 flex gap-3 ${!notif.read ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
                           >
                             <div className="shrink-0 mt-0.5">

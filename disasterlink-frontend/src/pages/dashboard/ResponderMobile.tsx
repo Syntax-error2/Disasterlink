@@ -5,6 +5,7 @@ import { MapPin, Navigation, CheckCircle, AlertTriangle, Radio, Clock, Camera, A
 import { MapContainer, TileLayer, Marker, Circle } from "react-leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";
+import axiosInstance from "../../lib/axios";
 
 // Map Icons
 const responderIcon = L.divIcon({
@@ -44,9 +45,8 @@ export default function ResponderMobile() {
     if (status !== "Available") return; 
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/incidents");
-      if (response.ok) {
-        const data = await response.json();
+      const response = await axiosInstance.get("/incidents");
+      const data = response.data;
         
         // Find incidents assigned to this unit AND ensure it hasn't already been resolved by this device
         const incomingDispatch = data.find((inc: any) => 
@@ -58,7 +58,6 @@ export default function ResponderMobile() {
           setStatus("Dispatched");
           showToast("URGENT: New Incident Dispatched to your unit!", "alert");
         }
-      }
     } catch (error) {
       console.warn("Silent poll failed - server might be offline.");
     }
@@ -105,6 +104,14 @@ export default function ResponderMobile() {
     }
   };
 
+  const handleGetDirections = () => {
+    if (incident?.latitude && incident?.longitude) {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${incident.latitude},${incident.longitude}`, '_blank');
+    } else {
+      showToast("GPS coordinates not available for this incident.", "warning");
+    }
+  };
+
   const handleResolve = async () => {
     if (!fieldNotes.trim() && !photoAttached) {
       showToast("Field notes or a photo are required to close this incident.", "warning");
@@ -118,11 +125,7 @@ export default function ResponderMobile() {
         setResolvedIds(prev => [...prev, incident.id]);
 
         // 2. Update the master database to mark it as Resolved
-        await fetch(`http://127.0.0.1:8000/api/incidents/${incident.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "Resolved" })
-        });
+        await axiosInstance.patch(`/incidents/${incident.id}`, { status: "Resolved" });
       }
       
       // 3. Clear the screen and return to Standby
@@ -238,7 +241,6 @@ export default function ResponderMobile() {
             >
               {/* Incident Details Card */}
               <Card className="bg-zinc-900 border-zinc-800 shadow-xl relative overflow-hidden shrink-0">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500 z-10" />
                 
                 <CardContent className="p-0 flex flex-col">
                   {/* REAL INCIDENT IMAGE FROM DATABASE */}
@@ -334,7 +336,7 @@ export default function ResponderMobile() {
                 <div className="max-w-md mx-auto space-y-3">
                   {status === "Dispatched" ? (
                     <>
-                      <button className="w-full bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg border border-zinc-700">
+                      <button onClick={handleGetDirections} className="w-full bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg border border-zinc-700">
                         <Navigation className="h-5 w-5 text-blue-400" /> Get Directions (GPS)
                       </button>
                       <button onClick={handleAcknowledge} className="w-full bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg">

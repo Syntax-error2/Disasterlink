@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertTriangle, Home, Users, CloudLightning, TrendingUp, Activity, ShieldAlert, Loader2, RefreshCw, ThermometerSun, Clock } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import axiosInstance from "../../lib/axios";
 
 // --- HELPER FUNCTIONS ---
 const getSeverityColor = (severity: string) => {
@@ -101,12 +102,10 @@ export default function Overview() {
     setIsRefreshing(true);
     try {
       // Fetch Real Incident Data from Laravel
-      const dbResponse = await fetch("http://127.0.0.1:8000/api/incidents");
-      if (dbResponse.ok) {
-        const dbData = await dbResponse.json();
-        setRawIncidents(dbData);
-        processDatabaseRecords(dbData);
-      }
+      const dbResponse = await axiosInstance.get("/incidents");
+      const dbData = dbResponse.data;
+      setRawIncidents(dbData);
+      processDatabaseRecords(dbData);
 
       // Fetch Local Weather Data
       const weatherUrl = "https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,wind_speed_10m&timezone=Asia%2FManila";

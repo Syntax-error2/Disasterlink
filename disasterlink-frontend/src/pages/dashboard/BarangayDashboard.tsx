@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Home, Users, AlertTriangle, ShieldCheck, MapPin, Send, Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import axiosInstance from "../../lib/axios";
 
 export default function BarangayDashboard() {
   const [user, setUser] = useState({ name: "Captain", assigned_barangay: "Loading..." });
@@ -30,9 +31,8 @@ export default function BarangayDashboard() {
   const fetchLocalIncidents = async (barangay: string) => {
     setIsLoadingReports(true);
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/incidents");
-      if (!response.ok) throw new Error("Network error");
-      const data = await response.json();
+      const response = await axiosInstance.get("/incidents");
+      const data = response.data;
       
       // Filter so the Captain ONLY sees reports from their Barangay
       const filtered = data.filter((report: any) => report.reporting_barangay === barangay);
@@ -63,13 +63,7 @@ export default function BarangayDashboard() {
     };
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/incidents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Failed to transmit to database.");
+      await axiosInstance.post("/incidents", payload);
 
       setShowSuccess(true);
       setFormData({ category: "Flood", priority: "High", purok: "", description: "" });

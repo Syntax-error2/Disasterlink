@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ShieldCheck, Mail, Lock, Activity, MapPin, Loader2, Server, AlertCircle, CheckCircle, Terminal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../../context/AuthContext";
+import axiosInstance from "../../lib/axios";
 
 export default function Login() {
   // Enhanced State Management for the Boot Sequence
@@ -9,6 +11,7 @@ export default function Login() {
   const [bootText, setBootText] = useState("Verifying credentials...");
   const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   // Real Laravel API Network Request
   const handleLogin = async (e: React.FormEvent) => {
@@ -21,24 +24,11 @@ export default function Login() {
     
     try {
       // Send data to Laravel Backend
-      const response = await fetch("http://localhost:8000/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Invalid credentials. Please try again.");
-      }
+      const response = await axiosInstance.post("/login", data);
+      const result = response.data;
 
       // 1. Save Token
-      localStorage.setItem("token", result.token);
-      localStorage.setItem("user", JSON.stringify(result.user));
+      login(result.token, result.user);
 
       // 2. Trigger the "Boot Sequence" UI
       setLoginState('booting');
@@ -66,7 +56,7 @@ export default function Login() {
       }, 2500); // 2.5 seconds total loading time
 
     } catch (error: any) {
-      setErrorMsg(error.message);
+      setErrorMsg(error.response?.data?.message || error.message || "Login failed");
       setLoginState('idle');
     }
   };

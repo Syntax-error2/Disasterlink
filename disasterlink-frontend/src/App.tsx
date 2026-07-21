@@ -13,38 +13,47 @@ import ResponderMobile from "./pages/dashboard/ResponderMobile";
 import BarangayDashboard from "./pages/dashboard/BarangayDashboard";
 import CommunityPortal from "./pages/dashboard/CommunityPortal";
 import 'leaflet/dist/leaflet.css';
+import { AuthProvider, useAuth } from "./context/AuthContext";
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return children;
+};
 
 export default function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="disasterlink-theme">
-      <BrowserRouter>
-        <Routes>
-          {/* Auth Routes (No Sidebar) */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} /> 
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Auth Routes (No Sidebar) */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} /> 
 
-          {/* Mobile-First Routes (No Sidebar) */}
-          <Route path="/responder-dispatch" element={<ResponderMobile />} />
-          <Route path="/portal" element={<CommunityPortal />} /> {/* <-- Added Portal Route */}
+            {/* Mobile-First Routes (No Sidebar) */}
+            <Route path="/responder-dispatch" element={<ProtectedRoute><ResponderMobile /></ProtectedRoute>} />
+            <Route path="/portal" element={<ProtectedRoute><CommunityPortal /></ProtectedRoute>} /> {/* <-- Added Portal Route */}
 
-          {/* Admin & Barangay Dashboard Routes (With Sidebar) */}
-          <Route element={<DashboardLayout />}>
-            {/* Master Admin Pages */}
-            <Route path="/" element={<Overview />} />
-            <Route path="/map" element={<GisMap />} />
-            <Route path="/reports" element={<IncidentReports />} />
-            <Route path="/weather" element={<LiveWeather />} />
-            <Route path="/alerts" element={<EmergencyAlerts />} />
-            <Route path="/settings" element={<Settings />} /> 
+            {/* Admin & Barangay Dashboard Routes (With Sidebar) */}
+            <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+              {/* Master Admin Pages */}
+              <Route path="/" element={<Overview />} />
+              <Route path="/map" element={<GisMap />} />
+              <Route path="/reports" element={<IncidentReports />} />
+              <Route path="/weather" element={<LiveWeather />} />
+              <Route path="/alerts" element={<EmergencyAlerts />} />
+              <Route path="/settings" element={<Settings />} /> 
+              
+              {/* Localized Barangay Command Center */}
+              <Route path="/barangay-command" element={<BarangayDashboard />} />
+            </Route>
             
-            {/* Localized Barangay Command Center */}
-            <Route path="/barangay-command" element={<BarangayDashboard />} />
-          </Route>
-          
-          {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

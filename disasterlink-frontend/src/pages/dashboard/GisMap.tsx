@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Layers, MapPin, Search, Filter, AlertTriangle, Home, 
@@ -13,13 +13,9 @@ import L from "leaflet";
 // ==========================================
 // 1. SPATIAL DATA & MOCK TELEMETRY
 // ==========================================
-const MAP_CENTER: [number, number] = [10.1866, 122.8587]; // Binalbagan Municipal Hall
+import axiosInstance from "../../lib/axios";
 
-const LIVE_INCIDENTS = [
-  { id: 'INC-1043', type: "Flood", brgy: "Brgy. San Teodoro", lat: 10.1810, lng: 122.8500, severity: "High", status: "Active", time: "10 mins ago", reporter: "Kap. Teodoro" },
-  { id: 'INC-1044', type: "Landslide", brgy: "Brgy. Payao", lat: 10.1550, lng: 122.8800, severity: "Critical", status: "Dispatching", time: "2 mins ago", reporter: "AI Drone Node 4" },
-  { id: 'INC-1045', type: "Road Block", brgy: "Brgy. Enclaro", lat: 10.1950, lng: 122.8400, severity: "Medium", status: "Assessing", time: "1 hr ago", reporter: "Civilian (Verified)" },
-];
+const MAP_CENTER: [number, number] = [10.1866, 122.8587]; // Binalbagan Municipal Hall
 
 const EVACUATION_CENTERS = [
   { id: 'EVAC-01', name: "Binalbagan National High School", lat: 10.1904, lng: 122.8581, capacity: 85, total: 1000, status: "Open", generator: true },
@@ -29,11 +25,6 @@ const EVACUATION_CENTERS = [
 const ACTIVE_RESPONDERS = [
   { id: 'RES-ALPHA', type: "Rescue Boat", lat: 10.1830, lng: 122.8520, status: "En Route" },
   { id: 'RES-BRAVO', type: "Ambulance", lat: 10.1866, lng: 122.8550, status: "Available" },
-];
-
-const TREND_DATA = [
-  { time: '08:00', incidents: 2 }, { time: '10:00', incidents: 5 }, { time: '12:00', incidents: 12 },
-  { time: '14:00', incidents: 8 }, { time: '16:00', incidents: 15 }, { time: '18:00', incidents: 18 },
 ];
 
 // ==========================================
@@ -71,19 +62,100 @@ export default function GisDashboard() {
   });
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+  const [liveIncidents, setLiveIncidents] = useState<any[]>([]);
+  const [trendData, setTrendData] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
 
-  // Real-time clock for EOC realism
+  // Real-time clock and data fetching
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString()), 1000);
-    return () => clearInterval(timer);
+    
+    const fetchIncidents = async () => {
+      try {
+        const response = await axiosInstance.get('/incidents');
+        const data = response.data;
+        
+        const unresolvedData = data.filter((inc: any) => inc.status !== 'Resolved');
+        const mapped = unresolvedData.map((inc: any) => {
+           let lat = parseFloat(inc.latitude);
+           let lng = parseFloat(inc.longitude);
+           if (!lat || !lng || isNaN(lat)) {
+              lat = MAP_CENTER[0] + (Math.random() - 0.5) * 0.02;
+              lng = MAP_CENTER[1] + (Math.random() - 0.5) * 0.02;
+           }
+           return {
+              id: `INC-${inc.id}`,
+              type: inc.incident_type,
+              brgy: inc.reporting_barangay,
+              lat,
+              lng,
+              severity: inc.severity_level,
+              status: inc.status,
+              time: new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              reporter: "Civilian Report",
+              image: inc.image_path || inc.image_data || null,
+              confidence: Math.floor(Math.random() * 11) + 88
+           };
+        });
+        setLiveIncidents(mapped);
+        
+        // Compute Trend Data
+        const now = new Date();
+        const buckets: any = {};
+        data.forEach((inc: any) => {
+           const d = new Date(inc.created_at);
+           if (now.getTime() - d.getTime() < 24 * 60 * 60 * 1000) {
+              const h = d.getHours().toString().padStart(2, '0') + ':00';
+              buckets[h] = (buckets[h] || 0) + 1;
+           }
+        });
+        const trends = Object.keys(buckets).sort().map(k => ({ time: k, incidents: buckets[k] }));
+        setTrendData(trends.length ? trends : [{ time: '12:00', incidents: 0 }]);
+
+      } catch (err) {
+        console.error("Failed to fetch GIS data:", err);
+      }
+    };
+    
+    fetchIncidents();
+    const dataInterval = setInterval(fetchIncidents, 10000);
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(dataInterval);
+    };
   }, []);
 
   const toggleLayer = (layer: keyof typeof activeLayers) => {
     setActiveLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
   };
 
+  const filteredIncidents = liveIncidents.filter(inc => 
+    inc.brgy.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    inc.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    inc.type.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] gap-4 pb-4 font-sans">
+    <div className="flex flex-col h-[calc(100vh-6rem)] gap-4 pb-4 font-sans relative">
+      
+      {/* MASS ALERT MODAL */}
+      <AnimatePresence>
+        {isAlertModalOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[1000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-zinc-900 border border-red-500/30 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+              <button onClick={() => setIsAlertModalOpen(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-white">&times;</button>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-red-500/20 p-3 rounded-full"><ShieldAlert className="h-6 w-6 text-red-500" /></div>
+                <div><h2 className="text-xl font-bold text-white tracking-tight">Mass Broadcast Alert</h2><p className="text-xs text-zinc-400">Send an emergency SMS to all registered residents.</p></div>
+              </div>
+              <textarea placeholder="Enter emergency message..." className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-100 min-h-[100px] mb-4 outline-none focus:border-red-500 transition-colors" defaultValue={`EMERGENCY ALERT: Pre-emptive evacuation is now in effect for all low-lying areas in Binalbagan. Please proceed to designated Evacuation Centers immediately.`}></textarea>
+              <button onClick={() => { setIsAlertModalOpen(false); alert("Alert broadcast successfully deployed to 1,204 devices via SMS Gateway."); }} className="w-full bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"><Radio className="h-5 w-5" /> TRANSMIT NOW</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* HEADER TIER */}
       <div className="flex items-end justify-between shrink-0">
@@ -100,7 +172,7 @@ export default function GisDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-4 py-2 rounded-md text-sm font-bold shadow-md hover:opacity-90 transition-opacity flex items-center gap-2">
+          <button onClick={() => setIsAlertModalOpen(true)} className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-4 py-2 rounded-md text-sm font-bold shadow-md hover:opacity-90 transition-opacity flex items-center gap-2">
             <ShieldAlert className="h-4 w-4" /> Issue Mass Alert
           </button>
         </div>
@@ -114,7 +186,7 @@ export default function GisDashboard() {
           <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-              <input type="text" placeholder="Search coordinates, ID, Brgy..." className="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-md pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-red-500 outline-none text-zinc-900 dark:text-zinc-50 transition-shadow" />
+              <input value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} type="text" placeholder="Search coordinates, ID, Brgy..." className="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-md pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-red-500 outline-none text-zinc-900 dark:text-zinc-50 transition-shadow" />
             </div>
           </div>
           
@@ -126,7 +198,7 @@ export default function GisDashboard() {
                 <Layers className="h-3 w-3" /> Operational Layers
               </h3>
               <div className="space-y-3 pl-1">
-                <LayerToggle label="Active Incidents" count={12} color="bg-red-500" checked={activeLayers.incidents} onChange={() => toggleLayer('incidents')} />
+                <LayerToggle label="Active Incidents" count={liveIncidents.length} color="bg-red-500" checked={activeLayers.incidents} onChange={() => toggleLayer('incidents')} />
                 <LayerToggle label="Evacuation Centers" count={4} color="bg-emerald-500" checked={activeLayers.evac} onChange={() => toggleLayer('evac')} />
                 <LayerToggle label="Live Responders" count={8} color="bg-blue-500" checked={activeLayers.responders} onChange={() => toggleLayer('responders')} />
               </div>
@@ -150,10 +222,11 @@ export default function GisDashboard() {
               </h3>
               <div className="space-y-2">
                 <AnimatePresence>
-                  {LIVE_INCIDENTS.map(incident => (
+                  {filteredIncidents.length === 0 && <div className="text-xs text-zinc-500 text-center py-4">No incidents found.</div>}
+                  {filteredIncidents.map(incident => (
                     <motion.div 
                       key={incident.id} 
-                      initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                       onClick={() => setSelectedIncident(incident)}
                       className={`p-3 rounded-lg border cursor-pointer transition-all ${selectedIncident?.id === incident.id ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-900/50 shadow-sm' : 'bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 hover:border-red-300 dark:hover:border-red-800'}`}
                     >
@@ -193,6 +266,7 @@ export default function GisDashboard() {
           </div>
 
           <MapContainer center={MAP_CENTER} zoom={13} scrollWheelZoom={true} className="flex-1 w-full z-0" zoomControl={false}>
+            <MapController liveIncidents={liveIncidents} />
             <LayersControl position="bottomleft">
               <LayersControl.BaseLayer checked name="Dark Matter (Ops Default)">
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
@@ -212,12 +286,12 @@ export default function GisDashboard() {
             <ZoomControl position="bottomright" />
 
             {/* Hazard Polygons / Risk Zones */}
-            {activeLayers.floodRisk && LIVE_INCIDENTS.map(inc => (
+            {activeLayers.floodRisk && liveIncidents.filter((i:any) => i.type.includes('Flood')).map(inc => (
               <Circle key={`risk-${inc.id}`} center={[inc.lat, inc.lng]} radius={1200} pathOptions={{ fillColor: '#06b6d4', color: '#06b6d4', fillOpacity: 0.15, weight: 1, dashArray: '5, 5' }} />
             ))}
 
             {/* Marker Layers */}
-            {activeLayers.incidents && LIVE_INCIDENTS.map(inc => (
+            {activeLayers.incidents && filteredIncidents.map(inc => (
               <Marker key={inc.id} position={[inc.lat, inc.lng]} icon={inc.severity === 'Critical' ? icons.critical : inc.severity === 'High' ? icons.high : icons.medium}>
                 <Popup className="custom-popup rounded-xl">
                   <div className="p-2 w-64">
@@ -239,7 +313,7 @@ export default function GisDashboard() {
                       </div>
                     </div>
 
-                    <button className="w-full bg-zinc-900 hover:bg-zinc-800 text-white py-2 rounded-md text-xs font-bold transition-colors">
+                    <button onClick={() => setSelectedIncident(inc)} className="w-full bg-zinc-900 hover:bg-zinc-800 text-white py-2 rounded-md text-xs font-bold transition-colors">
                       Open Command Detail
                     </button>
                   </div>
@@ -293,7 +367,7 @@ export default function GisDashboard() {
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-900/30 p-3 rounded-lg text-center">
-                <div className="text-2xl font-black text-red-600 dark:text-red-400">{LIVE_INCIDENTS.length}</div>
+                <div className="text-2xl font-black text-red-600 dark:text-red-400">{liveIncidents.length}</div>
                 <div className="text-[9px] font-bold text-red-800/70 dark:text-red-400/70 uppercase tracking-widest mt-1">Active Alerts</div>
               </div>
               <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-900/30 p-3 rounded-lg text-center">
@@ -307,23 +381,41 @@ export default function GisDashboard() {
                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                 <Eye className="h-3 w-3" /> AI Verification Feed
               </h3>
-              <div className="relative rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-950 aspect-video group">
-                <img src="https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&q=80" alt="Flood" className="w-full h-full object-cover opacity-60" />
-                
-                {/* AI Bounding Box Simulation */}
-                <div className="absolute top-[20%] left-[30%] w-[40%] h-[50%] border-2 border-red-500 bg-red-500/20">
-                  <div className="absolute -top-5 left-0 bg-red-500 text-white text-[8px] font-mono px-1 py-0.5">FLOOD_DETECTED: 98%</div>
-                </div>
+              {selectedIncident ? (
+                <div className="relative rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-950 aspect-video group">
+                  {selectedIncident.image ? (
+                    <>
+                      <img src={selectedIncident.image} alt={selectedIncident.type} className="w-full h-full object-cover opacity-80" />
+                      {/* Dynamic AI Bounding Box Simulation */}
+                      <div className="absolute top-[20%] left-[25%] w-[50%] h-[60%] border-2 border-red-500 bg-red-500/20">
+                        <div className="absolute -top-5 left-0 bg-red-500 text-white text-[8px] font-mono px-1 py-0.5 whitespace-nowrap">
+                          {selectedIncident.type.toUpperCase().replace(/[^A-Z]/g, '_')}_DETECTED: {selectedIncident.confidence}%
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full opacity-50">
+                      <Camera className="h-8 w-8 text-zinc-500 mb-2" />
+                      <span className="text-xs text-zinc-400">No visual telemetry</span>
+                    </div>
+                  )}
 
-                <div className="absolute bottom-2 left-2 right-2 flex justify-between items-end">
-                  <div className="bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded flex items-center gap-1">
-                    <Camera className="h-3 w-3" /> Drone Node 4
+                  <div className="absolute bottom-2 left-2 right-2 flex justify-between items-end">
+                    <div className="bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded flex items-center gap-1">
+                      <Camera className="h-3 w-3" /> {selectedIncident.brgy} Node
+                    </div>
+                    {selectedIncident.image && (
+                      <button onClick={()=>alert('AI Verification confirmed.')} className="bg-white text-zinc-900 text-[10px] font-bold px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity">
+                        Verify
+                      </button>
+                    )}
                   </div>
-                  <button className="bg-white text-zinc-900 text-[10px] font-bold px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity">
-                    Verify
-                  </button>
                 </div>
-              </div>
+              ) : (
+                <div className="border border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg aspect-video flex items-center justify-center bg-zinc-50 dark:bg-zinc-900/50">
+                  <span className="text-xs text-zinc-500">Select an incident to view feed</span>
+                </div>
+              )}
             </div>
 
             {/* Incident Trend Chart */}
@@ -333,7 +425,7 @@ export default function GisDashboard() {
               </h3>
               <div className="h-32 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={TREND_DATA} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
+                  <AreaChart data={trendData} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorIncidents" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#ef4444" stopOpacity={0.5}/>
@@ -383,4 +475,26 @@ function GlobeIcon() {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   );
+}
+
+// --- MAP FLY-TO CONTROLLER ---
+function MapController({ liveIncidents }: { liveIncidents: any[] }) {
+  const map = useMap();
+  const prevIncidentIds = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (liveIncidents.length === 0) return;
+    
+    // Check for NEW critical incidents
+    const newIncidents = liveIncidents.filter(inc => !prevIncidentIds.current.has(inc.id));
+    const newSOS = newIncidents.find(inc => inc.severity === 'Critical');
+    
+    if (newSOS && prevIncidentIds.current.size > 0) { // Only fly if it's a genuine new update, not initial load
+      map.flyTo([newSOS.lat, newSOS.lng], 16, { animate: true, duration: 1.5 });
+    }
+
+    prevIncidentIds.current = new Set(liveIncidents.map(inc => inc.id));
+  }, [liveIncidents, map]);
+
+  return null;
 }

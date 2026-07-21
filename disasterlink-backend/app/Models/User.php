@@ -12,7 +12,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens; // 1. Added Sanctum Import
 
 // 2. Added your custom LGU columns to the Fillable array
-#[Fillable(['name', 'email', 'password', 'role', 'department', 'assigned_barangay', 'account_status'])]
+#[Fillable(['name', 'email', 'password', 'role', 'department', 'assigned_barangay', 'account_status', 'barangay', 'purok'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
