@@ -17,5 +17,6 @@ class IncidentReport extends Model
         'image_data',
         'image_path',
         'status',
+        'verifications',
     ];
 }

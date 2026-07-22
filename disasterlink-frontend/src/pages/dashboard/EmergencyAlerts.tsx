@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Radio, Smartphone, CheckCircle2, Loader2, Megaphone, Activity, AlertTriangle } from "lucide-react";
+import axiosInstance from "../../lib/axios";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function EmergencyAlerts() {
@@ -25,12 +26,13 @@ export default function EmergencyAlerts() {
     }
   }, []);
 
-  const handleDispatch = () => {
+  const handleDispatch = async () => {
     if (!title.trim() || !message.trim()) return;
     
     setIsDispatching(true);
     
-    setTimeout(() => {
+    try {
+      await axiosInstance.post("/broadcast", { message: title + " - " + message });
       const newAlert = {
         id: Date.now(),
         title,
@@ -45,8 +47,11 @@ export default function EmergencyAlerts() {
       
       setTitle("");
       setMessage("");
+    } catch (e) {
+      alert("Failed to dispatch broadcast");
+    } finally {
       setIsDispatching(false);
-    }, 800);
+    }
   };
 
   return (

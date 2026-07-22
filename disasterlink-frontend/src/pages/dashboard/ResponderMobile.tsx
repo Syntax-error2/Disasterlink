@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Navigation, CheckCircle, AlertTriangle, Radio, Clock, Camera, ArrowLeft, Info, Send, Loader2, CameraOff, Activity, ShieldAlert } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Circle, useMap } from "react-leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";
 import axiosInstance from "../../lib/axios";
@@ -20,6 +20,14 @@ const emergencyIcon = L.divIcon({
   iconSize: [32, 32],
 });
 
+function MapUpdater({ center }: { center: [number, number] }) {
+  const map = useMap();
+  useEffect(() => {
+    map.panTo(center, { animate: true });
+  }, [center, map]);
+  return null;
+}
+
 export default function ResponderMobile() {
   const [incident, setIncident] = useState<any>(null);
   const [status, setStatus] = useState("Available"); // Available, Dispatched, En Route, On Scene
@@ -34,8 +42,42 @@ export default function ResponderMobile() {
   const [resolvedIds, setResolvedIds] = useState<number[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Default station coordinates (Standby Location)
-  const stationCoords: [number, number] = [10.1866, 122.8587];
+  // Real-time responder location (defaults to a central point until GPS locks)
+  const [responderLocation, setResponderLocation] = useState<[number, number]>([10.1866, 122.8587]);
+
+  // ==========================================
+  // REAL-TIME GPS TRACKING
+  // ==========================================
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setResponderLocation([position.coords.latitude, position.coords.longitude]);
+      },
+      (error) => console.warn("GPS tracking error:", error),
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  // ==========================================
+  // PING TELEMETRY TO SERVER
+  // ==========================================
+  useEffect(() => {
+    const pingInterval = setInterval(async () => {
+      try {
+        await axiosInstance.post("/responder/ping", {
+          unit_name: incident?.status?.replace("Dispatched: ", "") || "Alpha-1 Unit",
+          lat: responderLocation[0],
+          lng: responderLocation[1],
+          status: status
+        });
+      } catch (e) {}
+    }, 10000);
+    return () => clearInterval(pingInterval);
+  }, [responderLocation, status, incident]);
 
   // ==========================================
   // LIVE POLLING: LISTENING FOR DISPATCHES
@@ -48,9 +90,9 @@ export default function ResponderMobile() {
       const response = await axiosInstance.get("/incidents");
       const data = response.data;
         
-        // Find incidents assigned to this unit AND ensure it hasn't already been resolved by this device
+        // Find incidents assigned to a responder unit AND ensure it hasn't already been resolved by this device
         const incomingDispatch = data.find((inc: any) => 
-          inc.status === "Dispatched: Alpha-1 Unit" && !resolvedIds.includes(inc.id)
+          inc.status?.startsWith("Dispatched:") && !resolvedIds.includes(inc.id)
         );
 
         if (incomingDispatch) {
@@ -66,7 +108,7 @@ export default function ResponderMobile() {
   // Poll the database every 3 seconds
   useEffect(() => {
     checkForDispatches(); // Check immediately on load
-    const pollInterval = setInterval(checkForDispatches, 3000);
+    const pollInterval = setInterval(checkForDispatches, 10000);
     return () => clearInterval(pollInterval);
   }, [status, resolvedIds]); 
 
@@ -125,7 +167,7 @@ export default function ResponderMobile() {
         setResolvedIds(prev => [...prev, incident.id]);
 
         // 2. Update the master database to mark it as Resolved
-        await axiosInstance.patch(`/incidents/${incident.id}`, { status: "Resolved" });
+        await axiosInstance.put(`/incidents/${incident.id}`, { status: "Resolved" });
       }
       
       // 3. Clear the screen and return to Standby
@@ -141,6 +183,18 @@ export default function ResponderMobile() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // ==========================================
+  // RESPONDER PROFILE & LOGOUT
+  // ==========================================
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [showProfile, setShowProfile] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
   };
 
   return (
@@ -168,16 +222,13 @@ export default function ResponderMobile() {
         )}
       </AnimatePresence>
 
-      {/* DYNAMIC HEADER */}
-      <header className={`p-4 shadow-md sticky top-0 z-20 flex items-center justify-between transition-colors duration-500 ${
+    {/* DYNAMIC HEADER */}
+      <header className={`p-4 shadow-md sticky top-0 z-50 flex items-center justify-between transition-colors duration-500 ${
         status === "Available" ? "bg-zinc-900 border-b border-zinc-800" : 
         status === "On Scene" ? "bg-amber-600" : 
         "bg-red-600"
       }`}>
         <div className="flex items-center gap-3">
-          <Link to="/" className="text-white/80 hover:text-white transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
           <div className="flex items-center gap-2">
             {status !== "Available" && <Radio className="h-5 w-5 animate-pulse text-white" />}
             <span className="font-bold text-white tracking-wide uppercase">
@@ -185,11 +236,46 @@ export default function ResponderMobile() {
             </span>
           </div>
         </div>
-        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-          status === "Available" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/20 text-white shadow-sm"
-        }`}>
-          {status === "Available" ? "Available" : "Alpha-1"}
-        </span>
+        
+        <div className="flex items-center gap-3 relative">
+          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+            status === "Available" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/20 text-white shadow-sm"
+          }`}>
+            {status === "Available" ? "Available" : (incident?.status?.replace("Dispatched: ", "") || "Active")}
+          </span>
+
+          <button 
+            onClick={() => setShowProfile(!showProfile)} 
+            className="h-8 w-8 rounded-full bg-zinc-800 border-2 border-white/20 flex items-center justify-center overflow-hidden hover:opacity-80 transition-opacity focus:ring-2 focus:ring-white/50"
+          >
+            <div className="text-xs font-bold text-white uppercase">{user.name ? user.name.substring(0, 2) : 'R1'}</div>
+          </button>
+
+          {/* PROFILE DROPDOWN */}
+          <AnimatePresence>
+            {showProfile && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: -10 }} 
+                animate={{ opacity: 1, scale: 1, y: 0 }} 
+                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                className="absolute top-12 right-0 w-64 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-[100] transform origin-top-right"
+              >
+                <div className="p-4 border-b border-zinc-800 bg-zinc-950/50">
+                  <div className="text-sm font-bold text-white">{user.name || "Responder Unit"}</div>
+                  <div className="text-xs text-zinc-400 font-mono mt-1">{user.department || "Disaster Response"}</div>
+                  <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-2 flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span> SYSTEM CONNECTED
+                  </div>
+                </div>
+                <div className="p-2">
+                  <button onClick={handleLogout} className="w-full text-left px-3 py-3 rounded-xl hover:bg-red-500/10 text-red-400 text-sm font-bold flex items-center gap-2 transition-colors">
+                    <ArrowLeft className="h-4 w-4" /> Sign Out
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </header>
 
       <main className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col">
@@ -221,10 +307,11 @@ export default function ResponderMobile() {
                   </span>
                   <span className="text-[10px] font-mono text-zinc-500">AWAITING ORDERS</span>
                 </div>
-                <MapContainer center={stationCoords} zoom={15} zoomControl={false} scrollWheelZoom={false} dragging={false} className="h-full w-full z-0">
+                <MapContainer center={responderLocation} zoom={15} zoomControl={false} scrollWheelZoom={false} dragging={false} className="h-full w-full z-0">
                   <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-                  <Marker position={stationCoords} icon={responderIcon} />
-                  <Circle center={stationCoords} radius={300} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1, stroke: false }} />
+                  <MapUpdater center={responderLocation} />
+                  <Marker position={responderLocation} icon={responderIcon} />
+                  <Circle center={responderLocation} radius={300} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1, stroke: false }} />
                 </MapContainer>
               </div>
             </motion.div>
@@ -236,70 +323,99 @@ export default function ResponderMobile() {
           {status !== "Available" && incident && (
             <motion.div 
               key="active"
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              className="flex-1 p-4 flex flex-col gap-4 pb-32"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="flex-1 flex flex-col relative pb-32"
             >
-              {/* Incident Details Card */}
-              <Card className="bg-zinc-900 border-zinc-800 shadow-xl relative overflow-hidden shrink-0">
+              {/* Dynamic Map Header */}
+              <div className="w-full h-[300px] bg-zinc-900 relative z-0">
+                <MapContainer 
+                  center={incident.latitude && incident.longitude ? [parseFloat(incident.latitude), parseFloat(incident.longitude)] : responderLocation} 
+                  zoom={16} zoomControl={false} scrollWheelZoom={false} dragging={false} className="h-full w-full"
+                >
+                  <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                  <Marker 
+                    position={incident.latitude && incident.longitude ? [parseFloat(incident.latitude), parseFloat(incident.longitude)] : responderLocation} 
+                    icon={emergencyIcon} 
+                  />
+                  {/* Real-time moving Responder Marker on the Incident map! */}
+                  <Marker position={responderLocation} icon={responderIcon} />
+                </MapContainer>
                 
-                <CardContent className="p-0 flex flex-col">
-                  {/* REAL INCIDENT IMAGE FROM DATABASE */}
-                  <div className="w-full bg-zinc-950 relative border-b border-zinc-800 flex items-center justify-center" style={{ minHeight: '200px' }}>
-                    {incident.image_data ? (
-                      <img src={incident.image_data} alt="Field Evidence" className="w-full h-[220px] object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center text-zinc-600">
-                        <CameraOff className="h-10 w-10 mb-2 opacity-50" />
-                        <span className="text-xs font-bold uppercase tracking-widest opacity-80">No Field Image Provided</span>
-                      </div>
-                    )}
-                  </div>
+                {/* Gradient fade into the card */}
+                <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-zinc-950 to-transparent z-10 pointer-events-none"></div>
+              </div>
+
+              {/* Main Information Card (Overlapping the Map) */}
+              <div className="z-10 -mt-10 px-4">
+                <Card className="bg-zinc-950/90 backdrop-blur-xl border border-zinc-800 shadow-2xl rounded-3xl overflow-hidden">
+                  
+                  {/* Optional Image Evidence */}
+                  {(incident.image_path || incident.image_data) && (
+                    <div className="w-full h-32 relative border-b border-zinc-800/50">
+                      <img src={incident.image_path || incident.image_data} alt="Field Evidence" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent"></div>
+                      <Badge className="absolute bottom-3 left-3 bg-red-600 text-white font-bold tracking-widest text-[10px]">EVIDENCE ATTACHED</Badge>
+                    </div>
+                  )}
 
                   <div className="p-5">
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-6">
                       <div>
-                        <h2 className="text-2xl font-bold text-white tracking-tight">{incident.incident_type}</h2>
-                        <p className="text-zinc-400 font-mono text-sm mt-1">Ref ID: #{incident.id}</p>
+                        <h2 className="text-2xl font-black text-white tracking-tight">{incident.incident_type}</h2>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-zinc-500 font-mono text-xs">REF: #{incident.id}</span>
+                          <span className="h-1 w-1 rounded-full bg-zinc-700"></span>
+                          <span className={`text-xs font-bold uppercase tracking-wider ${
+                            incident.severity_level === 'Critical' ? 'text-red-400' : 'text-amber-400'
+                          }`}>
+                            {incident.severity_level} Threat
+                          </span>
+                        </div>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                        incident.severity_level === 'Critical' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 shadow-lg ${
+                         incident.severity_level === 'Critical' ? 'bg-red-500/20 text-red-500 border border-red-500/30 shadow-red-500/20' : 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-amber-500/20'
                       }`}>
-                        {incident.severity_level} Threat
-                      </span>
+                        <ShieldAlert className="h-6 w-6" />
+                      </div>
                     </div>
                     
-                    <div className="space-y-3 mt-4">
-                      <div className="flex items-start gap-3 bg-zinc-950 p-3 rounded-lg border border-zinc-800/50">
-                        <MapPin className="h-5 w-5 text-zinc-400 shrink-0 mt-0.5" />
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-4 bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800/80 shadow-inner">
+                        <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0 border border-blue-500/30">
+                          <MapPin className="h-5 w-5 text-blue-400" />
+                        </div>
                         <div>
-                          <div className="font-medium text-zinc-200">Location & Intel</div>
-                          <div className="text-xs text-white mt-1 font-bold">
-                            {incident.exact_location}, {incident.reporting_barangay}
+                          <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Target Location</div>
+                          <div className="text-sm text-zinc-100 font-medium leading-tight">
+                            {incident.exact_location}
                           </div>
-                          <div className="text-xs text-zinc-400 mt-2 leading-relaxed italic bg-zinc-900 p-2 rounded border border-zinc-800">
-                            "{incident.details || "No operational details provided by reporter."}"
+                          <div className="text-xs text-zinc-400 mt-0.5">
+                            Brgy. {incident.reporting_barangay}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 bg-zinc-950 p-3 rounded-lg border border-zinc-800/50">
-                        <Clock className="h-5 w-5 text-zinc-400 shrink-0" />
+
+                      <div className="flex items-start gap-4 bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800/80 shadow-inner">
+                        <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 border border-amber-500/30">
+                          <Clock className="h-5 w-5 text-amber-400" />
+                        </div>
                         <div>
-                          <div className="font-medium text-zinc-200">Time since dispatch</div>
-                          <div className="text-xs text-amber-500 mt-1 font-mono">{elapsedTime} mins elapsed</div>
+                          <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Mission Time</div>
+                          <div className="text-sm text-zinc-100 font-medium">
+                            <span className="text-amber-400 font-mono font-bold text-lg">{elapsedTime}</span> mins elapsed
+                          </div>
                         </div>
                       </div>
+
+                      {incident.details && (
+                        <div className="mt-4 p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 border-l-4 border-l-zinc-700 italic text-sm text-zinc-400 leading-relaxed shadow-inner">
+                          "{incident.details}"
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {/* Visual Context Map */}
-                  <div className="h-48 w-full bg-zinc-800 relative z-0 border-t border-zinc-800">
-                    <MapContainer center={stationCoords} zoom={15} zoomControl={false} scrollWheelZoom={false} dragging={false} className="h-full w-full z-0">
-                      <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-                      <Marker position={stationCoords} icon={emergencyIcon} />
-                    </MapContainer>
-                  </div>
-                </CardContent>
-              </Card>
+                </Card>
+              </div>
 
               {/* Dynamic Context Area (Shows when on scene) */}
               <AnimatePresence>
@@ -332,25 +448,25 @@ export default function ResponderMobile() {
               </AnimatePresence>
 
               {/* Sticky Action Controls */}
-              <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent pt-12 z-10">
-                <div className="max-w-md mx-auto space-y-3">
+              <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent pt-12 z-20">
+                <div className="max-w-md mx-auto space-y-3 pb-safe">
                   {status === "Dispatched" ? (
                     <>
-                      <button onClick={handleGetDirections} className="w-full bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg border border-zinc-700">
-                        <Navigation className="h-5 w-5 text-blue-400" /> Get Directions (GPS)
+                      <button onClick={handleGetDirections} className="w-full bg-zinc-800/80 backdrop-blur hover:bg-zinc-700 active:scale-95 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg border border-zinc-700/50 group">
+                        <Navigation className="h-5 w-5 text-blue-400 group-hover:scale-110 transition-transform" /> Get Directions (GPS)
                       </button>
-                      <button onClick={handleAcknowledge} className="w-full bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg">
-                        <CheckCircle className="h-5 w-5" /> Acknowledge & En Route
+                      <button onClick={handleAcknowledge} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 active:scale-95 text-white font-black tracking-wide py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_0_25px_rgba(37,99,235,0.4)] border border-blue-400/30 group">
+                        <CheckCircle className="h-5 w-5 group-hover:scale-110 transition-transform" /> ACKNOWLEDGE & EN ROUTE
                       </button>
                     </>
                   ) : status === "En Route" ? (
-                    <button onClick={handleArrived} className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-zinc-950 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)]">
-                      <MapPin className="h-5 w-5" /> Arrived On Scene
+                    <button onClick={handleArrived} className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:scale-95 text-zinc-950 font-black tracking-wide py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_0_25px_rgba(245,158,11,0.4)] border border-amber-300/50 group">
+                      <MapPin className="h-5 w-5 group-hover:scale-110 transition-transform" /> UNIT ARRIVED ON SCENE
                     </button>
                   ) : (
-                    <button onClick={handleResolve} disabled={isSubmitting} className="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 disabled:opacity-70 disabled:scale-100 text-zinc-950 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                      {isSubmitting ? "Transmitting SITREP..." : "Submit Report & Resolve"}
+                    <button onClick={handleResolve} disabled={isSubmitting} className="w-full bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 active:scale-95 disabled:opacity-70 disabled:scale-100 text-zinc-950 font-black tracking-wide py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_0_25px_rgba(16,185,129,0.4)] border border-emerald-300/50 group">
+                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
+                      {isSubmitting ? "TRANSMITTING SITREP..." : "SUBMIT REPORT & RESOLVE"}
                     </button>
                   )}
                 </div>

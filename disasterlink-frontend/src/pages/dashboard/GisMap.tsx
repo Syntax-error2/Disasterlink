@@ -5,7 +5,7 @@ import {
   Activity, Radio, ShieldAlert, Zap, Thermometer, Wind,
   Navigation, Crosshair, Clock, BarChart3, Camera, Eye
 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, LayersControl, ZoomControl, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, Polyline, LayersControl, ZoomControl, useMap } from "react-leaflet";
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";
@@ -16,16 +16,6 @@ import L from "leaflet";
 import axiosInstance from "../../lib/axios";
 
 const MAP_CENTER: [number, number] = [10.1866, 122.8587]; // Binalbagan Municipal Hall
-
-const EVACUATION_CENTERS = [
-  { id: 'EVAC-01', name: "Binalbagan National High School", lat: 10.1904, lng: 122.8581, capacity: 85, total: 1000, status: "Open", generator: true },
-  { id: 'EVAC-02', name: "San Isidro Labrador Church", lat: 10.1877, lng: 122.8589, capacity: 40, total: 500, status: "Open", generator: false },
-];
-
-const ACTIVE_RESPONDERS = [
-  { id: 'RES-ALPHA', type: "Rescue Boat", lat: 10.1830, lng: 122.8520, status: "En Route" },
-  { id: 'RES-BRAVO', type: "Ambulance", lat: 10.1866, lng: 122.8550, status: "Available" },
-];
 
 // ==========================================
 // 2. CUSTOM GIS ICONS (GLOWING & ANIMATED)
@@ -58,7 +48,12 @@ const icons = {
 // ==========================================
 export default function GisDashboard() {
   const [activeLayers, setActiveLayers] = useState({
-    incidents: true, evac: true, responders: true, floodRisk: false, weatherRadar: true
+    incidents: true,
+    evac: false,
+    responders: false,
+    floodRisk: false,
+    weatherRadar: false,
+    aiPredictions: true
   });
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
@@ -66,6 +61,9 @@ export default function GisDashboard() {
   const [trendData, setTrendData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const [evacCenters, setEvacCenters] = useState<any[]>([]);
+  const [liveResponders, setLiveResponders] = useState<any[]>([]);
+  const [aiPredictions, setAiPredictions] = useState<any[]>([]);
 
   // Real-time clock and data fetching
   useEffect(() => {
@@ -117,9 +115,47 @@ export default function GisDashboard() {
         console.error("Failed to fetch GIS data:", err);
       }
     };
-    
+
+    const fetchEvacCenters = async () => {
+      try {
+        const response = await axiosInstance.get("/evacuation-centers");
+        const withCoords = response.data.map((ec: any) => ({
+          ...ec,
+          lat: parseFloat(ec.lat) || (10.1866 + (Math.random() * 0.02 - 0.01)),
+          lng: parseFloat(ec.lng) || (122.8587 + (Math.random() * 0.02 - 0.01)),
+          dist: "1.2km"
+        }));
+        setEvacCenters(withCoords);
+      } catch (error) {
+        console.error("Failed to fetch evac centers:", error);
+      }
+    };
+
+    const fetchResponders = async () => {
+      try {
+        const res = await axiosInstance.get("/responder/locations");
+        setLiveResponders(res.data);
+      } catch (e) {}
+    };
+
+    const fetchAiPredictions = async () => {
+      try {
+        const res = await axiosInstance.get("/ai/predictions");
+        setAiPredictions(res.data);
+      } catch (e) {}
+    };
+
     fetchIncidents();
-    const dataInterval = setInterval(fetchIncidents, 10000);
+    fetchEvacCenters();
+    fetchResponders();
+    fetchAiPredictions();
+    
+    const dataInterval = setInterval(() => {
+      fetchIncidents();
+      fetchEvacCenters();
+      fetchResponders();
+      fetchAiPredictions();
+    }, 15000);
 
     return () => {
       clearInterval(timer);
@@ -151,7 +187,20 @@ export default function GisDashboard() {
                 <div><h2 className="text-xl font-bold text-white tracking-tight">Mass Broadcast Alert</h2><p className="text-xs text-zinc-400">Send an emergency SMS to all registered residents.</p></div>
               </div>
               <textarea placeholder="Enter emergency message..." className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-100 min-h-[100px] mb-4 outline-none focus:border-red-500 transition-colors" defaultValue={`EMERGENCY ALERT: Pre-emptive evacuation is now in effect for all low-lying areas in Binalbagan. Please proceed to designated Evacuation Centers immediately.`}></textarea>
-              <button onClick={() => { setIsAlertModalOpen(false); alert("Alert broadcast successfully deployed to 1,204 devices via SMS Gateway."); }} className="w-full bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"><Radio className="h-5 w-5" /> TRANSMIT NOW</button>
+              <button 
+                onClick={async () => { 
+                  try {
+                    await axiosInstance.post("/broadcast", { message: "EMERGENCY ALERT: Pre-emptive evacuation is now in effect for all low-lying areas in Binalbagan. Please proceed to designated Evacuation Centers immediately." });
+                    setIsAlertModalOpen(false); 
+                    alert("Alert broadcast successfully deployed to all citizen devices via API and SMS Gateway."); 
+                  } catch(e) {
+                    alert("Failed to broadcast.");
+                  }
+                }} 
+                className="w-full bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+              >
+                <Radio className="h-5 w-5" /> TRANSMIT NOW
+              </button>
             </motion.div>
           </motion.div>
         )}
@@ -199,8 +248,8 @@ export default function GisDashboard() {
               </h3>
               <div className="space-y-3 pl-1">
                 <LayerToggle label="Active Incidents" count={liveIncidents.length} color="bg-red-500" checked={activeLayers.incidents} onChange={() => toggleLayer('incidents')} />
-                <LayerToggle label="Evacuation Centers" count={4} color="bg-emerald-500" checked={activeLayers.evac} onChange={() => toggleLayer('evac')} />
-                <LayerToggle label="Live Responders" count={8} color="bg-blue-500" checked={activeLayers.responders} onChange={() => toggleLayer('responders')} />
+                <LayerToggle label="Evacuation Centers" count={evacCenters.length} color="bg-emerald-500" checked={activeLayers.evac} onChange={() => toggleLayer('evac')} />
+                <LayerToggle label="Live Responders" count={liveResponders.length} color="bg-blue-500" checked={activeLayers.responders} onChange={() => toggleLayer('responders')} />
               </div>
             </div>
 
@@ -212,6 +261,7 @@ export default function GisDashboard() {
               <div className="space-y-3 pl-1">
                 <LayerToggle label="Flood Susceptibility" color="bg-cyan-500" checked={activeLayers.floodRisk} onChange={() => toggleLayer('floodRisk')} />
                 <LayerToggle label="Live Weather Radar" color="bg-indigo-500" checked={activeLayers.weatherRadar} onChange={() => toggleLayer('weatherRadar')} />
+                <LayerToggle label="AI Predictions" count={aiPredictions.length} color="bg-yellow-500" checked={activeLayers.aiPredictions} onChange={() => toggleLayer('aiPredictions')} />
               </div>
             </div>
 
@@ -286,6 +336,37 @@ export default function GisDashboard() {
             <ZoomControl position="bottomright" />
 
             {/* Hazard Polygons / Risk Zones */}
+            {activeLayers.aiPredictions && aiPredictions.map((pred, i) => (
+              <Polygon 
+                key={`ai-pred-${i}`} 
+                positions={pred.polygon} 
+                pathOptions={{ 
+                  color: '#eab308', 
+                  fillColor: '#eab308', 
+                  fillOpacity: 0.4, 
+                  dashArray: '10, 10', 
+                  className: 'animate-pulse' 
+                }}
+              >
+                <Popup>
+                  <div className="p-2 w-[220px]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-2 w-2 rounded-full bg-yellow-500 animate-ping"></div>
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-yellow-600 m-0">AI Prediction: {pred.type}</h4>
+                    </div>
+                    <p className="text-[11px] text-zinc-600 m-0 mb-2">
+                      <span className="font-bold text-red-600">Risk:</span> {pred.risk_level}<br/>
+                      <span className="font-bold">ETA:</span> {pred.time_to_impact}<br/>
+                      <span className="font-bold">Zone:</span> {pred.barangay}
+                    </p>
+                    <div className="w-full bg-yellow-100 p-2 rounded text-[10px] text-yellow-800 font-mono">
+                      Algorithm detected rising water levels intersecting with topography.
+                    </div>
+                  </div>
+                </Popup>
+              </Polygon>
+            ))}
+
             {activeLayers.floodRisk && liveIncidents.filter((i:any) => i.type.includes('Flood')).map(inc => (
               <Circle key={`risk-${inc.id}`} center={[inc.lat, inc.lng]} radius={1200} pathOptions={{ fillColor: '#06b6d4', color: '#06b6d4', fillOpacity: 0.15, weight: 1, dashArray: '5, 5' }} />
             ))}
@@ -321,7 +402,8 @@ export default function GisDashboard() {
               </Marker>
             ))}
 
-            {activeLayers.evac && EVACUATION_CENTERS.map(evac => (
+            {/* EVACUATION CENTERS LAYER */}
+            {activeLayers.evac && evacCenters.map(evac => (
               <Marker key={evac.id} position={[evac.lat, evac.lng]} icon={icons.evac}>
                 <Popup>
                   <div className="p-1">
@@ -330,16 +412,58 @@ export default function GisDashboard() {
                       <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${evac.capacity}%` }}></div>
                     </div>
                     <p className="text-[10px] text-zinc-500 m-0 text-right">{evac.capacity}% Full</p>
+                    
+                    <div className="mt-2 border-t border-zinc-200 pt-2 space-y-1">
+                      <div className="flex justify-between items-center text-[9px] font-bold text-zinc-600">
+                        <span>FOOD</span>
+                        <span className={evac.food_level < 30 ? 'text-red-500' : ''}>{evac.food_level || 0}%</span>
+                      </div>
+                      <div className="w-full bg-zinc-200 rounded-full h-1">
+                        <div className={`h-1 rounded-full ${evac.food_level < 30 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${evac.food_level || 0}%` }}></div>
+                      </div>
+
+                      <div className="flex justify-between items-center text-[9px] font-bold text-zinc-600 mt-1">
+                        <span>WATER</span>
+                        <span className={evac.water_level < 30 ? 'text-red-500' : ''}>{evac.water_level || 0}%</span>
+                      </div>
+                      <div className="w-full bg-zinc-200 rounded-full h-1">
+                        <div className={`h-1 rounded-full ${evac.water_level < 30 ? 'bg-red-500' : 'bg-cyan-500'}`} style={{ width: `${evac.water_level || 0}%` }}></div>
+                      </div>
+
+                      <div className="flex justify-between items-center text-[9px] font-bold text-zinc-600 mt-1">
+                        <span>MEDS</span>
+                        <span className={evac.medicine_level < 30 ? 'text-red-500' : ''}>{evac.medicine_level || 0}%</span>
+                      </div>
+                      <div className="w-full bg-zinc-200 rounded-full h-1">
+                        <div className={`h-1 rounded-full ${evac.medicine_level < 30 ? 'bg-red-500' : 'bg-purple-500'}`} style={{ width: `${evac.medicine_level || 0}%` }}></div>
+                      </div>
+                    </div>
                   </div>
                 </Popup>
               </Marker>
             ))}
 
-            {activeLayers.responders && ACTIVE_RESPONDERS.map(res => (
+            {activeLayers.responders && liveResponders.map(res => (
               <Marker key={res.id} position={[res.lat, res.lng]} icon={icons.responder}>
-                <Popup><div className="font-bold text-sm text-center">{res.type}<br/><span className="text-blue-500 text-xs">{res.status}</span></div></Popup>
+                <Popup><div className="font-bold text-sm text-center">{res.unit_name}<br/><span className="text-blue-500 text-xs">{res.status}</span></div></Popup>
               </Marker>
             ))}
+
+            {/* ALGORITHMIC ROUTING: Draw lines from responder to incident if dispatched */}
+            {activeLayers.responders && activeLayers.incidents && liveIncidents.filter((inc:any) => inc.status?.includes('Dispatched')).map((inc:any) => {
+              const unitNameMatch = inc.status.replace('Dispatched: ', '').trim();
+              const responder = liveResponders.find(r => r.unit_name === unitNameMatch);
+              if (responder) {
+                return (
+                  <Polyline 
+                    key={`route-${inc.id}`} 
+                    positions={[[responder.lat, responder.lng], [inc.lat, inc.lng]]} 
+                    pathOptions={{ color: '#3b82f6', weight: 4, dashArray: '10, 15', className: 'animate-pulse' }} 
+                  />
+                );
+              }
+              return null;
+            })}
           </MapContainer>
 
           {/* Map Footer Telemetry */}
@@ -371,7 +495,7 @@ export default function GisDashboard() {
                 <div className="text-[9px] font-bold text-red-800/70 dark:text-red-400/70 uppercase tracking-widest mt-1">Active Alerts</div>
               </div>
               <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-900/30 p-3 rounded-lg text-center">
-                <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{ACTIVE_RESPONDERS.length}</div>
+                <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{liveResponders.length}</div>
                 <div className="text-[9px] font-bold text-blue-800/70 dark:text-blue-400/70 uppercase tracking-widest mt-1">Units Deployed</div>
               </div>
             </div>

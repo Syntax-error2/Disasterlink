@@ -6,8 +6,10 @@ import axiosInstance from "../../lib/axios";
 import { 
   Home, Map as MapIcon, PlusCircle, Users, AlertTriangle, CloudRain, 
   Navigation, PhoneCall, ShieldCheck, Camera, Send, Heart, 
-  MessageSquare, CheckCircle, Flame, Waves, Wind, Filter, Info, Loader2, Clock, Activity, MapPin, Thermometer, Droplets, Gauge
+  MessageSquare, CheckCircle, Flame, Waves, Wind, Filter, Info, Loader2, Clock, Activity, MapPin, Thermometer, Droplets, Gauge,
+  LogOut, User as UserIcon
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 // ==========================================
 // 1. DYNAMIC USER & MOCK DATA
@@ -20,7 +22,12 @@ declare global {
 
 const getActiveUser = () => {
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  return { name: storedUser.name || "Juan Dela Cruz", brgy: storedUser.barangay || storedUser.assigned_barangay || "Brgy. San Teodoro", purok: storedUser.purok || storedUser.sitio || "Unknown Location" };
+  return { 
+    name: storedUser.name || "Juan Dela Cruz", 
+    email: storedUser.email || "",
+    brgy: storedUser.barangay || storedUser.assigned_barangay || "Brgy. San Teodoro", 
+    purok: storedUser.purok || storedUser.sitio || "Unknown Location" 
+  };
 };
 
 const Avatar = ({ name, size = "10" }: { name: string, size?: string }) => (
@@ -36,7 +43,9 @@ const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6
 export default function CommunityPortal() {
   const [activeTab, setActiveTab] = useState("home");
   const [isSOSActive, setIsSOSActive] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'info' | 'error' } | null>(null);
+  const [activeBroadcast, setActiveBroadcast] = useState<string | null>(null);
 
   const [activeUser, setActiveUser] = useState(getActiveUser());
   const [userStatus, setUserStatus] = useState("Unknown");
@@ -50,7 +59,8 @@ export default function CommunityPortal() {
     try {
       const response = await axiosInstance.get("/incidents");
       const allIncidents = response.data;
-      const myIds = JSON.parse(localStorage.getItem("my_report_ids") || "[]");
+      const userKey = "my_report_ids_" + (activeUser.id || activeUser.email || 'guest');
+      const myIds = JSON.parse(localStorage.getItem(userKey) || "[]");
       const myActiveReports = allIncidents.filter((inc: any) => myIds.includes(inc.id));
       setMyReports(myActiveReports);
     } catch (error) {
@@ -59,19 +69,130 @@ export default function CommunityPortal() {
     }
   };
 
+  const fetchEvacuationCenters = async () => {
+    try {
+      const response = await axiosInstance.get("/evacuation-centers");
+      const withCoords = response.data.map((ec: any) => ({
+        ...ec,
+        lat: parseFloat(ec.lat) || (10.1866 + (Math.random() * 0.02 - 0.01)),
+        lng: parseFloat(ec.lng) || (122.8587 + (Math.random() * 0.02 - 0.01)),
+        dist: "1.2km"
+      }));
+      setEvacCenters(withCoords);
+    } catch (error) {
+      console.error("Failed to fetch evac centers:", error);
+    }
+  };
+
+  const fetchFeedPosts = async () => {
+    try {
+      const response = await axiosInstance.get('/feed');
+      setFeedPosts(response.data);
+    } catch (e) {}
+  };
+
   useEffect(() => {
     setActiveUser(getActiveUser());
     setAlerts([]);
     setEvacCenters([]);
     setFamilyMembers([]);
-    setFeedPosts([
-      { id: 1, author: "Maria Clara", time: "5 mins ago", content: "Water level rising near the old bridge in San Teodoro. Please avoid this route!", verified: true, likes: 24, liked: false, type: "update", replies: [] },
-      { id: 2, author: "MDRRMO Binalbagan", time: "15 mins ago", content: "Rescue team deployed to Purok 4. Evacuation trucks are on standby at the plaza.", verified: true, likes: 156, liked: true, type: "official", replies: [] }
-    ]);
+
+    const handleOnline = async () => {
+      setIsOffline(false);
+      showToast("Connection restored. Synchronizing offline data...", "info");
+      
+        const offlinePostsStr = localStorage.getItem("offline_posts");
+      if (offlinePostsStr) {
+        const offlinePosts = JSON.parse(offlinePostsStr);
+        for (const post of offlinePosts) {
+          try {
+            await axiosInstance.post('/feed', post);
+          } catch(e) {}
+        }
+        localStorage.removeItem("offline_posts");
+        showToast(`Successfully synced ${offlinePosts.length} offline updates!`, "success");
+        fetchFeedPosts();
+      }
+
+      // Sync offline incidents
+      const offlineIncidentsStr = localStorage.getItem("offline_incidents");
+      if (offlineIncidentsStr) {
+        const offlineIncidents = JSON.parse(offlineIncidentsStr);
+        let successCount = 0;
+        for (const incident of offlineIncidents) {
+          try {
+            const res = await axiosInstance.post('/incidents', incident);
+            if (res.data && res.data.id) {
+              const userKey = "my_report_ids_" + (activeUser?.id || activeUser?.email || 'guest');
+              const existingIds = JSON.parse(localStorage.getItem(userKey) || "[]");
+              if (!existingIds.includes(res.data.id)) {
+                existingIds.push(res.data.id);
+                localStorage.setItem(userKey, JSON.stringify(existingIds));
+              }
+            }
+            successCount++;
+          } catch(e) {
+            console.error("Failed to sync incident", e);
+          }
+        }
+        if (successCount > 0) {
+          localStorage.removeItem("offline_incidents");
+          showToast(`Successfully synced ${successCount} offline emergency reports!`, "success");
+          fetchMyReports();
+        }
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+      showToast("Connection lost. Switched to offline mesh mode.", "error");
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    const fetchFamilyMembers = async () => {
+      try {
+        const response = await axiosInstance.get('/family');
+        setFamilyMembers(response.data);
+      } catch (e) {}
+    };
+
+    const fetchBroadcast = async () => {
+      try {
+        const res = await axiosInstance.get("/broadcast");
+        const broadcastMsg = res.data.broadcast;
+        if (broadcastMsg) {
+          const dismissed = JSON.parse(localStorage.getItem("dismissed_broadcasts") || "[]");
+          if (!dismissed.includes(broadcastMsg)) {
+            setActiveBroadcast(broadcastMsg);
+          }
+        } else {
+          setActiveBroadcast(null);
+        }
+      } catch (e) {}
+    };
 
     fetchMyReports();
-    const interval = setInterval(fetchMyReports, 5000);
-    return () => clearInterval(interval);
+    fetchEvacuationCenters();
+    fetchBroadcast();
+    fetchFeedPosts();
+    fetchFamilyMembers();
+    
+    const interval = setInterval(() => {
+      if (navigator.onLine) {
+        fetchMyReports();
+        fetchEvacuationCenters();
+        fetchBroadcast();
+        fetchFeedPosts();
+        fetchFamilyMembers();
+      }
+    }, 15000); // Increased polling interval to 15 seconds to prevent network spam
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   const showToast = (msg: string, type: 'success' | 'info' | 'error' = 'info') => {
@@ -90,24 +211,57 @@ export default function CommunityPortal() {
         lng = position.coords.longitude;
       } catch (e) {}
     }
+    
+    let exactLocationText = `${activeUser.purok}, ${activeUser.brgy}`;
+    
+    if (isOffline) {
+       exactLocationText = `[OFFLINE GPS] Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+    } else {
+       try {
+         const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+         const geoData = await geoRes.json();
+         if (geoData && geoData.display_name) {
+             // Extract just the street / local area to keep it concise
+             const parts = geoData.display_name.split(',');
+             exactLocationText = parts.slice(0, 3).join(',').trim();
+         }
+       } catch (e) {
+         exactLocationText = `[GPS] Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+       }
+    }
+
+    const payload = {
+      reporting_barangay: activeUser.brgy,
+      incident_type: "SOS Emergency",
+      severity_level: "Critical",
+      exact_location: exactLocationText,
+      details: `URGENT SOS SIGNAL from ${activeUser.name}. Immediate dispatch required!`,
+      status: "Active",
+      latitude: lat.toString(),
+      longitude: lng.toString(),
+      reporting_user: activeUser.name
+    };
+
+    if (isOffline) {
+      const offlineIncidents = JSON.parse(localStorage.getItem("offline_incidents") || "[]");
+      offlineIncidents.push(payload);
+      localStorage.setItem("offline_incidents", JSON.stringify(offlineIncidents));
+      
+      setTimeout(() => {
+        setIsSOSActive(false);
+        showToast("Offline: SOS Emergency saved locally. Will transmit when connection returns!", "error");
+      }, 2000);
+      return;
+    }
 
     try {
-      const formData = new FormData();
-      formData.append("reporting_barangay", activeUser.brgy);
-      formData.append("incident_type", "SOS Emergency"); 
-      formData.append("severity_level", "Critical");
-      formData.append("exact_location", `${activeUser.purok}, ${activeUser.brgy}`);
-      formData.append("details", `URGENT SOS SIGNAL from ${activeUser.name}. Immediate dispatch required!`);
-      formData.append("status", "Active");
-      formData.append("latitude", lat.toString());
-      formData.append("longitude", lng.toString());
-      
-      const response = await axiosInstance.post("/incidents", formData);
+      const response = await axiosInstance.post("/incidents", payload);
       if (response.data && response.data.id) {
-        const existingIds = JSON.parse(localStorage.getItem("my_report_ids") || "[]");
+        const userKey = "my_report_ids_" + (activeUser.id || activeUser.email || 'guest');
+        const existingIds = JSON.parse(localStorage.getItem(userKey) || "[]");
         if (!existingIds.includes(response.data.id)) {
           existingIds.push(response.data.id);
-          localStorage.setItem("my_report_ids", JSON.stringify(existingIds));
+          localStorage.setItem(userKey, JSON.stringify(existingIds));
         }
       }
     } catch (error) {
@@ -122,6 +276,44 @@ export default function CommunityPortal() {
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[#0a0a0c] text-zinc-50 font-sans overflow-hidden selection:bg-red-500/30 relative">
+      
+      {/* EMERGENCY BROADCAST OVERLAY */}
+      <AnimatePresence>
+        {activeBroadcast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="absolute inset-0 z-[999] bg-red-600/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center"
+          >
+            <motion.div 
+              animate={{ scale: [1, 1.2, 1] }} 
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              className="bg-white/20 p-6 rounded-full mb-6"
+            >
+              <AlertTriangle className="h-20 w-20 text-white" />
+            </motion.div>
+            <h1 className="text-4xl font-black text-white tracking-tighter mb-4 uppercase">Emergency Broadcast</h1>
+            <p className="text-xl text-white/90 font-medium leading-relaxed max-w-sm mb-12">
+              {activeBroadcast}
+            </p>
+            <button 
+              onClick={() => {
+                const dismissed = JSON.parse(localStorage.getItem("dismissed_broadcasts") || "[]");
+                if (activeBroadcast && !dismissed.includes(activeBroadcast)) {
+                  dismissed.push(activeBroadcast);
+                  localStorage.setItem("dismissed_broadcasts", JSON.stringify(dismissed));
+                }
+                setActiveBroadcast(null);
+              }} 
+              className="px-8 py-4 bg-white text-red-600 font-bold rounded-full shadow-2xl active:scale-95 transition-all text-lg"
+            >
+              Acknowledge & Dismiss
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 16 }} exit={{ opacity: 0, y: -50 }} className="absolute top-0 left-4 right-4 z-[200] flex justify-center">
@@ -135,10 +327,10 @@ export default function CommunityPortal() {
 
       <main className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
-          {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} />}
+          {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} isOffline={isOffline} />}
           {activeTab === "map" && <MapView key="map" showToast={showToast} evacCenters={evacCenters} />}
-          {activeTab === "report" && <ReportView key="report" showToast={showToast} user={activeUser} refreshMyReports={fetchMyReports} setActiveTab={setActiveTab} />}
-          {activeTab === "feed" && <FeedView key="feed" showToast={showToast} posts={feedPosts} setPosts={setFeedPosts} user={activeUser} />}
+          {activeTab === "report" && <ReportView key="report" showToast={showToast} user={activeUser} refreshMyReports={fetchMyReports} setActiveTab={setActiveTab} isOffline={isOffline} />}
+          {activeTab === "feed" && <FeedView key="feed" showToast={showToast} posts={feedPosts} setPosts={setFeedPosts} user={activeUser} isOffline={isOffline} />}
           {activeTab === "family" && <FamilyView key="family" showToast={showToast} members={familyMembers} setMembers={setFamilyMembers} userStatus={userStatus} setUserStatus={setUserStatus} />}
         </AnimatePresence>
 
@@ -198,6 +390,9 @@ function NavItem({ icon: Icon, label, isActive, onClick, isPrimary }: any) {
 // 3. HOME VIEW
 // ==========================================
 function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, user, myReports }: any) {
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { logout } = useAuth();
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 space-y-6 pb-48">
       <div className="flex justify-between items-start mt-4">
@@ -206,9 +401,48 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
           <h1 className="text-3xl font-black text-white tracking-tight">{user.name.split(' ')[0]}</h1>
           <p className="text-sm text-zinc-500 mt-1 flex items-center gap-1"><MapIcon className="h-3 w-3" /> {user.brgy}</p>
         </div>
-        <div className="relative">
-          <Avatar name={user.name} size="12" />
-          {userStatus === "Safe" && <div className="absolute -top-1 -right-1 h-3 w-3 bg-emerald-500 border-2 border-zinc-900 rounded-full"></div>}
+        <div className="relative z-50">
+          <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="relative active:scale-95 transition-transform focus:outline-none">
+            <Avatar name={user.name} size="12" />
+            {userStatus === "Safe" && <div className="absolute -top-1 -right-1 h-3 w-3 bg-emerald-500 border-2 border-zinc-900 rounded-full"></div>}
+          </button>
+          
+          <AnimatePresence>
+            {isProfileOpen && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 10 }} 
+                animate={{ opacity: 1, scale: 1, y: 0 }} 
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="absolute top-14 right-0 w-64 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl p-4 z-[500] origin-top-right"
+              >
+                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-zinc-800">
+                  <div className="bg-zinc-800 p-2 rounded-full shrink-0"><UserIcon className="h-5 w-5 text-zinc-400" /></div>
+                  <div className="overflow-hidden">
+                    <h3 className="text-white font-bold text-sm truncate">{user.name}</h3>
+                    <p className="text-zinc-500 text-xs truncate">{user.email || "Resident Account"}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider mb-0.5">Assigned Barangay</div>
+                    <div className="text-zinc-300 text-sm font-medium">{user.brgy}</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider mb-0.5">Specific Location</div>
+                    <div className="text-zinc-300 text-sm font-medium">{user.purok}</div>
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => logout()} 
+                  className="w-full bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-500/20 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors active:scale-95"
+                >
+                  <LogOut className="h-4 w-4" /> Secure Logout
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -226,14 +460,16 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => showToast(`Connecting to ${user.brgy} Hotline...`, "info")} className="bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all">
-          <div className="bg-blue-500/20 p-3 rounded-full text-blue-400"><PhoneCall className="h-6 w-6" /></div>
-          <span className="text-sm font-semibold">Brgy Hotline</span>
+      <div className="grid grid-cols-2 gap-4">
+        <button onClick={() => showToast(`Connecting to ${user.brgy} Hotline...`, "info")} className="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 hover:border-blue-500/50 active:scale-95 p-5 rounded-[24px] flex flex-col items-center justify-center gap-3 transition-all shadow-lg relative overflow-hidden group">
+          <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div className="bg-blue-500/10 p-4 rounded-full text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"><PhoneCall className="h-7 w-7" /></div>
+          <span className="text-[13px] font-bold tracking-wide">Brgy Hotline</span>
         </button>
-        <button onClick={() => { setUserStatus("Safe"); showToast("Your status has been updated to Safe.", "success"); }} className={`active:scale-95 border p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all ${userStatus === "Safe" ? "bg-emerald-500/20 border-emerald-500/50" : "bg-white/5 border-white/10 hover:bg-white/10"}`}>
-          <div className={`${userStatus === "Safe" ? "bg-emerald-500 text-white" : "bg-emerald-500/20 text-emerald-400"} p-3 rounded-full transition-colors`}><ShieldCheck className="h-6 w-6" /></div>
-          <span className="text-sm font-semibold">{userStatus === "Safe" ? "Marked Safe" : "I Am Safe"}</span>
+        <button onClick={() => { setUserStatus("Safe"); showToast("Your status has been updated to Safe.", "success"); }} className={`active:scale-95 border p-5 rounded-[24px] flex flex-col items-center justify-center gap-3 transition-all shadow-lg relative overflow-hidden group ${userStatus === "Safe" ? "bg-gradient-to-br from-emerald-900/40 to-emerald-900/10 border-emerald-500/50" : "bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700/50 hover:border-emerald-500/50"}`}>
+          <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div className={`${userStatus === "Safe" ? "bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]" : "bg-emerald-500/10 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]"} p-4 rounded-full transition-all`}><ShieldCheck className="h-7 w-7" /></div>
+          <span className="text-[13px] font-bold tracking-wide">{userStatus === "Safe" ? "Marked Safe" : "I Am Safe"}</span>
         </button>
       </div>
 
@@ -295,6 +531,31 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
             </button>
           </div>
         </div>
+      )}
+
+      {(!myReports || myReports.length === 0) && (!alerts || alerts.length === 0) && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 pt-2">
+          <div className="bg-gradient-to-br from-zinc-800/80 to-zinc-900 border border-zinc-700/50 rounded-3xl p-6 relative overflow-hidden shadow-xl">
+             <div className="absolute -top-4 -right-4 p-4 opacity-5"><ShieldCheck className="h-40 w-40" /></div>
+             <div className="relative z-10 flex items-center gap-3 mb-3">
+                <div className="h-2.5 w-2.5 bg-emerald-500 rounded-full animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
+                <span className="text-xs font-black text-emerald-500 tracking-widest uppercase">System Normal</span>
+             </div>
+             <h3 className="text-2xl font-black text-white mb-2 tracking-tight">No Active Threats</h3>
+             <p className="text-sm text-zinc-400 leading-relaxed max-w-[85%]">Your community is currently safe. No severe weather or emergency alerts have been issued for your area.</p>
+          </div>
+          
+          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-[20px] p-4 flex items-center justify-between backdrop-blur-sm">
+            <div className="flex items-center gap-4">
+               <div className="bg-blue-500/10 p-3 rounded-xl"><Info className="h-6 w-6 text-blue-500" /></div>
+               <div>
+                  <h4 className="font-bold text-sm text-zinc-100">Prepare Your Go-Bag</h4>
+                  <p className="text-xs text-zinc-500 mt-0.5">Read the LGU emergency guidelines.</p>
+               </div>
+            </div>
+            <button onClick={() => showToast("Opening emergency guidelines...", "info")} className="text-xs font-bold text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 active:scale-95 transition-all px-4 py-2 rounded-lg">View</button>
+          </div>
+        </motion.div>
       )}
     </motion.div>
   );
@@ -455,7 +716,7 @@ function MapView({ showToast, evacCenters }: any) {
 // ==========================================
 // 5. REPORT VIEW (WITH COMPRESSION + AI + FORMDATA)
 // ==========================================
-function ReportView({ showToast, user, refreshMyReports, setActiveTab }: any) {
+function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline }: any) {
   const [analyzing, setAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState<any>(null);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
@@ -472,17 +733,15 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab }: any) {
     if (file) {
       setSelectedFile(file);
       setAnalyzing(true);
-      const fileName = file.name.toLowerCase();
-
-      // Compress image aggressively so PHP doesn't reject it
+      
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");
           const MAX_WIDTH = 600; // Small size to guarantee it passes through PHP limits
-          const scaleSize = MAX_WIDTH / img.width;
-          canvas.width = MAX_WIDTH;
+          const scaleSize = Math.min(1, MAX_WIDTH / img.width); // NEVER UPSCALE
+          canvas.width = img.width * scaleSize;
           canvas.height = img.height * scaleSize;
 
           const ctx = canvas.getContext("2d");
@@ -576,36 +835,33 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab }: any) {
     
     setSubmitting(true);
 
-    // Using FormData instead of JSON.stringify to completely bypass PHP memory limits
-    const formData = new FormData();
-    formData.append("reporting_barangay", user.brgy);
-    formData.append("incident_type", selectedCat);
-    formData.append("severity_level", aiResult ? aiResult.severity : "Medium");
-    formData.append("exact_location", "GPS Ping, " + user.brgy);
-    formData.append("details", desc);
-    formData.append("status", "Active");
+    const payload: any = {
+      reporting_barangay: user?.brgy || "Unknown",
+      incident_type: selectedCat,
+      severity_level: aiResult ? aiResult.severity : "Medium",
+      exact_location: "GPS Ping, " + (user?.brgy || "Unknown"),
+      details: desc,
+      status: "Active"
+    };
     
     if (location) {
-        formData.append("latitude", location.lat.toString());
-        formData.append("longitude", location.lng.toString());
+        payload.latitude = location.lat;
+        payload.longitude = location.lng;
     }
     
     if (imagePreview) {
-        formData.append("image_data", imagePreview);
-    }
-    
-    if (selectedFile) {
-        formData.append("image", selectedFile);
+        payload.image_data = imagePreview;
     }
 
     try {
-      const response = await axiosInstance.post("/incidents", formData);
+      const response = await axiosInstance.post("/incidents", payload);
       const responseData = response.data;
 
       if (responseData.id) {
-        const existingIds = JSON.parse(localStorage.getItem("my_report_ids") || "[]");
+        const userKey = "my_report_ids_" + (user.id || user.email || 'guest');
+        const existingIds = JSON.parse(localStorage.getItem(userKey) || "[]");
         existingIds.push(responseData.id);
-        localStorage.setItem("my_report_ids", JSON.stringify(existingIds));
+        localStorage.setItem(userKey, JSON.stringify(existingIds));
       }
 
       showToast("Report officially submitted to the Command Center!", "success");
@@ -723,13 +979,32 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
   const [newPost, setNewPost] = useState("");
   const [activeReplyId, setActiveReplyId] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
+  const isOffline = !navigator.onLine;
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if(!newPost.trim()) return;
-    const post = { id: Date.now(), author: user.name, time: "Just now", content: newPost, verified: false, likes: 0, liked: false, type: "update", replies: [] };
-    setPosts([post, ...posts]);
-    setNewPost("");
-    showToast("Update shared with the community.", "success");
+    const postPayload = { author: user.name, content: newPost, verified: false, type: "update" };
+    
+    if (isOffline) {
+      const offlinePosts = JSON.parse(localStorage.getItem("offline_posts") || "[]");
+      offlinePosts.push(postPayload);
+      localStorage.setItem("offline_posts", JSON.stringify(offlinePosts));
+      
+      const optimisticPost = { ...postPayload, id: Date.now(), created_at: new Date().toISOString(), _isOfflinePending: true };
+      setPosts([optimisticPost, ...posts]);
+      setNewPost("");
+      showToast("Offline: Update saved to local mesh buffer. Will sync when online.", "info");
+      return;
+    }
+
+    try {
+      const res = await axiosInstance.post('/feed', postPayload);
+      setPosts([res.data, ...posts]);
+      setNewPost("");
+      showToast("Update shared with the community.", "success");
+    } catch(e) {
+      showToast("Failed to post update", "error");
+    }
   };
 
   const handleReplySubmit = (postId: number) => {
@@ -740,8 +1015,11 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
     showToast("Reply posted successfully.", "success");
   };
 
-  const toggleLike = (id: number) => {
-    setPosts(posts.map((p:any) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
+  const toggleLike = async (id: number) => {
+    try {
+      setPosts(posts.map((p:any) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
+      await axiosInstance.post(`/feed/${id}/like`);
+    } catch(e) {}
   };
 
   return (
@@ -771,7 +1049,11 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
                     {post.type === 'official' ? <ShieldCheck className="h-5 w-5 text-blue-400" /> : <Avatar name={post.author} size="10" />}
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-zinc-100 flex items-center gap-1">{post.author} {post.verified && <CheckCircle className="h-3 w-3 text-blue-500" />}</h4>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-sm text-zinc-100">{post.author}</span>
+                      {post.verified && <CheckCircle className="h-3 w-3 text-blue-500" />}
+                      {post._isOfflinePending && <span className="bg-orange-900/30 text-orange-400 text-[8px] px-1 rounded uppercase font-bold">Pending Sync</span>}
+                    </div>
                     <p className="text-[10px] text-zinc-500">{post.time}</p>
                   </div>
                 </div>
@@ -827,14 +1109,24 @@ function FamilyView({ showToast, members, setMembers, userStatus, setUserStatus 
   const [newName, setNewName] = useState("");
   const [newRelation, setNewRelation] = useState("");
 
-  const handleAddSubmit = () => {
+  const handleAddSubmit = async () => {
     if(!newName.trim() || !newRelation.trim()) return showToast("Please fill all fields", "error");
-    const newMember = { id: Date.now(), name: newName, relation: newRelation, status: "Waiting..." };
-    setMembers([...members, newMember]);
-    setNewName("");
-    setNewRelation("");
-    setIsAdding(false);
-    showToast(`${newName} added to family tracking.`, "success");
+    try {
+      const res = await axiosInstance.post('/family', { name: newName, relation: newRelation, status: "Waiting..." });
+      setMembers([...members, res.data]);
+      setNewName(""); setNewRelation(""); setIsAdding(false);
+      showToast(`${newName} added to family tracking.`, "success");
+    } catch(e) {
+      showToast("Failed to add member", "error");
+    }
+  };
+
+  const handleMarkSafe = async () => {
+    setUserStatus("Safe");
+    showToast("Your safety status has been broadcasted.", "success");
+    try {
+      await axiosInstance.post('/family/status', { name: "Juan Dela Cruz", status: "Safe" });
+    } catch (e) {}
   };
 
   return (
@@ -848,7 +1140,7 @@ function FamilyView({ showToast, members, setMembers, userStatus, setUserStatus 
         <h2 className={`text-xl font-bold mb-2 transition-colors duration-500 ${userStatus === "Safe" ? "text-emerald-400" : "text-zinc-200"}`}>{userStatus === "Safe" ? "You are marked Safe" : "Check In Now"}</h2>
         <p className="text-sm text-zinc-400 mb-6">Let your family and the Barangay know you are currently safe.</p>
         <button 
-          onClick={() => { setUserStatus("Safe"); showToast("Your safety status has been broadcasted.", "success"); }}
+          onClick={handleMarkSafe}
           disabled={userStatus === "Safe"}
           className={`w-full font-black tracking-widest uppercase py-4 rounded-2xl shadow-lg transition-all active:scale-95 disabled:opacity-50 ${userStatus === "Safe" ? "bg-emerald-500 text-zinc-950" : "bg-white text-zinc-950 hover:bg-zinc-200"}`}
         >

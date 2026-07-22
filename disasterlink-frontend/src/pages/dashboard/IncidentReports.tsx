@@ -45,8 +45,19 @@ export default function IncidentReports() {
     }
   };
 
+  const handleVerify = async (id: number) => {
+    try {
+      await axiosInstance.post(`/incidents/${id}/verify`);
+      fetchIncidents();
+    } catch (error) {
+      console.error("Failed to verify incident", error);
+    }
+  };
+
   useEffect(() => {
     fetchIncidents();
+    const interval = setInterval(fetchIncidents, 15000); // Auto-refresh every 15s
+    return () => clearInterval(interval);
   }, []);
 
   const handleOpenDispatch = (incident: any) => {
@@ -71,8 +82,8 @@ export default function IncidentReports() {
     setIsDispatching(true);
     
     try {
-      // Real PATCH request to update database
-      await axiosInstance.patch(`/incidents/${selectedIncident.id}`, {
+      // Real PUT request to update database
+      await axiosInstance.put(`/incidents/${selectedIncident.id}`, {
         status: `Dispatched: ${selectedResponder}`
       });
       
@@ -156,10 +167,10 @@ export default function IncidentReports() {
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 block">Uploaded Field Proof</label>
                   <div className="relative rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-900 aspect-video group flex items-center justify-center">
                     
-                    {selectedIncident.image_data && selectedIncident.image_data.length > 50 ? (
+                    {(selectedIncident.image_path || (selectedIncident.image_data && selectedIncident.image_data.length > 50)) ? (
                       <>
                         <img 
-                          src={selectedIncident.image_data} 
+                          src={selectedIncident.image_path || selectedIncident.image_data} 
                           alt="Incident Evidence" 
                           className="w-full h-full object-contain bg-black"
                         />
@@ -357,9 +368,20 @@ export default function IncidentReports() {
                     <TableCell className="text-sm font-bold text-blue-500">{r.status}</TableCell>
                     <TableCell className="text-right px-6">
                       {!r.status.includes("Dispatched") && !r.status.includes("Resolved") ? (
-                        <Button onClick={() => handleOpenDispatch(r)} size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs font-bold shadow-md flex items-center gap-1.5 ml-auto">
-                          <ShieldAlert className="h-3.5 w-3.5" /> Deploy Responder
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            onClick={(e) => { e.stopPropagation(); handleVerify(r.id); }} 
+                            size="sm" 
+                            variant="outline" 
+                            disabled={r.verifications >= 3}
+                            className={`h-8 text-xs font-bold border-blue-200 text-blue-600 ${r.verifications >= 3 ? 'opacity-50' : 'hover:bg-blue-50'}`}
+                          >
+                            {r.verifications >= 3 ? 'Verified' : 'Verify'} ({Math.min(r.verifications || 0, 3)}/3)
+                          </Button>
+                          <Button onClick={() => handleOpenDispatch(r)} size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs font-bold shadow-md flex items-center gap-1.5">
+                            <ShieldAlert className="h-3.5 w-3.5" /> Deploy Responder
+                          </Button>
+                        </div>
                       ) : (
                         <Button variant="outline" size="sm" disabled className="h-8 text-xs border-emerald-500/30 text-emerald-500 bg-emerald-500/10 ml-auto">
                           <CheckCircle className="h-3 w-3 mr-1" /> {r.status.includes("Dispatched") ? "Dispatched" : "Resolved"}

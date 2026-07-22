@@ -15,9 +15,25 @@ import CommunityPortal from "./pages/dashboard/CommunityPortal";
 import 'leaflet/dist/leaflet.css';
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
+  const { isAuthenticated, user, logout } = useAuth();
+  
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  
+  // If the route requires roles, but user data is missing/corrupted, force logout
+  if (allowedRoles && !user) {
+    logout();
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // Prevent privilege escalation and redirect to appropriate dashboards
+    if (user.role === 'resident' || user.role === 'citizen') return <Navigate to="/portal" replace />;
+    if (user.role === 'responder') return <Navigate to="/responder-dispatch" replace />;
+    if (user.role === 'barangay_captain') return <Navigate to="/barangay-command" replace />;
+    return <Navigate to="/login" replace />;
+  }
+
   return children;
 };
 
@@ -32,21 +48,21 @@ export default function App() {
             <Route path="/signup" element={<Signup />} /> 
 
             {/* Mobile-First Routes (No Sidebar) */}
-            <Route path="/responder-dispatch" element={<ProtectedRoute><ResponderMobile /></ProtectedRoute>} />
-            <Route path="/portal" element={<ProtectedRoute><CommunityPortal /></ProtectedRoute>} /> {/* <-- Added Portal Route */}
+            <Route path="/responder-dispatch" element={<ProtectedRoute allowedRoles={['responder']}><ResponderMobile /></ProtectedRoute>} />
+            <Route path="/portal" element={<ProtectedRoute allowedRoles={['resident', 'citizen']}><CommunityPortal /></ProtectedRoute>} />
 
             {/* Admin & Barangay Dashboard Routes (With Sidebar) */}
-            <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff', 'barangay_captain']}><DashboardLayout /></ProtectedRoute>}>
               {/* Master Admin Pages */}
-              <Route path="/" element={<Overview />} />
-              <Route path="/map" element={<GisMap />} />
-              <Route path="/reports" element={<IncidentReports />} />
-              <Route path="/weather" element={<LiveWeather />} />
-              <Route path="/alerts" element={<EmergencyAlerts />} />
-              <Route path="/settings" element={<Settings />} /> 
+              <Route path="/" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><Overview /></ProtectedRoute>} />
+              <Route path="/map" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><GisMap /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><IncidentReports /></ProtectedRoute>} />
+              <Route path="/weather" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><LiveWeather /></ProtectedRoute>} />
+              <Route path="/alerts" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><EmergencyAlerts /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><Settings /></ProtectedRoute>} /> 
               
               {/* Localized Barangay Command Center */}
-              <Route path="/barangay-command" element={<BarangayDashboard />} />
+              <Route path="/barangay-command" element={<ProtectedRoute allowedRoles={['barangay_captain']}><BarangayDashboard /></ProtectedRoute>} />
             </Route>
             
             {/* Catch-all redirect */}

@@ -32,7 +32,7 @@ export default function DashboardLayout() {
   const [user, setUser] = useState({ name: "Loading...", role: "guest", department: "Loading...", assigned_barangay: "all" });
   
   // Notification State
-  const [notifications, setNotifications] = useState<typeof MOCK_NOTIFICATIONS>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

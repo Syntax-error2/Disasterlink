@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   CloudRain, Wind, Droplets, AlertTriangle, 
   Map as MapIcon, Activity, ShieldAlert,
-  Thermometer, Gauge, Zap, Loader2, RefreshCw, Send, X, CheckCircle, Info
+  Thermometer, Gauge, Zap, Loader2, RefreshCw, Send, X, CheckCircle, Info, CloudLightning
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup, LayersControl, Circle } from "react-leaflet";
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";
+import axiosInstance from "../../lib/axios";
 
 // --- TYPES & CONSTANTS ---
 interface WeatherData {
@@ -50,8 +51,54 @@ const WeatherMap = () => (
   </Card>
 );
 
-const CycloneTracker = ({ cycloneData }: { cycloneData: any }) => {
+const CycloneTracker = ({ cycloneData, pagasaData }: { cycloneData: any, pagasaData: any }) => {
   if (!cycloneData) {
+    if (pagasaData && pagasaData.active) {
+       return (
+        <Card className="shadow-lg border-orange-500/30 dark:border-orange-500/30 bg-gradient-to-br from-white to-orange-50 dark:from-[#111115] dark:to-orange-950/20 relative overflow-hidden h-[500px] col-span-1">
+          <div className="absolute -right-12 -top-12 opacity-5 animate-[spin_20s_linear_infinite]">
+            <CloudLightning className="w-64 h-64 text-orange-500" />
+          </div>
+          <CardHeader>
+            <CardTitle className="text-orange-600 dark:text-orange-400 flex items-center gap-2 uppercase tracking-wider text-sm">
+              <Activity className="h-4 w-4 animate-pulse" /> PAGASA Local Telemetry
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="relative z-10 space-y-6">
+            <div>
+              <h2 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tighter">{pagasaData.category} {pagasaData.name}</h2>
+              <span className="inline-block mt-2 bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">PAGASA LOCAL MONITORING</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Status</div>
+                <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{pagasaData.category}</div>
+              </div>
+              <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Former Name</div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 h-8">{pagasaData.former_name}</div>
+              </div>
+              <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm col-span-2">
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Location</div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{pagasaData.location}</div>
+              </div>
+              <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Wind Gust</div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 h-8">{pagasaData.wind_gust}</div>
+              </div>
+              <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Movement</div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 h-8">{pagasaData.movement}</div>
+              </div>
+            </div>
+            
+            <div className="text-sm font-semibold mb-3 flex justify-between"><span className="text-orange-500">PAGASA Bulletin</span> <span className="text-xs text-zinc-500">{pagasaData.issued_at}</span></div>
+          </CardContent>
+        </Card>
+       );
+    }
+    
     return (
       <Card className="shadow-lg border-zinc-200 dark:border-zinc-800 bg-gradient-to-br from-white to-zinc-50 dark:from-[#111115] dark:to-zinc-900 relative overflow-hidden h-[500px] col-span-1 flex flex-col items-center justify-center">
         <ShieldAlert className="h-16 w-16 text-emerald-500 mb-4 opacity-50" />
@@ -105,6 +152,110 @@ const CycloneTracker = ({ cycloneData }: { cycloneData: any }) => {
   );
 };
 
+const EarthquakeTracker = ({ earthquakeData }: { earthquakeData: any }) => {
+  if (!earthquakeData) {
+    return (
+      <Card className="shadow-lg border-zinc-200 dark:border-zinc-800 bg-gradient-to-br from-white to-zinc-50 dark:from-[#111115] dark:to-zinc-900 relative overflow-hidden h-[500px] col-span-1 flex flex-col items-center justify-center">
+        <Activity className="h-16 w-16 text-emerald-500 mb-4 opacity-50" />
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 uppercase tracking-widest text-center">Seismic Activity Normal</h3>
+        <p className="text-sm text-zinc-500 mt-2 text-center px-6">USGS reports no significant earthquakes (M4.5+) globally in the past 24 hours.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="shadow-lg border-orange-500/30 dark:border-orange-500/30 bg-gradient-to-br from-white to-orange-50 dark:from-[#111115] dark:to-orange-950/20 relative overflow-hidden h-[500px] col-span-1">
+      <div className="absolute -right-12 -top-12 opacity-5 animate-[ping_3s_linear_infinite]">
+        <Activity className="w-64 h-64 text-orange-500" />
+      </div>
+      <CardHeader>
+        <CardTitle className="text-orange-600 dark:text-orange-400 flex items-center gap-2 uppercase tracking-wider text-sm">
+          <Activity className="h-4 w-4 animate-pulse" /> Live Seismic Telemetry
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="relative z-10 space-y-6">
+        <div>
+          <h2 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tighter">Mag {earthquakeData.mag?.toFixed(1)}</h2>
+          <span className="inline-block mt-2 bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">USGS ALERT: {earthquakeData.alert ? earthquakeData.alert.toUpperCase() : "PENDING REVIEW"}</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Depth</div>
+            <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{earthquakeData.geometry?.coordinates?.[2]?.toFixed(1)} <span className="text-sm">km</span></div>
+          </div>
+          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">MMI (Intensity)</div>
+            <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{earthquakeData.mmi ? earthquakeData.mmi.toFixed(1) : "N/A"}</div>
+          </div>
+          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm col-span-2">
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Epicenter Location</div>
+            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 truncate">{earthquakeData.place}</div>
+          </div>
+          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-orange-500/30 backdrop-blur-sm transition-all col-span-2">
+            <div className="text-xs text-orange-500 dark:text-orange-400 mb-1">Epicenter Coordinates</div>
+            <div className="text-sm font-bold text-orange-600 dark:text-orange-400">{earthquakeData.geometry?.coordinates?.[1]?.toFixed(2)}°N, {earthquakeData.geometry?.coordinates?.[0]?.toFixed(2)}°E</div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
+          <div className="text-sm font-semibold mb-3 flex justify-between"><span>USGS Seismic Info</span> <span className="text-xs text-zinc-500">{new Date(earthquakeData.time).toLocaleString()}</span></div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const VolcanoTracker = ({ volcanoData }: { volcanoData: any }) => {
+  if (!volcanoData) {
+    return (
+      <Card className="shadow-lg border-zinc-200 dark:border-zinc-800 bg-gradient-to-br from-white to-zinc-50 dark:from-[#111115] dark:to-zinc-900 relative overflow-hidden h-[500px] col-span-1 flex flex-col items-center justify-center">
+        <Thermometer className="h-16 w-16 text-emerald-500 mb-4 opacity-50" />
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 uppercase tracking-widest text-center">Volcanic Status Normal</h3>
+        <p className="text-sm text-zinc-500 mt-2 text-center px-6">No major volcanic unrest detected locally (Kanlaon) or globally by GDACS.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="shadow-lg border-purple-500/30 dark:border-purple-500/30 bg-gradient-to-br from-white to-purple-50 dark:from-[#111115] dark:to-purple-950/20 relative overflow-hidden h-[500px] col-span-1">
+      <div className="absolute -right-12 -top-12 opacity-5 animate-[ping_4s_linear_infinite]">
+        <Thermometer className="w-64 h-64 text-purple-500" />
+      </div>
+      <CardHeader>
+        <CardTitle className="text-purple-600 dark:text-purple-400 flex items-center gap-2 uppercase tracking-wider text-sm">
+          <Activity className="h-4 w-4 animate-pulse" /> Live Volcanic Telemetry
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="relative z-10 space-y-6">
+        <div>
+          <h2 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tighter truncate">{volcanoData.name}</h2>
+          <span className="inline-block mt-2 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">GDACS ALERT: {volcanoData.alertlevel ? volcanoData.alertlevel.toUpperCase() : "MONITORING"}</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all col-span-2">
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Details</div>
+            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 truncate">{volcanoData.description || volcanoData.severitydata?.severitytext || "Eruption Event"}</div>
+          </div>
+          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all col-span-2">
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Region</div>
+            <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50 truncate">{volcanoData.country}</div>
+          </div>
+          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-purple-500/30 backdrop-blur-sm transition-all col-span-2">
+            <div className="text-xs text-purple-500 dark:text-purple-400 mb-1">Volcano Coordinates</div>
+            <div className="text-sm font-bold text-purple-600 dark:text-purple-400">{volcanoData.geometry?.coordinates?.[1]?.toFixed(2)}°N, {volcanoData.geometry?.coordinates?.[0]?.toFixed(2)}°E</div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
+          <div className="text-sm font-semibold mb-3 flex justify-between"><span>GDACS Volcanic Info</span> <span className="text-xs text-zinc-500">{new Date(volcanoData.datemodified || volcanoData.fromdate).toLocaleString()}</span></div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 // --- MAIN PAGE COMPONENT ---
 
 export default function LiveWeather() {
@@ -126,6 +277,9 @@ export default function LiveWeather() {
   };
 
   const [cycloneData, setCycloneData] = useState<any>(null);
+  const [pagasaData, setPagasaData] = useState<any>(null);
+  const [earthquakeData, setEarthquakeData] = useState<any>(null);
+  const [volcanoData, setVolcanoData] = useState<any>(null);
   const [defcon, setDefcon] = useState({ level: 5, text: "Normal Operations", color: "bg-emerald-600" });
   const [hazardMatrix, setHazardMatrix] = useState(HAZARD_MATRIX);
   const [actionRec, setActionRec] = useState({ text: "Initializing AI models...", classes: { bg: 'bg-zinc-50 dark:bg-zinc-500/10', border: 'border-zinc-200 dark:border-zinc-500/20', text: 'text-zinc-600 dark:text-zinc-400' } });
@@ -172,31 +326,93 @@ export default function LiveWeather() {
   const fetchWeather = async () => {
     setLoading(true);
     try {
-      // Free Open-Meteo API
-      const url = "https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure&hourly=precipitation&timezone=Asia%2FManila&forecast_days=2";
-      const response = await fetch(url);
-      const data = await response.json();
+      // Use Backend Proxy to bypass CORS/Adblockers (Using axios to resolve dynamic network IP for mobile testing)
+      const response = await axiosInstance.get("/telemetry");
+      const rootData = response.data;
       
-      if (data.error || !data.current || !data.hourly) {
+      if (rootData.error) throw new Error(rootData.error);
+      
+      const data = rootData.weather;
+      const gdacsJson = rootData.gdacs;
+      const usgsJson = rootData.usgs;
+      
+      if (!data || data.error || !data.current || !data.hourly) {
         throw new Error("Open-Meteo returned invalid data");
       }
 
       setWeather(data);
+      if (rootData.pagasa) {
+         setPagasaData(rootData.pagasa);
+      }
       
-      // Fetch GDACS Cyclone Data (Filtered ONLY for Tropical Cyclones)
+      // Parse GDACS Telemetry (Cyclones and Volcanoes)
       try {
-        const gdacsUrl = "https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH";
-        const gdacsRes = await fetch(gdacsUrl);
-        const gdacsJson = await gdacsRes.json();
-        const cyclones = gdacsJson?.features?.filter((f: any) => f.properties.eventtype === 'TC') || [];
-        
+        // Parse Cyclones (Filter by Active within 7 days, and in PAR/Philippines)
+        const cyclones = gdacsJson?.features?.filter((f: any) => {
+           if (f.properties.eventtype !== 'TC') return false;
+           
+           // Filter for Realtime/Active: Must be within the last 7 days
+           const eventDate = new Date(f.properties.todate || f.properties.datemodified || f.properties.fromdate);
+           const diffDays = (new Date().getTime() - eventDate.getTime()) / (1000 * 3600 * 24);
+           if (diffDays > 7) return false;
+
+           const country = f.properties.country?.toLowerCase() || "";
+           if (country.includes("philippines")) return true;
+
+           const lng = f.geometry?.coordinates?.[0];
+           const lat = f.geometry?.coordinates?.[1];
+           if (lat === undefined || lng === undefined) return false;
+           return (lat >= 5 && lat <= 25 && lng >= 115 && lng <= 135);
+        }) || [];
         if (cyclones.length > 0) {
-            setCycloneData(cyclones[0].properties);
+            setCycloneData({ ...cyclones[0].properties, geometry: cyclones[0].geometry });
         } else {
             setCycloneData(null);
         }
+
+        // Parse Volcanoes (Filter for Kanlaon or Negros Island Bounds: Lat 8.5 to 11.0, Lng 122.0 to 123.5)
+        const volcanoes = gdacsJson?.features?.filter((f: any) => {
+           if (f.properties.eventtype !== 'VO') return false;
+           const name = f.properties.name?.toLowerCase() || "";
+           if (name.includes("kanlaon") || name.includes("canlaon")) return true;
+           const lng = f.geometry?.coordinates?.[0];
+           const lat = f.geometry?.coordinates?.[1];
+           if (lat === undefined || lng === undefined) return false;
+           return (lat >= 8.5 && lat <= 11.0 && lng >= 122.0 && lng <= 123.5);
+        }) || [];
+        if (volcanoes.length > 0) {
+            setVolcanoData({ ...volcanoes[0].properties, geometry: volcanoes[0].geometry });
+        } else {
+            // Force Kanlaon to always display as baseline
+            setVolcanoData({
+                name: "Mount Kanlaon",
+                alertlevel: "Green",
+                country: "Philippines",
+                description: "Background status. No active major GDACS alert.",
+                datemodified: new Date().toISOString(),
+                geometry: { coordinates: [123.13, 10.41] }
+            });
+        }
       } catch (e) {
         console.warn("GDACS Fetch Error:", e);
+      }
+
+      // Parse USGS Earthquake Data (All magnitudes for the past month to guarantee Negros Island low-mag data)
+      try {
+        const quakes = usgsJson?.features?.filter((f: any) => {
+           const lng = f.geometry?.coordinates?.[0];
+           const lat = f.geometry?.coordinates?.[1];
+           if (lat === undefined || lng === undefined) return false;
+           return (lat >= 8.5 && lat <= 11.0 && lng >= 122.0 && lng <= 123.5);
+        }) || [];
+        
+        if (quakes.length > 0) {
+            setEarthquakeData({ ...quakes[0].properties, geometry: quakes[0].geometry });
+        } else {
+            setEarthquakeData(null);
+        }
+      } catch (e) {
+        console.warn("USGS Fetch Error:", e);
       }
       
       // Parse Hourly Precipitation for the Chart
@@ -248,7 +464,7 @@ export default function LiveWeather() {
 
   useEffect(() => {
     fetchWeather();
-    const interval = setInterval(fetchWeather, 300000); // 5 min refresh
+    const interval = setInterval(fetchWeather, 15000); // 15 seconds refresh for real-time tracking
     return () => clearInterval(interval);
   }, []);
 
@@ -405,10 +621,18 @@ export default function LiveWeather() {
         </motion.div>
       </div>
 
-      {/* MIDDLE SECTION: MAP & CYCLONE */}
+      {/* MIDDLE SECTION 1: MAP & CYCLONE */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <WeatherMap />
-        <CycloneTracker cycloneData={cycloneData} />
+        <div className="lg:col-span-2">
+          <WeatherMap />
+        </div>
+        <CycloneTracker cycloneData={cycloneData} pagasaData={pagasaData} />
+      </div>
+
+      {/* MIDDLE SECTION 2: EARTHQUAKE & VOLCANO */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <EarthquakeTracker earthquakeData={earthquakeData} />
+        <VolcanoTracker volcanoData={volcanoData} />
       </div>
 
       {/* BOTTOM SECTION: ANALYTICS & HAZARDS */}

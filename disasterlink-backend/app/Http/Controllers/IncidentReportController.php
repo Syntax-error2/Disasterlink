@@ -23,7 +23,18 @@ class IncidentReportController extends Controller
             $imagePath = null;
             if ($request->hasFile('image')) {
                 $path = $request->file('image')->store('incidents', 'public');
-                $imagePath = 'http://127.0.0.1:8000/storage/' . $path;
+                $imagePath = url('storage/' . $path);
+            }
+            
+            $imageData = $request->input('image_data');
+            if ($imageData && strpos($imageData, 'data:image') === 0) {
+                // Decode base64 and save to storage/incidents/ to bypass MySQL max_allowed_packet
+                $base64Data = substr($imageData, strpos($imageData, ',') + 1);
+                $decodedData = base64_decode($base64Data);
+                $filename = 'incidents/' . uniqid() . '.jpg';
+                \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decodedData);
+                $imagePath = url('storage/' . $filename);
+                $imageData = null; // Do not insert the massive string into the DB!
             }
 
             $barangay = $request->input('reporting_barangay', 'Unknown');
@@ -48,7 +59,7 @@ class IncidentReportController extends Controller
                     $recentIncident->update([
                         'exact_location' => $request->input('exact_location', $recentIncident->exact_location),
                         'details' => $recentIncident->details . "\n" . $request->input('details', 'No narrative provided.'),
-                        'image_data' => $request->input('image_data', $recentIncident->image_data),
+                        'image_data' => $imageData ?: $recentIncident->image_data,
                         'image_path' => $imagePath ?: $recentIncident->image_path,
                     ]);
                     return response()->json(['message' => 'Report Merged!', 'id' => $recentIncident->id], 200);
@@ -63,7 +74,7 @@ class IncidentReportController extends Controller
                 'latitude'           => $request->input('latitude'),
                 'longitude'          => $request->input('longitude'),
                 'details'            => $request->input('details', 'No narrative provided.'),
-                'image_data'         => $request->input('image_data'),
+                'image_data'         => $imageData,
                 'image_path'         => $imagePath,
                 'status'             => $request->input('status', 'Pending Review'),
             ]);
@@ -76,12 +87,26 @@ class IncidentReportController extends Controller
 
     public function update(Request $request, $id)
     {
+        $incident = IncidentReport::findOrFail($id);
+        $incident->update($request->all());
+        return response()->json($incident, 200);
+    }
+
+    public function verify($id)
+    {
         try {
             $incident = IncidentReport::findOrFail($id);
-            $incident->update([
-                'status' => $request->input('status')
-            ]);
-            return response()->json(['message' => 'Status updated!'], 200);
+            $incident->increment('verifications');
+            
+            // If it hits 3 verifications, upgrade severity/status
+            if ($incident->verifications >= 3 && $incident->status !== 'Resolved' && !str_starts_with($incident->status, 'Dispatched:')) {
+                $incident->update([
+                    'severity_level' => 'Critical',
+                    'status' => 'Verified / Critical'
+                ]);
+            }
+            
+            return response()->json($incident, 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
