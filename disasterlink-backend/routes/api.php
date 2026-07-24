@@ -5,14 +5,23 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
-// Authentication Routes
-Route::post('/register/send-otp', [AuthController::class, 'sendOtp']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
+// --------------------------------------------------------
+// SuperAdmin Routes
+// --------------------------------------------------------
+Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    Route::get('/superadmin/lgus', [\App\Http\Controllers\SuperAdminController::class, 'getLgus']);
+    Route::post('/superadmin/lgus', [\App\Http\Controllers\SuperAdminController::class, 'createLgu']);
 });
+
+// --------------------------------------------------------
+// Auth & Public Routes
+// --------------------------------------------------------
+Route::middleware('throttle:auth')->group(function () {
+    Route::post('/register/send-otp', [AuthController::class, 'sendOtp']);
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
+Route::get('/tenant-config/{subdomain}', [AuthController::class, 'tenantConfig'])->middleware('throttle:api');
 
 use App\Http\Controllers\IncidentReportController;
 use App\Http\Controllers\EvacuationCenterController;
@@ -21,45 +30,49 @@ use App\Http\Controllers\CommunityPostController;
 use App\Http\Controllers\FamilyMemberController;
 use App\Http\Controllers\ResponderTelemetryController;
 
-// ==========================================
-// INCIDENT REPORTING API
-// ==========================================
-Route::get('/incidents', [IncidentReportController::class, 'index']);
-Route::post('/incidents', [IncidentReportController::class, 'store']);
-Route::put('/incidents/{id}', [IncidentReportController::class, 'update']);
-Route::post('/incidents/{id}/verify', [IncidentReportController::class, 'verify']);
-Route::get('/telemetry', [App\Http\Controllers\TelemetryController::class, 'index']);
-Route::get('/ai/predictions', [App\Http\Controllers\TelemetryController::class, 'aiPredictions']);
-Route::get('/broadcast', [App\Http\Controllers\BroadcastController::class, 'get']);
-Route::post('/broadcast', [App\Http\Controllers\BroadcastController::class, 'store']);
+Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
 
-// ==========================================
-// EVACUATION CENTERS API
-// ==========================================
-Route::get('/evacuation-centers', [EvacuationCenterController::class, 'index']);
-Route::post('/evacuation-centers', [EvacuationCenterController::class, 'store']);
+    // ==========================================
+    // INCIDENT REPORTING API
+    // ==========================================
+    Route::get('/incidents', [IncidentReportController::class, 'index']);
+    Route::post('/incidents', [IncidentReportController::class, 'store']);
+    Route::put('/incidents/{id}', [IncidentReportController::class, 'update']);
+    Route::post('/incidents/{id}/verify', [IncidentReportController::class, 'verify']);
+    Route::get('/telemetry', [App\Http\Controllers\TelemetryController::class, 'index']);
+    Route::get('/ai/predictions', [App\Http\Controllers\TelemetryController::class, 'aiPredictions']);
+    Route::get('/broadcast', [App\Http\Controllers\BroadcastController::class, 'get']);
+    Route::post('/broadcast', [App\Http\Controllers\BroadcastController::class, 'store']);
 
-// ==========================================
-// DASHBOARD STATS API
-// ==========================================
-Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+    // ==========================================
+    // EVACUATION CENTERS API
+    // ==========================================
+    Route::get('/evacuation-centers', [EvacuationCenterController::class, 'index']);
+    Route::post('/evacuation-centers', [EvacuationCenterController::class, 'store']);
 
-// ==========================================
-// COMMUNITY FEED API
-// ==========================================
-Route::get('/feed', [CommunityPostController::class, 'index']);
-Route::post('/feed', [CommunityPostController::class, 'store']);
-Route::post('/feed/{id}/like', [CommunityPostController::class, 'like']);
+    // ==========================================
+    // DASHBOARD STATS API
+    // ==========================================
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
-// ==========================================
-// FAMILY TRACKING API
-// ==========================================
-Route::get('/family', [FamilyMemberController::class, 'index']);
-Route::post('/family', [FamilyMemberController::class, 'store']);
-Route::post('/family/status', [FamilyMemberController::class, 'updateStatus']);
+    // ==========================================
+    // COMMUNITY FEED API
+    // ==========================================
+    Route::get('/feed', [CommunityPostController::class, 'index']);
+    Route::post('/feed', [CommunityPostController::class, 'store']);
+    Route::post('/feed/{id}/like', [CommunityPostController::class, 'like']);
 
-// ==========================================
-// RESPONDER TELEMETRY API
-// ==========================================
-Route::get('/responder/locations', [ResponderTelemetryController::class, 'index']);
-Route::post('/responder/ping', [ResponderTelemetryController::class, 'ping']);
+    // ==========================================
+    // FAMILY TRACKING API
+    // ==========================================
+    Route::get('/family', [FamilyMemberController::class, 'index']);
+    Route::post('/family', [FamilyMemberController::class, 'store']);
+    Route::post('/family/status', [FamilyMemberController::class, 'updateStatus']);
+
+    // ==========================================
+    // RESPONDER TELEMETRY API
+    // ==========================================
+    Route::get('/responder/locations', [ResponderTelemetryController::class, 'index']);
+    Route::post('/responder/ping', [ResponderTelemetryController::class, 'ping']);
+});

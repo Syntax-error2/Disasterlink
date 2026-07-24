@@ -11,7 +11,7 @@ class TelemetryController extends Controller
     {
         $weather = null;
         try {
-            $weather = Http::timeout(8)->get("https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure&hourly=precipitation&timezone=Asia%2FManila&forecast_days=2")->json();
+            $weather = Http::timeout(8)->get("https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila&forecast_days=2")->json();
         } catch (\Exception $e) {}
 
         $gdacs = null;

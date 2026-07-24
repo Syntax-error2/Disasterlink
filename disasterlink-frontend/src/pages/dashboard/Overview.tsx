@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import axiosInstance from "../../lib/axios";
-
+import { useAuth } from "../../context/AuthContext";
 function LocationPicker({ position, setPosition }: { position: [number, number] | null, setPosition: (p: [number, number]) => void }) {
   useMapEvents({
     click(e) {
@@ -69,6 +69,10 @@ const timeAgo = (dateString: string) => {
 };
 
 export default function Overview() {
+  const { user } = useAuth();
+  const MAP_CENTER: [number, number] = user?.lgu ? [Number(user.lgu.latitude), Number(user.lgu.longitude)] : [10.1866, 122.8587];
+
+  const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [weatherTemp, setWeatherTemp] = useState<string>("--");
   const [weatherWind, setWeatherWind] = useState<string>("--");
@@ -283,7 +287,7 @@ export default function Overview() {
                       </button>
                     </div>
 
-                    <MapContainer center={[10.1866, 122.8587]} zoom={14} className="h-full w-full" zoomControl={false}>
+                    <MapContainer center={MAP_CENTER} zoom={14} className="h-full w-full" zoomControl={false}>
                       <TileLayer 
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

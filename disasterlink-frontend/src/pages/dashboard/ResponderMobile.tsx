@@ -29,6 +29,15 @@ function MapUpdater({ center }: { center: [number, number] }) {
 }
 
 export default function ResponderMobile() {
+  const { logout, user } = useAuth();
+  const MAP_CENTER: [number, number] = user?.lgu ? [Number(user.lgu.latitude), Number(user.lgu.longitude)] : [10.1866, 122.8587];
+
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<"missions" | "map" | "comms" | "profile">("missions");
+  
+  // Real-time states
+  const [isOnline, setIsOnline] = useState(true);
+  const [isDeploying, setIsDeploying] = useState(false);
   const [incident, setIncident] = useState<any>(null);
   const [status, setStatus] = useState("Available"); // Available, Dispatched, En Route, On Scene
   
@@ -43,7 +52,7 @@ export default function ResponderMobile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Real-time responder location (defaults to a central point until GPS locks)
-  const [responderLocation, setResponderLocation] = useState<[number, number]>([10.1866, 122.8587]);
+  const [responderLocation, setResponderLocation] = useState<[number, number]>(MAP_CENTER);
 
   // ==========================================
   // REAL-TIME GPS TRACKING
@@ -188,13 +197,11 @@ export default function ResponderMobile() {
   // ==========================================
   // RESPONDER PROFILE & LOGOUT
   // ==========================================
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [showProfile, setShowProfile] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+    logout();
+    navigate('/login');
   };
 
   return (

@@ -6,6 +6,13 @@ interface User {
     email: string;
     role: string;
     assigned_barangay?: string;
+    lgu?: {
+        id: number;
+        name: string;
+        subdomain: string;
+        latitude: number;
+        longitude: number;
+    };
 }
 
 interface AuthContextType {

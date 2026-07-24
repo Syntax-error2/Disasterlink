@@ -21,6 +21,14 @@ class BroadcastController extends Controller
         
         Cache::put('active_broadcast', $message, now()->addMinutes($duration));
         
+        if ($request->input('include_sms')) {
+            $phones = \App\Models\User::whereNotNull('phone')->pluck('phone')->toArray();
+            if (empty($phones)) {
+                $phones = ['+639123456789', '+639987654321']; // Fallback mocks
+            }
+            \App\Jobs\SendEmergencySmsJob::dispatch($message, $phones);
+        }
+        
         return response()->json(['success' => true]);
     }
     

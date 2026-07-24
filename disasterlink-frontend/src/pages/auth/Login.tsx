@@ -10,8 +10,21 @@ export default function Login() {
   const [loginState, setLoginState] = useState<'idle' | 'authenticating' | 'booting'>('idle');
   const [bootText, setBootText] = useState("Verifying credentials...");
   const [errorMsg, setErrorMsg] = useState("");
+  const [tenant, setTenant] = useState<any>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  // Extract Subdomain for SaaS Branding
+  const hostname = window.location.hostname;
+  const currentSubdomain = (hostname === "localhost" || hostname === "127.0.0.1") 
+    ? "binalbagan" // Default for local development
+    : hostname.split('.')[0];
+
+  useEffect(() => {
+    axiosInstance.get(`/tenant-config/${currentSubdomain}`)
+      .then(res => setTenant(res.data))
+      .catch(err => console.log("Generic SaaS Mode Active"));
+  }, [currentSubdomain]);
 
   // Real Laravel API Network Request
   const handleLogin = async (e: React.FormEvent) => {
@@ -21,6 +34,7 @@ export default function Login() {
     
     const formData = new FormData(e.target as HTMLFormElement);
     const data = Object.fromEntries(formData);
+    data.subdomain = currentSubdomain; // Pass the subdomain to enforce security
     
     try {
       // Send data to Laravel Backend
@@ -42,7 +56,9 @@ export default function Login() {
       setTimeout(() => {
         const userRole = result.user.role;
         
-        if (userRole === 'admin' || userRole === 'mdrrmo_staff') {
+        if (userRole === 'superadmin') {
+          navigate("/superadmin");
+        } else if (userRole === 'admin' || userRole === 'mdrrmo_staff') {
           navigate("/"); // Send to Master Dashboard
         } else if (userRole === 'barangay_captain') {
           navigate("/barangay-command"); // Send to Localized Dashboard
@@ -119,12 +135,18 @@ export default function Login() {
                 transition={{ duration: 0.3 }}
                 className="space-y-8"
               >
-                <div className="lg:hidden flex items-center justify-center sm:justify-start gap-3 mb-8">
-                  <div className="h-10 w-10 rounded-xl bg-red-600 flex items-center justify-center shadow-lg">
-                    <Activity className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">DisasterLink</span>
-                </div>
+            {/* SaaS Dynamic Header */}
+            <div className="text-center mb-8">
+              <div className="mx-auto w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-4 border border-red-500/20">
+                <ShieldCheck className="h-8 w-8 text-red-500" />
+              </div>
+              <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">
+                {tenant ? `${tenant.name} Command` : 'DisasterLink'}
+              </h1>
+              <p className="text-zinc-500 dark:text-zinc-400">
+                {tenant ? 'Authorized personnel access only.' : 'Multi-Tenant Disaster Management System'}
+              </p>
+            </div>
 
                 <div className="text-center sm:text-left">
                   <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">Welcome back</h2>

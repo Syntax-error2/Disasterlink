@@ -18,9 +18,12 @@ class EvacuationCenterController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'location' => 'required|string|max:255',
+            'barangay' => 'nullable|string|max:255',
             'capacity' => 'required|integer|min:1',
             'current_occupants' => 'integer|min:0',
-            'status' => 'string|in:Active,Full,Closed'
+            'status' => 'string|in:Active,Full,Closed',
+            'lat' => 'nullable|numeric',
+            'lng' => 'nullable|numeric'
         ]);
 
         $center = EvacuationCenter::create($validated);

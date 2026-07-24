@@ -41,6 +41,9 @@ const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6
 // 2. MAIN LAYOUT SHELL
 // ==========================================
 export default function CommunityPortal() {
+  const { logout, user } = useAuth();
+  const MAP_CENTER: [number, number] = user?.lgu ? [Number(user.lgu.latitude), Number(user.lgu.longitude)] : [10.1866, 122.8587];
+
   const [activeTab, setActiveTab] = useState("home");
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -573,7 +576,10 @@ function MapFlyTo({ center }: { center: [number, number] }) {
 }
 
 function MapView({ showToast, evacCenters }: any) {
-  const [center, setCenter] = useState<[number, number]>([10.1866, 122.8587]);
+  const { user } = useAuth();
+  const MAP_CENTER: [number, number] = user?.lgu ? [Number(user.lgu.latitude), Number(user.lgu.longitude)] : [10.1866, 122.8587];
+
+  const [center, setCenter] = useState<[number, number]>(MAP_CENTER);
   const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
   const [weather, setWeather] = useState<any>(null);
   const [showWindy, setShowWindy] = useState(false);
@@ -599,16 +605,18 @@ function MapView({ showToast, evacCenters }: any) {
     // 2. Fetch Live Weather Data (Open-Meteo)
     const fetchWeather = async () => {
       try {
-        const url = "https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure&timezone=Asia%2FManila";
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${center[0]}&longitude=${center[1]}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila`;
         const response = await fetch(url);
         const data = await response.json();
         setWeather(data.current);
       } catch (e) {
         console.warn("Weather fetch failed");
-        setWeather({ temperature_2m: 31.5, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010 });
+        setWeather({ temperature_2m: 31.5, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010, precipitation_probability: 25 });
       }
     };
     fetchWeather();
+    const weatherInterval = setInterval(fetchWeather, 15000);
+    return () => clearInterval(weatherInterval);
   }, []);
 
   return (
@@ -621,11 +629,16 @@ function MapView({ showToast, evacCenters }: any) {
         </h2>
         
         {weather ? (
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-2">
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
               <Thermometer className="h-4 w-4 text-orange-400 mb-1" />
               <span className="text-white font-bold text-sm">{weather.temperature_2m}°C</span>
               <span className="text-[9px] text-zinc-500 uppercase font-bold">Temp</span>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
+              <CloudRain className="h-4 w-4 text-indigo-400 mb-1" />
+              <span className="text-white font-bold text-sm">{weather.precipitation_probability ?? 0}%</span>
+              <span className="text-[9px] text-zinc-500 uppercase font-bold">Rain</span>
             </div>
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
               <Droplets className="h-4 w-4 text-blue-400 mb-1" />

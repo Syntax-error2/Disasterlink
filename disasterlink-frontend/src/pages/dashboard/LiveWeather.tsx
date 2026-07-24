@@ -10,10 +10,10 @@ import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveCont
 import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";
 import axiosInstance from "../../lib/axios";
-
+import { useAuth } from "../../context/AuthContext";
 // --- TYPES & CONSTANTS ---
 interface WeatherData {
-  current: { temperature_2m: number; apparent_temperature: number; relative_humidity_2m: number; wind_speed_10m: number; surface_pressure: number; };
+  current: { temperature_2m: number; apparent_temperature: number; relative_humidity_2m: number; wind_speed_10m: number; surface_pressure: number; precipitation_probability?: number; };
   hourly: { time: string[]; precipitation: number[]; };
 }
 
@@ -259,6 +259,11 @@ const VolcanoTracker = ({ volcanoData }: { volcanoData: any }) => {
 // --- MAIN PAGE COMPONENT ---
 
 export default function LiveWeather() {
+  const { user } = useAuth();
+  const binalbaganCoords: [number, number] = user?.lgu ? [Number(user.lgu.latitude), Number(user.lgu.longitude)] : [10.1866, 122.8587];
+
+  const [activeTab, setActiveTab] = useState<"radar" | "forecast">("radar");
+  const [mapLayer, setMapLayer] = useState<"satellite" | "streets" | "dark">("dark");
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [chartData, setChartData] = useState<{time: string, rain: number}[]>([]);
   const [loading, setLoading] = useState(true);
@@ -269,6 +274,7 @@ export default function LiveWeather() {
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [broadcastTarget, setBroadcastTarget] = useState("all");
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [includeSms, setIncludeSms] = useState(false);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'info' } | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'info' = 'info') => {
@@ -440,7 +446,7 @@ export default function LiveWeather() {
       
       // --- REALISTIC FALLBACK FOR PRESENTATION ---
       const mockWeather = {
-        current: { temperature_2m: 31.5, apparent_temperature: 37.2, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010 },
+        current: { temperature_2m: 31.5, apparent_temperature: 37.2, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010, precipitation_probability: 25 },
         hourly: { time: [], precipitation: [] }
       };
       setWeather(mockWeather as any);
@@ -468,16 +474,26 @@ export default function LiveWeather() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSendBroadcast = () => {
+  const handleSendBroadcast = async () => {
     if (!broadcastMsg.trim()) return;
     setIsBroadcasting(true);
-    // Simulate Network Request
-    setTimeout(() => {
-      setIsBroadcasting(false);
+    
+    try {
+      await axiosInstance.post('/broadcast', {
+        message: broadcastMsg,
+        include_sms: includeSms,
+        duration: 60
+      });
+      
       setIsBroadcastOpen(false);
       setBroadcastMsg("");
+      setIncludeSms(false);
       showToast(`Emergency alert successfully broadcasted to ${broadcastTarget === 'all' ? 'All Barangays' : broadcastTarget}.`, 'success');
-    }, 2000);
+    } catch (error) {
+      showToast("Failed to broadcast message.", "error");
+    } finally {
+      setIsBroadcasting(false);
+    }
   };
 
   if (loading && !weather) {
@@ -525,8 +541,20 @@ export default function LiveWeather() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Broadcast Message (SMS & App Push)</label>
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Broadcast Message (App Push)</label>
                   <textarea value={broadcastMsg} onChange={(e) => setBroadcastMsg(e.target.value)} placeholder="Type official emergency advisory here..." className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-3 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-red-500 h-32 resize-none"></textarea>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    id="includeSms" 
+                    checked={includeSms} 
+                    onChange={(e) => setIncludeSms(e.target.checked)} 
+                    className="h-4 w-4 rounded border-zinc-300 text-red-600 focus:ring-red-500"
+                  />
+                  <label htmlFor="includeSms" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Simultaneously send via Twilio SMS Blast
+                  </label>
                 </div>
                 <button onClick={handleSendBroadcast} disabled={isBroadcasting || !broadcastMsg.trim()} className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all">
                   {isBroadcasting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
@@ -561,9 +589,9 @@ export default function LiveWeather() {
       </div>
 
       {/* TOP METRICS (HERO) - POWERED BY FREE OPEN-METEO API */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="bg-zinc-900 dark:bg-black text-white border-none shadow-md overflow-hidden relative group">
+          <Card className="h-full bg-zinc-900 dark:bg-black text-white border-none shadow-md overflow-hidden relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-orange-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <CardContent className="p-5">
               <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2"><Thermometer className="h-4 w-4 text-orange-400"/> Air Temp</div>
@@ -577,7 +605,7 @@ export default function LiveWeather() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="bg-zinc-900 dark:bg-black text-white border-none shadow-md overflow-hidden relative group">
+          <Card className="h-full bg-zinc-900 dark:bg-black text-white border-none shadow-md overflow-hidden relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <CardContent className="p-5">
               <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2"><Droplets className="h-4 w-4 text-blue-300"/> Humidity</div>
@@ -587,8 +615,19 @@ export default function LiveWeather() {
           </Card>
         </motion.div>
 
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <Card className="h-full bg-zinc-900 dark:bg-black text-white border-none shadow-md overflow-hidden relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <CardContent className="p-5">
+              <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2"><CloudRain className="h-4 w-4 text-indigo-400"/> Chance of Rain</div>
+              <div className="text-4xl font-black tracking-tighter">{weather?.current.precipitation_probability ?? 0}%</div>
+              <div className="text-sm text-indigo-400 mt-1 font-medium flex items-center gap-1">Next hour forecast</div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="bg-zinc-900 dark:bg-black text-white border-none shadow-md overflow-hidden relative group">
+          <Card className="h-full bg-zinc-900 dark:bg-black text-white border-none shadow-md overflow-hidden relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-zinc-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <CardContent className="p-5">
               <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2"><Wind className="h-4 w-4 text-zinc-300"/> Avg Wind Speed</div>
@@ -599,7 +638,7 @@ export default function LiveWeather() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <Card className="bg-zinc-900 dark:bg-black text-white border-none shadow-md overflow-hidden relative group">
+          <Card className="h-full bg-zinc-900 dark:bg-black text-white border-none shadow-md overflow-hidden relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-amber-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <CardContent className="p-5">
               <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2"><Gauge className="h-4 w-4 text-amber-500"/> Pressure</div>

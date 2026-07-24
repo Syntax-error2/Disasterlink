@@ -15,7 +15,7 @@ import L from "leaflet";
 // ==========================================
 import axiosInstance from "../../lib/axios";
 
-const MAP_CENTER: [number, number] = [10.1866, 122.8587]; // Binalbagan Municipal Hall
+import { useAuth } from "../../context/AuthContext";
 
 // ==========================================
 // 2. CUSTOM GIS ICONS (GLOWING & ANIMATED)
@@ -47,6 +47,9 @@ const icons = {
 // 3. MAIN DASHBOARD COMPONENT
 // ==========================================
 export default function GisDashboard() {
+  const { user } = useAuth();
+  const MAP_CENTER: [number, number] = user?.lgu ? [Number(user.lgu.latitude), Number(user.lgu.longitude)] : [10.1866, 122.8587];
+
   const [activeLayers, setActiveLayers] = useState({
     incidents: true,
     evac: false,

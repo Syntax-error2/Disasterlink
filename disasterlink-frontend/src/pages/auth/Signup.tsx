@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShieldCheck, Mail, Lock, User, Briefcase, Loader2, AlertCircle, MapPin, Home } from "lucide-react";
+import { ShieldCheck, Mail, Lock, User, Briefcase, Loader2, AlertCircle, MapPin, Home, Phone } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 
 export default function Signup() {
@@ -136,11 +136,21 @@ export default function Signup() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">Email Address</label>
-              <div className="relative group">
-                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors" />
-                <input type="email" name="email" placeholder="name@binalbagan.gov.ph" className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner" required disabled={loading} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors" />
+                  <input type="email" name="email" placeholder="name@binalbagan.gov.ph" className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner" required disabled={loading} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">Phone Number</label>
+                <div className="relative group">
+                  <Phone className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors" />
+                  <input type="text" name="phone" placeholder="+63 912 345 6789" className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner" required disabled={loading} />
+                </div>
               </div>
             </div>
 

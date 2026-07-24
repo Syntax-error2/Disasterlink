@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Lgu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
@@ -12,6 +13,23 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    // Fetch Dynamic Tenant Configuration
+    public function tenantConfig($subdomain)
+    {
+        $lgu = Lgu::where('subdomain', $subdomain)->first();
+        
+        if (!$lgu) {
+            return response()->json(['message' => 'LGU not found'], 404);
+        }
+
+        return response()->json([
+            'name' => $lgu->name,
+            'subdomain' => $lgu->subdomain,
+            'latitude' => $lgu->latitude,
+            'longitude' => $lgu->longitude,
+            'theme' => 'default' // Future expansion for colors
+        ]);
+    }
     // Generate and Email OTP
     public function sendOtp(Request $request)
     {
@@ -46,6 +64,7 @@ class AuthController extends Controller
             'role' => 'required|string',
             'barangay' => 'required|string',
             'purok' => 'required|string',
+            'phone' => 'nullable|string|max:20',
             'otp' => 'required|string|size:6'
         ]);
 
@@ -58,17 +77,23 @@ class AuthController extends Controller
             ], 400);
         }
 
+        // Default to Binalbagan LGU if not dynamically specified in request
+        $subdomain = $request->input('lgu_subdomain', 'binalbagan');
+        $lgu = \App\Models\Lgu::where('subdomain', $subdomain)->first();
+
         // Clear the OTP
         Cache::forget('register_otp_' . $request->email);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'phone' => $request->phone,
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'barangay' => $request->barangay,
             'purok' => $request->purok,
-            'account_status' => 'active', 
+            'account_status' => 'active',
+            'lgu_id' => $lgu ? $lgu->id : null,
         ]);
 
         return response()->json([
@@ -85,7 +110,7 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::with('lgu')->where('email', $request->email)->first();
 
         // Check if user exists and password is correct
         if (! $user || ! Hash::check($request->password, $user->password)) {
@@ -98,6 +123,15 @@ class AuthController extends Controller
         if (strtolower($user->account_status) !== 'active') {
             return response()->json([
                 'message' => 'Your account is currently pending approval by the LGU Admin.'
+            ], 403);
+        }
+
+        // Enforce strict Subdomain / Tenant isolation
+        $requestSubdomain = $request->input('subdomain');
+        // Superadmins can log in anywhere, but standard users are locked to their LGU
+        if ($user->role !== 'superadmin' && $user->lgu && $user->lgu->subdomain !== $requestSubdomain) {
+            return response()->json([
+                'message' => 'Unauthorized. This account belongs to a different LGU portal.'
             ], 403);
         }
 

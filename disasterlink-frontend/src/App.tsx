@@ -12,6 +12,7 @@ import Settings from "./pages/dashboard/Settings";
 import ResponderMobile from "./pages/dashboard/ResponderMobile";
 import BarangayDashboard from "./pages/dashboard/BarangayDashboard";
 import CommunityPortal from "./pages/dashboard/CommunityPortal";
+import SuperAdmin from "./pages/dashboard/SuperAdmin";
 import 'leaflet/dist/leaflet.css';
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
@@ -26,13 +27,14 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
     return <Navigate to="/login" replace />;
   }
   
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    // Prevent privilege escalation and redirect to appropriate dashboards
-    if (user.role === 'resident' || user.role === 'citizen') return <Navigate to="/portal" replace />;
-    if (user.role === 'responder') return <Navigate to="/responder-dispatch" replace />;
-    if (user.role === 'barangay_captain') return <Navigate to="/barangay-command" replace />;
-    return <Navigate to="/login" replace />;
-  }
+    if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+      // Prevent privilege escalation and redirect to appropriate dashboards
+      if (user.role === 'superadmin') return <Navigate to="/superadmin" replace />;
+      if (user.role === 'resident' || user.role === 'citizen') return <Navigate to="/portal" replace />;
+      if (user.role === 'responder') return <Navigate to="/responder-dispatch" replace />;
+      if (user.role === 'barangay_captain') return <Navigate to="/barangay-command" replace />;
+      return <Navigate to="/login" replace />;
+    }
 
   return children;
 };
@@ -48,6 +50,7 @@ export default function App() {
             <Route path="/signup" element={<Signup />} /> 
 
             {/* Mobile-First Routes (No Sidebar) */}
+            <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdmin /></ProtectedRoute>} />
             <Route path="/responder-dispatch" element={<ProtectedRoute allowedRoles={['responder']}><ResponderMobile /></ProtectedRoute>} />
             <Route path="/portal" element={<ProtectedRoute allowedRoles={['resident', 'citizen']}><CommunityPortal /></ProtectedRoute>} />
 
