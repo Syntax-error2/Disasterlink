@@ -14,7 +14,7 @@ if (typeof window !== 'undefined') {
     }
     // Use the official Capacitor module to detect native environments
     else if (Capacitor.isNativePlatform()) {
-        apiBase = 'https://disasterlink-api-binalbagan.loca.lt/api';
+        apiBase = 'https://spoiler-hanky-prideful.ngrok-free.dev/api';
     } 
     else if (hostname.includes('.devtunnels.ms') || hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
         // Use relative path to let Vite Proxy handle the routing securely, bypassing ALL CORS and Microsoft Proxy issues!
@@ -28,7 +28,7 @@ const axiosInstance = axios.create({
     headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Bypass-Tunnel-Reminder': 'true' // Required to bypass Localtunnel warning page
+        'ngrok-skip-browser-warning': 'true' // Required to bypass Ngrok warning page
     }
 });
 
