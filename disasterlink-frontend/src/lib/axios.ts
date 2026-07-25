@@ -1,13 +1,13 @@
 import axios from 'axios';
+import { Capacitor } from '@capacitor/core';
 
 let apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
 if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     
-    // Check if running inside compiled Capacitor Android App
-    // @ts-ignore
-    if (window.Capacitor && window.Capacitor.isNative) {
+    // Use the official Capacitor module to detect native environments
+    if (Capacitor.isNativePlatform()) {
         apiBase = 'http://192.168.1.150:8000/api';
     } 
     else if (hostname.includes('.devtunnels.ms') || hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
