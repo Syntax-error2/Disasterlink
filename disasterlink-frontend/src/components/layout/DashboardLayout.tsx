@@ -13,7 +13,6 @@ import {
   Search, 
   Menu, 
   UserCircle,
-  ShieldAlert,
   Sun,
   Moon,
   CheckCircle2,
@@ -21,12 +20,14 @@ import {
   Info
 } from "lucide-react";
 import axiosInstance from "../../lib/axios";
+import { useAuth } from "../../context/AuthContext";
 
 // No mock notifications, dynamic only
 export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { logout } = useAuth();
   
   // 1. Manage User State (Now includes assigned_barangay for filtering)
   const [user, setUser] = useState({ name: "Loading...", role: "guest", department: "Loading...", assigned_barangay: "all" });
@@ -149,8 +150,7 @@ export default function DashboardLayout() {
     try {
       await axiosInstance.post('/logout');
     } catch(e) {}
-    localStorage.removeItem('auth_token'); 
-    localStorage.removeItem('user'); 
+    logout(); 
     navigate("/login");
   };
 
@@ -161,9 +161,7 @@ export default function DashboardLayout() {
       <aside className="w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111115] hidden md:flex flex-col h-full shrink-0">
         <div className="h-16 flex items-center px-6 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-red-600 flex items-center justify-center shadow-sm">
-              <ShieldAlert className="h-5 w-5 text-white" />
-            </div>
+            <img src="/logo.svg" alt="DisasterLink" className="h-8 w-8 rounded-lg shadow-sm" />
             <span className="text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">DisasterLink</span>
           </div>
         </div>
