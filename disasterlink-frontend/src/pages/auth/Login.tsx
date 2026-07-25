@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShieldCheck, Mail, Lock, Activity, MapPin, Loader2, Server, AlertCircle, CheckCircle, Terminal } from "lucide-react";
+import { ShieldCheck, Mail, Lock, Activity, MapPin, Loader2, Server, AlertCircle, CheckCircle, Terminal, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import axiosInstance from "../../lib/axios";
@@ -10,6 +10,8 @@ export default function Login() {
   const [loginState, setLoginState] = useState<'idle' | 'authenticating' | 'booting'>('idle');
   const [bootText, setBootText] = useState("Verifying credentials...");
   const [errorMsg, setErrorMsg] = useState("");
+  const [showConfig, setShowConfig] = useState(false);
+  const [customUrl, setCustomUrl] = useState(localStorage.getItem('custom_api_url') || "");
   const [tenant, setTenant] = useState<any>(null);
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
@@ -291,6 +293,53 @@ export default function Login() {
             )}
           </AnimatePresence>
 
+          {/* Developer Settings Toggle for Android */}
+          <div className="mt-8 text-center">
+            <button 
+              onClick={() => setShowConfig(!showConfig)}
+              className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-400 text-xs flex items-center justify-center gap-1 mx-auto transition-colors"
+            >
+              <Settings className="h-3 w-3" />
+              Developer Settings
+            </button>
+            
+            <AnimatePresence>
+              {showConfig && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-4 p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-lg text-left"
+                >
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1 block">Cloudflare Tunnel Override URL</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={customUrl}
+                      onChange={(e) => setCustomUrl(e.target.value)}
+                      placeholder="https://xyz.trycloudflare.com" 
+                      className="w-full bg-white dark:bg-[#111115] border border-zinc-200 dark:border-zinc-800 rounded-md px-3 py-2 text-xs text-zinc-900 dark:text-zinc-50 outline-none focus:border-red-500"
+                    />
+                    <button 
+                      onClick={() => {
+                        if (customUrl.trim() === "") {
+                          localStorage.removeItem('custom_api_url');
+                        } else {
+                          localStorage.setItem('custom_api_url', customUrl.trim().replace(/\/$/, ""));
+                        }
+                        window.location.reload();
+                      }}
+                      className="bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 px-3 py-2 rounded-md text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-2">Paste the new link from your .bat file if the connection breaks. App will reload to apply changes.</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          
         </div>
       </div>
     </div>

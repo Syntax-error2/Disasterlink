@@ -6,8 +6,14 @@ let apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     
+    // Allow user to manually override the API URL for testing changing Cloudflare tunnels
+    const customApiUrl = localStorage.getItem('custom_api_url');
+    
+    if (customApiUrl) {
+        apiBase = customApiUrl + '/api';
+    }
     // Use the official Capacitor module to detect native environments
-    if (Capacitor.isNativePlatform()) {
+    else if (Capacitor.isNativePlatform()) {
         apiBase = 'https://arm-syntax-discs-dont.trycloudflare.com/api';
     } 
     else if (hostname.includes('.devtunnels.ms') || hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
