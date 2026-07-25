@@ -18,8 +18,8 @@ return [
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
-    'allowed_origins' => ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://192.168.1.150:5173', 'https://disasterlink.com', 'https://94mg3w1f-5173.asse.devtunnels.ms'],
-    'allowed_origins_patterns' => [],
+    'allowed_origins' => ['http://localhost', 'https://localhost', 'capacitor://localhost', 'http://localhost:5173', 'http://127.0.0.1:5173', 'http://192.168.1.150:5173', 'https://disasterlink.com', 'https://94mg3w1f-5173.asse.devtunnels.ms'],
+    'allowed_origins_patterns' => ['#.*#'],
 
     'allowed_headers' => ['Accept', 'Content-Type', 'Authorization', 'X-Requested-With'],
 

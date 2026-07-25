@@ -27,23 +27,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(() => {
-        const storedUser = sessionStorage.getItem('user');
+        const storedUser = localStorage.getItem('user');
         return storedUser ? JSON.parse(storedUser) : null;
     });
-    const [token, setToken] = useState<string | null>(() => sessionStorage.getItem('auth_token'));
+    const [token, setToken] = useState<string | null>(() => localStorage.getItem('auth_token'));
 
     const login = (newToken: string, newUser: User) => {
         setToken(newToken);
         setUser(newUser);
-        sessionStorage.setItem('auth_token', newToken);
-        sessionStorage.setItem('user', JSON.stringify(newUser));
+        localStorage.setItem('auth_token', newToken);
+        localStorage.setItem('user', JSON.stringify(newUser));
     };
 
     const logout = () => {
         setToken(null);
         setUser(null);
-        sessionStorage.removeItem('auth_token');
-        sessionStorage.removeItem('user');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
     };
 
     return (

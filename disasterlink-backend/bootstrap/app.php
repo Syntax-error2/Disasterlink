@@ -13,7 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-    $middleware->statefulApi(); // Crucial: This allows Sanctum to work with your frontend
+        $middleware->statefulApi(); // Crucial: This allows Sanctum to work with your frontend
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+            'login',
+            'register'
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

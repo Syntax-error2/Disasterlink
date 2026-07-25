@@ -10,6 +10,7 @@ import {
   LogOut, User as UserIcon
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { Geolocation } from '@capacitor/geolocation';
 
 // ==========================================
 // 1. DYNAMIC USER & MOCK DATA
@@ -98,6 +99,16 @@ export default function CommunityPortal() {
     setActiveUser(getActiveUser());
     setAlerts([]);
     setEvacCenters([]);
+    setFamilyMembers([]);
+
+    const requestLocationPermission = async () => {
+      try {
+        await Geolocation.requestPermissions();
+      } catch (e) {
+        console.error("Location permission denied", e);
+      }
+    };
+    requestLocationPermission();
     setFamilyMembers([]);
 
     const handleOnline = async () => {
@@ -400,6 +411,10 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 space-y-6 pb-48">
       <div className="flex justify-between items-start mt-4">
         <div>
+          <div className="flex items-center gap-2 mb-1">
+            <img src="/logo.png" alt="DisasterLink" className="h-6 w-auto" />
+            <span className="text-xs font-bold text-red-500 tracking-wider">DISASTERLINK</span>
+          </div>
           <h2 className="text-zinc-400 text-sm">Stay safe,</h2>
           <h1 className="text-3xl font-black text-white tracking-tight">{user.name.split(' ')[0]}</h1>
           <p className="text-sm text-zinc-500 mt-1 flex items-center gap-1"><MapIcon className="h-3 w-3" /> {user.brgy}</p>
