@@ -581,7 +581,10 @@ function MapView({ showToast, evacCenters }: any) {
 
   const [center, setCenter] = useState<[number, number]>(MAP_CENTER);
   const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
-  const [weather, setWeather] = useState<any>(null);
+  const [weather, setWeather] = useState<any>(() => {
+    const cached = sessionStorage.getItem('cp_weather_cache');
+    return cached ? JSON.parse(cached) : null;
+  });
   const [showWindy, setShowWindy] = useState(false);
 
   useEffect(() => {
@@ -609,6 +612,7 @@ function MapView({ showToast, evacCenters }: any) {
         const response = await fetch(url);
         const data = await response.json();
         setWeather(data.current);
+        sessionStorage.setItem('cp_weather_cache', JSON.stringify(data.current));
       } catch (e) {
         console.warn("Weather fetch failed");
         setWeather({ temperature_2m: 31.5, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010, precipitation_probability: 25 });

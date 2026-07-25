@@ -55,14 +55,14 @@ export default function App() {
             <Route path="/portal" element={<ProtectedRoute allowedRoles={['resident', 'citizen']}><CommunityPortal /></ProtectedRoute>} />
 
             {/* Admin & Barangay Dashboard Routes (With Sidebar) */}
-            <Route element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff', 'barangay_captain']}><DashboardLayout /></ProtectedRoute>}>
+            <Route element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff', 'barangay_captain']}><DashboardLayout /></ProtectedRoute>}>
               {/* Master Admin Pages */}
-              <Route path="/" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><Overview /></ProtectedRoute>} />
-              <Route path="/map" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><GisMap /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><IncidentReports /></ProtectedRoute>} />
-              <Route path="/weather" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><LiveWeather /></ProtectedRoute>} />
-              <Route path="/alerts" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><EmergencyAlerts /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin', 'mdrrmo_staff']}><Settings /></ProtectedRoute>} /> 
+              <Route path="/" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><Overview /></ProtectedRoute>} />
+              <Route path="/map" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><GisMap /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><IncidentReports /></ProtectedRoute>} />
+              <Route path="/weather" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><LiveWeather /></ProtectedRoute>} />
+              <Route path="/alerts" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><EmergencyAlerts /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><Settings /></ProtectedRoute>} /> 
               
               {/* Localized Barangay Command Center */}
               <Route path="/barangay-command" element={<ProtectedRoute allowedRoles={['barangay_captain']}><BarangayDashboard /></ProtectedRoute>} />

@@ -11,17 +11,23 @@ class TelemetryController extends Controller
     {
         $weather = null;
         try {
-            $weather = Http::timeout(8)->get("https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila&forecast_days=2")->json();
+            $weather = \Illuminate\Support\Facades\Cache::remember('telemetry_weather', 300, function () {
+                return Http::timeout(8)->get("https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila&forecast_days=2")->json();
+            });
         } catch (\Exception $e) {}
 
         $gdacs = null;
         try {
-            $gdacs = Http::timeout(3)->get("https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH")->json();
+            $gdacs = \Illuminate\Support\Facades\Cache::remember('telemetry_gdacs', 300, function () {
+                return Http::timeout(3)->get("https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH")->json();
+            });
         } catch (\Exception $e) {}
 
         $usgs = null;
         try {
-            $usgs = Http::timeout(3)->get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson")->json();
+            $usgs = \Illuminate\Support\Facades\Cache::remember('telemetry_usgs', 300, function () {
+                return Http::timeout(3)->get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson")->json();
+            });
         } catch (\Exception $e) {}
 
         // Real-Time PAGASA Local Telemetry Scraper

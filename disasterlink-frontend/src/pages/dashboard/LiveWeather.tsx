@@ -264,8 +264,14 @@ export default function LiveWeather() {
 
   const [activeTab, setActiveTab] = useState<"radar" | "forecast">("radar");
   const [mapLayer, setMapLayer] = useState<"satellite" | "streets" | "dark">("dark");
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [chartData, setChartData] = useState<{time: string, rain: number}[]>([]);
+  const [weather, setWeather] = useState<WeatherData | null>(() => {
+    const cached = sessionStorage.getItem('lw_weather_cache');
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [chartData, setChartData] = useState<{time: string, rain: number}[]>(() => {
+    const cached = sessionStorage.getItem('lw_chart_cache');
+    return cached ? JSON.parse(cached) : [];
+  });
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>("");
   
@@ -282,26 +288,42 @@ export default function LiveWeather() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const [cycloneData, setCycloneData] = useState<any>(null);
-  const [pagasaData, setPagasaData] = useState<any>(null);
-  const [earthquakeData, setEarthquakeData] = useState<any>(null);
-  const [volcanoData, setVolcanoData] = useState<any>(null);
-  const [defcon, setDefcon] = useState({ level: 5, text: "Normal Operations", color: "bg-emerald-600" });
+  const [cycloneData, setCycloneData] = useState<any>(() => {
+    const cached = sessionStorage.getItem('lw_cyclone_cache');
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [pagasaData, setPagasaData] = useState<any>(() => {
+    const cached = sessionStorage.getItem('lw_pagasa_cache');
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [earthquakeData, setEarthquakeData] = useState<any>(() => {
+    const cached = sessionStorage.getItem('lw_earthquake_cache');
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [volcanoData, setVolcanoData] = useState<any>(() => {
+    const cached = sessionStorage.getItem('lw_volcano_cache');
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [defcon, setDefcon] = useState(() => {
+    const cached = sessionStorage.getItem('lw_defcon_cache');
+    return cached ? JSON.parse(cached) : { level: 5, text: "Normal Operations", color: "bg-emerald-600" };
+  });
   const [hazardMatrix, setHazardMatrix] = useState(HAZARD_MATRIX);
   const [actionRec, setActionRec] = useState({ text: "Initializing AI models...", classes: { bg: 'bg-zinc-50 dark:bg-zinc-500/10', border: 'border-zinc-200 dark:border-zinc-500/20', text: 'text-zinc-600 dark:text-zinc-400' } });
 
   const updateHazards = (wind: number, totalRain24h: number, heatIndex: number) => {
+      let newDefcon = { level: 5, text: "Normal Operations", color: "bg-emerald-600" };
       if (wind > 100 || totalRain24h > 100) {
-          setDefcon({ level: 1, text: "Maximum Readiness", color: "bg-red-600" });
+          newDefcon = { level: 1, text: "Maximum Readiness", color: "bg-red-600" };
       } else if (wind > 60 || totalRain24h > 50) {
-          setDefcon({ level: 2, text: "High Readiness", color: "bg-orange-600" });
+          newDefcon = { level: 2, text: "High Readiness", color: "bg-orange-600" };
       } else if (wind > 40 || totalRain24h > 20) {
-          setDefcon({ level: 3, text: "Elevated Readiness", color: "bg-amber-500" });
+          newDefcon = { level: 3, text: "Elevated Readiness", color: "bg-amber-500" };
       } else if (wind > 20 || totalRain24h > 5) {
-          setDefcon({ level: 4, text: "Guarded", color: "bg-blue-500" });
-      } else {
-          setDefcon({ level: 5, text: "Normal Operations", color: "bg-emerald-600" });
+          newDefcon = { level: 4, text: "Heightened Alert", color: "bg-yellow-500" };
       }
+      setDefcon(newDefcon);
+      sessionStorage.setItem('lw_defcon_cache', JSON.stringify(newDefcon));
 
       setHazardMatrix([
         { name: "Flood Risk", level: totalRain24h > 50 ? "High" : totalRain24h > 10 ? "Medium" : "Low", color: totalRain24h > 50 ? "bg-red-500" : totalRain24h > 10 ? "bg-amber-500" : "bg-blue-500", percent: Math.min(100, Math.round((totalRain24h / 50) * 100)) },
@@ -332,7 +354,6 @@ export default function LiveWeather() {
   const fetchWeather = async () => {
     setLoading(true);
     try {
-      // Use Backend Proxy to bypass CORS/Adblockers (Using axios to resolve dynamic network IP for mobile testing)
       const response = await axiosInstance.get("/telemetry");
       const rootData = response.data;
       
@@ -347,17 +368,18 @@ export default function LiveWeather() {
       }
 
       setWeather(data);
+      sessionStorage.setItem('lw_weather_cache', JSON.stringify(data));
+      
       if (rootData.pagasa) {
          setPagasaData(rootData.pagasa);
+         sessionStorage.setItem('lw_pagasa_cache', JSON.stringify(rootData.pagasa));
       }
       
       // Parse GDACS Telemetry (Cyclones and Volcanoes)
       try {
-        // Parse Cyclones (Filter by Active within 7 days, and in PAR/Philippines)
         const cyclones = gdacsJson?.features?.filter((f: any) => {
            if (f.properties.eventtype !== 'TC') return false;
            
-           // Filter for Realtime/Active: Must be within the last 7 days
            const eventDate = new Date(f.properties.todate || f.properties.datemodified || f.properties.fromdate);
            const diffDays = (new Date().getTime() - eventDate.getTime()) / (1000 * 3600 * 24);
            if (diffDays > 7) return false;
@@ -371,12 +393,14 @@ export default function LiveWeather() {
            return (lat >= 5 && lat <= 25 && lng >= 115 && lng <= 135);
         }) || [];
         if (cyclones.length > 0) {
-            setCycloneData({ ...cyclones[0].properties, geometry: cyclones[0].geometry });
+            const cData = { ...cyclones[0].properties, geometry: cyclones[0].geometry };
+            setCycloneData(cData);
+            sessionStorage.setItem('lw_cyclone_cache', JSON.stringify(cData));
         } else {
             setCycloneData(null);
+            sessionStorage.removeItem('lw_cyclone_cache');
         }
 
-        // Parse Volcanoes (Filter for Kanlaon or Negros Island Bounds: Lat 8.5 to 11.0, Lng 122.0 to 123.5)
         const volcanoes = gdacsJson?.features?.filter((f: any) => {
            if (f.properties.eventtype !== 'VO') return false;
            const name = f.properties.name?.toLowerCase() || "";
@@ -387,17 +411,21 @@ export default function LiveWeather() {
            return (lat >= 8.5 && lat <= 11.0 && lng >= 122.0 && lng <= 123.5);
         }) || [];
         if (volcanoes.length > 0) {
-            setVolcanoData({ ...volcanoes[0].properties, geometry: volcanoes[0].geometry });
+            const vData = { ...volcanoes[0].properties, geometry: volcanoes[0].geometry };
+            setVolcanoData(vData);
+            sessionStorage.setItem('lw_volcano_cache', JSON.stringify(vData));
         } else {
             // Force Kanlaon to always display as baseline
-            setVolcanoData({
+            const vData = {
                 name: "Mount Kanlaon",
                 alertlevel: "Green",
                 country: "Philippines",
                 description: "Background status. No active major GDACS alert.",
                 datemodified: new Date().toISOString(),
                 geometry: { coordinates: [123.13, 10.41] }
-            });
+            };
+            setVolcanoData(vData);
+            sessionStorage.setItem('lw_volcano_cache', JSON.stringify(vData));
         }
       } catch (e) {
         console.warn("GDACS Fetch Error:", e);
@@ -413,9 +441,12 @@ export default function LiveWeather() {
         }) || [];
         
         if (quakes.length > 0) {
-            setEarthquakeData({ ...quakes[0].properties, geometry: quakes[0].geometry });
+            const qData = { ...quakes[0].properties, geometry: quakes[0].geometry };
+            setEarthquakeData(qData);
+            sessionStorage.setItem('lw_earthquake_cache', JSON.stringify(qData));
         } else {
             setEarthquakeData(null);
+            sessionStorage.removeItem('lw_earthquake_cache');
         }
       } catch (e) {
         console.warn("USGS Fetch Error:", e);
@@ -434,6 +465,9 @@ export default function LiveWeather() {
         }));
         
       setChartData(full24hRain);
+      setWeather(data);
+      sessionStorage.setItem('lw_chart_cache', JSON.stringify(full24hRain));
+      sessionStorage.setItem('lw_weather_cache', JSON.stringify(data));
       
       // Dynamic DEFCON & Hazard Calc
       const wind = data.current.wind_speed_10m || 0;
