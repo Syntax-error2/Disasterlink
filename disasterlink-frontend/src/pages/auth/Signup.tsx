@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ShieldCheck, Mail, Lock, User, Briefcase, Loader2, AlertCircle, MapPin, Home, Phone } from "lucide-react";
 import axiosInstance from "../../lib/axios";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Signup() {
   const [loading, setLoading] = useState(false);
@@ -10,6 +11,13 @@ export default function Signup() {
   const [formData, setFormData] = useState<any>(null);
   const [otp, setOtp] = useState("");
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();

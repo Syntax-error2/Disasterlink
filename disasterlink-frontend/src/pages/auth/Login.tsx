@@ -12,7 +12,14 @@ export default function Login() {
   const [errorMsg, setErrorMsg] = useState("");
   const [tenant, setTenant] = useState<any>(null);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // Extract Subdomain for SaaS Branding
   const hostname = window.location.hostname;

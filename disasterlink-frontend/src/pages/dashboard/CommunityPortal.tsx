@@ -220,7 +220,7 @@ export default function CommunityPortal() {
     let lat = 10.1866, lng = 122.8587;
     if ("geolocation" in navigator) {
       try {
-        const position = await new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
         lat = position.coords.latitude;
         lng = position.coords.longitude;
       } catch (e) {}
@@ -339,7 +339,7 @@ export default function CommunityPortal() {
         )}
       </AnimatePresence>
 
-      <main className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0">
+      <main className="flex-1 overflow-y-auto no-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
           {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} isOffline={isOffline} />}
           {activeTab === "map" && <MapView key="map" showToast={showToast} evacCenters={evacCenters} />}
@@ -412,7 +412,7 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
       <div className="flex justify-between items-start mt-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <img src="/logo.png" alt="DisasterLink" className="h-6 w-auto" />
+            <img src="/pwa-512x512.png" alt="DisasterLink" className="h-6 w-auto rounded" />
             <span className="text-xs font-bold text-red-500 tracking-wider">DISASTERLINK</span>
           </div>
           <h2 className="text-zinc-400 text-sm">Stay safe,</h2>
@@ -604,21 +604,19 @@ function MapView({ showToast, evacCenters }: any) {
 
   useEffect(() => {
     // 1. Fetch Geolocation
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newLoc: [number, number] = [position.coords.latitude, position.coords.longitude];
-          setCenter(newLoc);
-          setUserLoc(newLoc);
-          showToast("Location accurately acquired and pinned.", "success");
-        },
-        (err) => {
-          console.warn("Location error:", err);
-          showToast("Using default location.", "error");
-        },
-        { enableHighAccuracy: true }
-      );
-    }
+    const fetchLocation = async () => {
+      try {
+        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+        const newLoc: [number, number] = [position.coords.latitude, position.coords.longitude];
+        setCenter(newLoc);
+        setUserLoc(newLoc);
+        showToast("Location accurately acquired and pinned.", "success");
+      } catch (err) {
+        console.warn("Location error:", err);
+        showToast("Using default location.", "error");
+      }
+    };
+    fetchLocation();
 
     // 2. Fetch Live Weather Data (Open-Meteo)
     const fetchWeather = async () => {
@@ -832,23 +830,16 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
       };
       reader.readAsDataURL(file);
 
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setLocation({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            });
-          },
-          (error) => {
-            console.warn("Location error:", error);
-            // Default to Binalbagan center if user denies permission
-            setLocation({ lat: 10.1866, lng: 122.8587 });
-          }
-        );
-      } else {
-         setLocation({ lat: 10.1866, lng: 122.8587 });
-      }
+      const fetchReportLoc = async () => {
+        try {
+          const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+          setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        } catch (e) {
+          console.warn("Location error:", e);
+          setLocation({ lat: 10.1866, lng: 122.8587 });
+        }
+      };
+      fetchReportLoc();
     }
   };
 
