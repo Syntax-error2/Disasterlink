@@ -6,19 +6,29 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Loader2 } from "lucide-react";
 import 'leaflet/dist/leaflet.css';
 
+// Helper to simulate network delay so the beautiful loader is actually visible on localhost!
+const lazyWithDelay = (importFunc: () => Promise<any>, delay = 600) => {
+  return React.lazy(() => 
+    Promise.all([
+      importFunc(),
+      new Promise(resolve => setTimeout(resolve, delay))
+    ]).then(([moduleExports]) => moduleExports)
+  );
+};
+
 // Lazy loaded pages for performance and loading states
-const Login = React.lazy(() => import("./pages/auth/Login"));
-const Signup = React.lazy(() => import("./pages/auth/Signup"));
-const Overview = React.lazy(() => import("./pages/dashboard/Overview"));
-const GisMap = React.lazy(() => import("./pages/dashboard/GisMap"));
-const IncidentReports = React.lazy(() => import("./pages/dashboard/IncidentReports"));
-const LiveWeather = React.lazy(() => import("./pages/dashboard/LiveWeather"));
-const EmergencyAlerts = React.lazy(() => import("./pages/dashboard/EmergencyAlerts"));
-const Settings = React.lazy(() => import("./pages/dashboard/Settings"));
-const ResponderMobile = React.lazy(() => import("./pages/dashboard/ResponderMobile"));
-const BarangayDashboard = React.lazy(() => import("./pages/dashboard/BarangayDashboard"));
-const CommunityPortal = React.lazy(() => import("./pages/dashboard/CommunityPortal"));
-const SuperAdmin = React.lazy(() => import("./pages/dashboard/SuperAdmin"));
+const Login = lazyWithDelay(() => import("./pages/auth/Login"), 800);
+const Signup = lazyWithDelay(() => import("./pages/auth/Signup"), 800);
+const Overview = lazyWithDelay(() => import("./pages/dashboard/Overview"));
+const GisMap = lazyWithDelay(() => import("./pages/dashboard/GisMap"));
+const IncidentReports = lazyWithDelay(() => import("./pages/dashboard/IncidentReports"));
+const LiveWeather = lazyWithDelay(() => import("./pages/dashboard/LiveWeather"));
+const EmergencyAlerts = lazyWithDelay(() => import("./pages/dashboard/EmergencyAlerts"));
+const Settings = lazyWithDelay(() => import("./pages/dashboard/Settings"));
+const ResponderMobile = lazyWithDelay(() => import("./pages/dashboard/ResponderMobile"));
+const BarangayDashboard = lazyWithDelay(() => import("./pages/dashboard/BarangayDashboard"));
+const CommunityPortal = lazyWithDelay(() => import("./pages/dashboard/CommunityPortal"));
+const SuperAdmin = lazyWithDelay(() => import("./pages/dashboard/SuperAdmin"));
 
 // Global Page Loader
 const PageLoader = () => (
