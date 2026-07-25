@@ -106,11 +106,11 @@ export default function Login() {
         <div className="absolute inset-0 z-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
         {/* Top Logo */}
-        <div className="relative z-10 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="h-10 w-10 rounded-xl bg-red-600 flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.5)]">
-            <Activity className="h-6 w-6 text-white" />
+        <div className="flex flex-col items-start justify-start relative z-10 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="flex items-center gap-3">
+            <img src="/logo.svg" alt="DisasterLink" className="h-10 w-10 rounded-xl shadow-[0_0_15px_rgba(220,38,38,0.5)]" />
+            <span className="text-2xl font-bold tracking-tight">DisasterLink</span>
           </div>
-          <span className="text-2xl font-bold tracking-tight">DisasterLink</span>
         </div>
 
         {/* Main Value Prop */}

@@ -412,7 +412,7 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
       <div className="flex justify-between items-start mt-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <img src="/pwa-512x512.png" alt="DisasterLink" className="h-6 w-auto rounded" />
+            <img src="/logo.svg" alt="DisasterLink" className="h-6 w-6 rounded-md shadow-[0_0_10px_rgba(220,38,38,0.5)]" />
             <span className="text-xs font-bold text-red-500 tracking-wider">DISASTERLINK</span>
           </div>
           <h2 className="text-zinc-400 text-sm">Stay safe,</h2>
