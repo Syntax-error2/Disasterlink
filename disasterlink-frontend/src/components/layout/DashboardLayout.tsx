@@ -50,7 +50,7 @@ export default function DashboardLayout() {
 
   // 2. Fetch User & Filter Notifications on Load
   useEffect(() => {
-    const storedUser = JSON.parse(sessionStorage.getItem("user") || "{}");
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     if (storedUser && storedUser.name) {
       setUser({
         name: storedUser.name,
@@ -149,8 +149,8 @@ export default function DashboardLayout() {
     try {
       await axiosInstance.post('/logout');
     } catch(e) {}
-    sessionStorage.removeItem('auth_token'); 
-    sessionStorage.removeItem('user'); 
+    localStorage.removeItem('auth_token'); 
+    localStorage.removeItem('user'); 
     navigate("/login");
   };
 
