@@ -24,7 +24,10 @@ export default function Login() {
 
   useEffect(() => {
     axiosInstance.get(`/tenant-config/${currentSubdomain}`)
-      .then(res => setTenant(res.data))
+      .then(res => {
+        const tenantData = res.data.data || res.data;
+        setTenant(tenantData);
+      })
       .catch(err => console.log("Generic SaaS Mode Active"));
   }, [currentSubdomain]);
 
@@ -41,10 +44,13 @@ export default function Login() {
     try {
       // Send data to Laravel Backend
       const response = await axiosInstance.post("/login", data);
-      const result = response.data;
+      const result = response.data.data || response.data;
+      
+      const token = result.token || response.data.token;
+      const user = result.user || response.data.user;
 
       // 1. Save Token
-      login(result.token, result.user);
+      login(token, user);
 
       // 2. Trigger the "Boot Sequence" UI
       setLoginState('booting');
@@ -56,12 +62,13 @@ export default function Login() {
 
       // 4. Secure Role-Based Redirection after the boot sequence completes
       setTimeout(() => {
-        const userRole = result.user.role;
-        
-        if (userRole === 'superadmin') {
-          navigate("/superadmin");
-        } else if (userRole === 'admin' || userRole === 'mdrrmo_staff') {
-          navigate("/"); // Send to Master Dashboard
+        try {
+          const userRole = user?.role || 'admin';
+          
+          if (userRole === 'superadmin') {
+            navigate("/superadmin");
+          } else if (userRole === 'admin' || userRole === 'mdrrmo_staff') {
+            navigate("/"); // Send to Master Dashboard
         } else if (userRole === 'barangay_captain') {
           navigate("/barangay-command"); // Send to Localized Dashboard
         } else if (userRole === 'responder') {
@@ -70,6 +77,10 @@ export default function Login() {
           navigate("/portal"); // Send to Community Portal
         } else {
           navigate("/"); // Fallback
+        }
+        } catch (navError) {
+          console.error("Navigation error", navError);
+          navigate("/");
         }
       }, 2500); // 2.5 seconds total loading time
 
