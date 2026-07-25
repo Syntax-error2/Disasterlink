@@ -8,7 +8,7 @@ if (typeof window !== 'undefined') {
     
     // Use the official Capacitor module to detect native environments
     if (Capacitor.isNativePlatform()) {
-        apiBase = 'http://192.168.1.150:8000/api';
+        apiBase = 'https://arm-syntax-discs-dont.trycloudflare.com/api';
     } 
     else if (hostname.includes('.devtunnels.ms') || hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
         // Use relative path to let Vite Proxy handle the routing securely, bypassing ALL CORS and Microsoft Proxy issues!
