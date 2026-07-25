@@ -14,12 +14,12 @@ export default function Login() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
 
-  // Auto-redirect if already logged in
+  // Auto-redirect if already logged in, BUT don't interrupt the boot sequence if they just logged in!
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && loginState === 'idle') {
       navigate("/", { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, loginState, navigate]);
 
   // Extract Subdomain for SaaS Branding
   const hostname = window.location.hostname;
@@ -57,7 +57,10 @@ export default function Login() {
       const user = result.user || response.data.user;
 
       // 1. Save Token
-      login(token, user);
+      // Note: We don't call login() here anymore, because it instantly flips isAuthenticated and triggers the app router.
+      // We will manually store it for now, and let the boot sequence finish.
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('user', JSON.stringify(user));
 
       // 2. Trigger the "Boot Sequence" UI
       setLoginState('booting');
@@ -69,22 +72,23 @@ export default function Login() {
 
       // 4. Secure Role-Based Redirection after the boot sequence completes
       setTimeout(() => {
+        login(token, user); // Officially log them in
+        
         try {
           const userRole = user?.role || 'admin';
-          
           if (userRole === 'superadmin') {
             navigate("/superadmin");
           } else if (userRole === 'admin' || userRole === 'mdrrmo_staff') {
             navigate("/"); // Send to Master Dashboard
-        } else if (userRole === 'barangay_captain') {
-          navigate("/barangay-command"); // Send to Localized Dashboard
-        } else if (userRole === 'responder') {
-          navigate("/responder-dispatch"); // Send to Mobile Field UI
-        } else if (userRole === 'resident' || userRole === 'citizen') {
-          navigate("/portal"); // Send to Community Portal
-        } else {
-          navigate("/"); // Fallback
-        }
+          } else if (userRole === 'barangay_captain') {
+            navigate("/barangay-command"); // Send to Localized Dashboard
+          } else if (userRole === 'responder') {
+            navigate("/responder-dispatch"); // Send to Mobile Field UI
+          } else if (userRole === 'resident' || userRole === 'citizen') {
+            navigate("/portal"); // Send to Community Portal
+          } else {
+            navigate("/"); // Fallback
+          }
         } catch (navError) {
           console.error("Navigation error", navError);
           navigate("/");
