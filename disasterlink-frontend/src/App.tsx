@@ -1,20 +1,32 @@
+import React, { Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/theme-provider";
 import DashboardLayout from "./components/layout/DashboardLayout";
-import Login from "./pages/auth/Login";
-import Signup from "./pages/auth/Signup";
-import Overview from "./pages/dashboard/Overview";
-import GisMap from "./pages/dashboard/GisMap";
-import IncidentReports from "./pages/dashboard/IncidentReports";
-import LiveWeather from "./pages/dashboard/LiveWeather";         
-import EmergencyAlerts from "./pages/dashboard/EmergencyAlerts"; 
-import Settings from "./pages/dashboard/Settings";
-import ResponderMobile from "./pages/dashboard/ResponderMobile";
-import BarangayDashboard from "./pages/dashboard/BarangayDashboard";
-import CommunityPortal from "./pages/dashboard/CommunityPortal";
-import SuperAdmin from "./pages/dashboard/SuperAdmin";
-import 'leaflet/dist/leaflet.css';
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { Loader2 } from "lucide-react";
+import 'leaflet/dist/leaflet.css';
+
+// Lazy loaded pages for performance and loading states
+const Login = React.lazy(() => import("./pages/auth/Login"));
+const Signup = React.lazy(() => import("./pages/auth/Signup"));
+const Overview = React.lazy(() => import("./pages/dashboard/Overview"));
+const GisMap = React.lazy(() => import("./pages/dashboard/GisMap"));
+const IncidentReports = React.lazy(() => import("./pages/dashboard/IncidentReports"));
+const LiveWeather = React.lazy(() => import("./pages/dashboard/LiveWeather"));
+const EmergencyAlerts = React.lazy(() => import("./pages/dashboard/EmergencyAlerts"));
+const Settings = React.lazy(() => import("./pages/dashboard/Settings"));
+const ResponderMobile = React.lazy(() => import("./pages/dashboard/ResponderMobile"));
+const BarangayDashboard = React.lazy(() => import("./pages/dashboard/BarangayDashboard"));
+const CommunityPortal = React.lazy(() => import("./pages/dashboard/CommunityPortal"));
+const SuperAdmin = React.lazy(() => import("./pages/dashboard/SuperAdmin"));
+
+// Global Page Loader
+const PageLoader = () => (
+  <div className="h-screen w-full flex flex-col items-center justify-center bg-zinc-50 dark:bg-[#16171d]">
+    <Loader2 className="h-10 w-10 animate-spin text-red-600 mb-4" />
+    <span className="text-zinc-500 dark:text-zinc-400 font-medium animate-pulse">Loading modules...</span>
+  </div>
+);
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -44,8 +56,9 @@ export default function App() {
     <ThemeProvider defaultTheme="system" storageKey="disasterlink-theme">
       <AuthProvider>
         <BrowserRouter>
-          <Routes>
-            {/* Auth Routes (No Sidebar) */}
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Auth Routes (No Sidebar) */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} /> 
 
@@ -70,7 +83,8 @@ export default function App() {
             
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>

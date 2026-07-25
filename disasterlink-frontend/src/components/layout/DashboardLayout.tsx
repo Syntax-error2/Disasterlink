@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../theme-provider";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,10 +17,19 @@ import {
   Moon,
   CheckCircle2,
   AlertTriangle,
-  Info
+  Info,
+  Loader2
 } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../context/AuthContext";
+
+// Inner Loader for Dashboard Pane Transitions
+const DashboardLoader = () => (
+  <div className="h-full w-full flex flex-col items-center justify-center min-h-[60vh]">
+    <Loader2 className="h-8 w-8 animate-spin text-red-500 mb-4" />
+    <span className="text-zinc-500 font-medium animate-pulse text-sm">Loading module...</span>
+  </div>
+);
 
 // No mock notifications, dynamic only
 export default function DashboardLayout() {
@@ -341,7 +350,9 @@ export default function DashboardLayout() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar relative z-0">
-          <Outlet />
+          <Suspense fallback={<DashboardLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>
