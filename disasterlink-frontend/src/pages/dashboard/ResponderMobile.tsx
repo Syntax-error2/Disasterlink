@@ -30,7 +30,9 @@ function MapUpdater({ center }: { center: [number, number] }) {
 
 export default function ResponderMobile() {
   const { logout, user } = useAuth();
-  const MAP_CENTER: [number, number] = user?.lgu ? [Number(user.lgu.latitude), Number(user.lgu.longitude)] : [10.1866, 122.8587];
+  const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
+  const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
+  const MAP_CENTER: [number, number] = [isNaN(lat) ? 10.1866 : lat, isNaN(lng) ? 122.8587 : lng];
 
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"missions" | "map" | "comms" | "profile">("missions");

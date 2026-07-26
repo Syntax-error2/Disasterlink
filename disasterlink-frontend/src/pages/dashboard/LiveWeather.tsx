@@ -260,7 +260,9 @@ const VolcanoTracker = ({ volcanoData }: { volcanoData: any }) => {
 
 export default function LiveWeather() {
   const { user } = useAuth();
-  const binalbaganCoords: [number, number] = user?.lgu ? [Number(user.lgu.latitude), Number(user.lgu.longitude)] : [10.1866, 122.8587];
+  const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
+  const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
+  const binalbaganCoords: [number, number] = [isNaN(lat) ? 10.1866 : lat, isNaN(lng) ? 122.8587 : lng];
 
   const [activeTab, setActiveTab] = useState<"radar" | "forecast">("radar");
   const [mapLayer, setMapLayer] = useState<"satellite" | "streets" | "dark">("dark");
