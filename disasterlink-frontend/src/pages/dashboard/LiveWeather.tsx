@@ -270,7 +270,7 @@ export default function LiveWeather() {
     const cached = sessionStorage.getItem('lw_weather_cache');
     return cached ? JSON.parse(cached) : null;
   });
-  const [chartData, setChartData] = useState<{time: string, rain: number}[]>(() => {
+  const [chartData, setChartData] = useState<{time: string, rain: number, prob: number}[]>(() => {
     const cached = sessionStorage.getItem('lw_chart_cache');
     return cached ? JSON.parse(cached) : [];
   });
@@ -313,7 +313,7 @@ export default function LiveWeather() {
   const [hazardMatrix, setHazardMatrix] = useState(HAZARD_MATRIX);
   const [actionRec, setActionRec] = useState({ text: "Initializing AI models...", classes: { bg: 'bg-zinc-50 dark:bg-zinc-500/10', border: 'border-zinc-200 dark:border-zinc-500/20', text: 'text-zinc-600 dark:text-zinc-400' } });
 
-  const updateHazards = (wind: number, totalRain24h: number, heatIndex: number) => {
+  const updateHazards = (wind: number, totalRain24h: number, heatIndex: number, currentPrecipProb: number) => {
       let newDefcon = { level: 5, text: "Normal Operations", color: "bg-emerald-600" };
       if (wind > 100 || totalRain24h > 100) {
           newDefcon = { level: 1, text: "Maximum Readiness", color: "bg-red-600" };
@@ -348,6 +348,9 @@ export default function LiveWeather() {
       } else if (totalRain24h > 10) {
           recText = "Moderate rainfall expected. Monitor water levels in catch basins and local streams.";
           classes = { bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-200 dark:border-amber-500/20', text: 'text-amber-600 dark:text-amber-400' };
+      } else if (currentPrecipProb >= 70) {
+          recText = `High probability of rain (${currentPrecipProb}%). Weather remains generally stable, but prepare for impending downpours.`;
+          classes = { bg: 'bg-blue-50 dark:bg-blue-500/10', border: 'border-blue-200 dark:border-blue-500/20', text: 'text-blue-600 dark:text-blue-400' };
       }
       
       setActionRec({ text: recText, classes });
@@ -463,7 +466,8 @@ export default function LiveWeather() {
         .slice(startIndex, startIndex + 24)
         .map((t: string, i: number) => ({
             time: new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            rain: data.hourly.precipitation[startIndex + i] || 0
+            rain: data.hourly.precipitation[startIndex + i] || 0,
+            prob: data.hourly.precipitation_probability ? (data.hourly.precipitation_probability[startIndex + i] || 0) : 0
         }));
         
       setChartData(full24hRain);
@@ -474,8 +478,9 @@ export default function LiveWeather() {
       // Dynamic DEFCON & Hazard Calc
       const wind = data.current.wind_speed_10m || 0;
       const totalRain24h = full24hRain.reduce((acc: number, val: any) => acc + (val.rain || 0), 0);
+      const currentPrecipProb = data.current.precipitation_probability || 0;
       
-      updateHazards(wind, totalRain24h, data.current.apparent_temperature || 0);
+      updateHazards(wind, totalRain24h, data.current.apparent_temperature || 0, currentPrecipProb);
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (error) {
       console.warn("Failed to fetch live weather data. Engaging high-fidelity fallback:", error);
@@ -492,12 +497,13 @@ export default function LiveWeather() {
         d.setHours(d.getHours() + i);
         return {
           time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          rain: Math.random() > 0.7 ? Math.random() * 5 : 0 // Random bursts of rain
+          rain: Math.random() > 0.7 ? Math.random() * 5 : 0, // Random bursts of rain
+          prob: Math.random() > 0.5 ? Math.floor(Math.random() * 100) : 0
         };
       });
       setChartData(mockChartData);
       
-      updateHazards(mockWeather.current.wind_speed_10m, 12.5, mockWeather.current.apparent_temperature);
+      updateHazards(mockWeather.current.wind_speed_10m, 12.5, mockWeather.current.apparent_temperature, mockWeather.current.precipitation_probability);
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + " (Simulated)");
     } finally {
       setLoading(false);
@@ -716,7 +722,7 @@ export default function LiveWeather() {
         {/* Rainfall Forecast Chart */}
         <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-sm uppercase tracking-wider text-zinc-500 dark:text-zinc-400">24-Hour Precipitation Model (mm)</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-wider text-zinc-500 dark:text-zinc-400">24-Hour Precipitation & Probability Model</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[250px] w-full">
@@ -727,12 +733,18 @@ export default function LiveWeather() {
                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                     </linearGradient>
+                    <linearGradient id="colorProb" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.5}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.2} />
                   <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} />
+                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} />
+                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} domain={[0, 100]} />
                   <RechartsTooltip contentStyle={{ backgroundColor: '#111115', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
-                  <Area type="monotone" dataKey="rain" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorRain)" />
+                  <Area yAxisId="left" type="monotone" dataKey="rain" name="Rain (mm)" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorRain)" />
+                  <Area yAxisId="right" type="monotone" dataKey="prob" name="Chance of Rain (%)" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorProb)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
