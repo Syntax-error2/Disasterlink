@@ -52,7 +52,9 @@ const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6
 // ==========================================
 export default function CommunityPortal() {
   const { logout, user } = useAuth();
-  const MAP_CENTER: [number, number] = user?.lgu ? [Number(user.lgu.latitude), Number(user.lgu.longitude)] : [10.1866, 122.8587];
+  const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
+  const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
+  const MAP_CENTER: [number, number] = [isNaN(lat) ? 10.1866 : lat, isNaN(lng) ? 122.8587 : lng];
 
   const [activeTab, setActiveTab] = useState("home");
   const [isSOSActive, setIsSOSActive] = useState(false);
@@ -101,7 +103,8 @@ export default function CommunityPortal() {
   const fetchLiveResponders = async () => {
     try {
       const response = await axiosInstance.get('/responder/locations');
-      setLiveResponders(response.data);
+      const safeRes = response.data.map((r: any) => ({ ...r, lat: Number(r.lat) || MAP_CENTER[0], lng: Number(r.lng) || MAP_CENTER[1] }));
+      setLiveResponders(safeRes);
     } catch (e) {}
   };
 
