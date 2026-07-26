@@ -366,7 +366,7 @@ export default function CommunityPortal() {
 
       <main className="flex-1 overflow-y-auto no-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
-          {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} isOffline={isOffline} />}
+          {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} isOffline={isOffline} activeBroadcast={activeBroadcast} />}
           {activeTab === "map" && <MapView key="map" showToast={showToast} evacCenters={evacCenters} />}
           {activeTab === "report" && <ReportView key="report" showToast={showToast} user={activeUser} refreshMyReports={fetchMyReports} setActiveTab={setActiveTab} isOffline={isOffline} />}
           {activeTab === "feed" && <FeedView key="feed" showToast={showToast} posts={feedPosts} setPosts={setFeedPosts} user={activeUser} isOffline={isOffline} />}
@@ -428,7 +428,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, isPrimary }: any) {
 // ==========================================
 // 3. HOME VIEW
 // ==========================================
-function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, user, myReports }: any) {
+function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, user, myReports, activeBroadcast }: any) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { logout } = useAuth();
 
