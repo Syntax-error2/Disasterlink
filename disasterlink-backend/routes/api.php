@@ -39,6 +39,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/incidents', [IncidentReportController::class, 'index']);
     Route::post('/incidents', [IncidentReportController::class, 'store']);
     Route::put('/incidents/{id}', [IncidentReportController::class, 'update']);
+    Route::delete('/incidents/{id}', [IncidentReportController::class, 'destroy']);
     Route::post('/incidents/{id}/verify', [IncidentReportController::class, 'verify']);
     Route::get('/telemetry', [App\Http\Controllers\TelemetryController::class, 'index']);
     Route::get('/ai/predictions', [App\Http\Controllers\TelemetryController::class, 'aiPredictions']);

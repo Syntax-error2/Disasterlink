@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\IncidentReport;
 use Illuminate\Http\Request;
+use App\Events\IncidentEvent;
 
 class IncidentReportController extends Controller
 {
@@ -62,6 +63,7 @@ class IncidentReportController extends Controller
                         'image_data' => $imageData ?: $recentIncident->image_data,
                         'image_path' => $imagePath ?: $recentIncident->image_path,
                     ]);
+                    event(new IncidentEvent('updated', $recentIncident));
                     return response()->json(['message' => 'Report Merged!', 'id' => $recentIncident->id], 200);
                 }
             }
@@ -79,6 +81,8 @@ class IncidentReportController extends Controller
                 'status'             => $request->input('status', 'Pending Review'),
             ]);
             
+            event(new IncidentEvent('created', $incident));
+            
             return response()->json(['message' => 'Incident created!', 'id' => $incident->id], 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -89,6 +93,7 @@ class IncidentReportController extends Controller
     {
         $incident = IncidentReport::findOrFail($id);
         $incident->update($request->all());
+        event(new IncidentEvent('updated', $incident));
         return response()->json($incident, 200);
     }
 
@@ -106,7 +111,20 @@ class IncidentReportController extends Controller
                 ]);
             }
             
+            event(new IncidentEvent('updated', $incident));
             return response()->json($incident, 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $incident = IncidentReport::findOrFail($id);
+            $incident->delete();
+            event(new IncidentEvent('deleted', ['id' => $id]));
+            return response()->json(['message' => 'Incident deleted successfully'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

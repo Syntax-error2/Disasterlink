@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Geolocation } from '@capacitor/geolocation';
+import echo from "../../lib/echo";
 
 // ==========================================
 // 1. DYNAMIC USER & MOCK DATA
@@ -212,25 +213,34 @@ export default function CommunityPortal() {
       } catch (e) {}
     };
 
+    let isSubscribed = true;
+
+    const fetchMyReportsWrapper = async () => {
+      if (isSubscribed) {
+        await fetchMyReports();
+      }
+    };
+
     fetchMyReports();
     fetchEvacuationCenters();
     fetchBroadcast();
     fetchFeedPosts();
     fetchFamilyMembers();
     
-    const interval = setInterval(() => {
-      if (navigator.onLine) {
-        fetchMyReports();
-        fetchEvacuationCenters();
-        fetchBroadcast();
-        fetchFeedPosts();
-        fetchFamilyMembers();
-      }
-    }, 15000); // Increased polling interval to 15 seconds to prevent network spam
+    const channel = echo.channel('incidents');
+    channel.listen('.incident.event', (e: any) => {
+      console.log('Real-time Incident Event:', e);
+      fetchMyReportsWrapper();
+    });
+
+    const broadcastInterval = setInterval(fetchBroadcast, 60000); // 1-minute interval for weather alerts
+
     return () => {
-      clearInterval(interval);
+      isSubscribed = false;
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearInterval(broadcastInterval);
+      echo.leaveChannel('incidents');
     };
   }, []);
 

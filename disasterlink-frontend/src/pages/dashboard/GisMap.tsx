@@ -14,6 +14,7 @@ import L from "leaflet";
 // 1. SPATIAL DATA & MOCK TELEMETRY
 // ==========================================
 import axiosInstance from "../../lib/axios";
+import echo from "../../lib/echo";
 
 import { useAuth } from "../../context/AuthContext";
 
@@ -68,13 +69,15 @@ export default function GisDashboard() {
   const [liveResponders, setLiveResponders] = useState<any[]>([]);
   const [aiPredictions, setAiPredictions] = useState<any[]>([]);
 
-  // Real-time clock and data fetching
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString()), 1000);
     
+    let isSubscribed = true;
+
     const fetchIncidents = async () => {
       try {
         const response = await axiosInstance.get('/incidents');
+        if (!isSubscribed) return;
         const data = response.data;
         
         const unresolvedData = data.filter((inc: any) => inc.status !== 'Resolved');
@@ -153,16 +156,17 @@ export default function GisDashboard() {
     fetchResponders();
     fetchAiPredictions();
     
-    const dataInterval = setInterval(() => {
+    const channel = echo.channel('incidents');
+    channel.listen('.incident.event', (e: any) => {
+      console.log('Real-time Incident Event:', e);
+      // Fast refresh without waiting 15 seconds!
       fetchIncidents();
-      fetchEvacCenters();
-      fetchResponders();
-      fetchAiPredictions();
-    }, 15000);
+    });
 
     return () => {
+      isSubscribed = false;
       clearInterval(timer);
-      clearInterval(dataInterval);
+      echo.leaveChannel('incidents');
     };
   }, []);
 
@@ -294,7 +298,22 @@ export default function GisDashboard() {
                       </div>
                       <div className="flex justify-between items-center text-[10px] border-t border-zinc-200 dark:border-zinc-800 pt-2 mt-2">
                         <span className="text-zinc-400">{incident.time}</span>
-                        <span className="text-blue-600 dark:text-blue-400 font-semibold">{incident.status}</span>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            className="text-red-500 hover:bg-red-500/20 px-2 py-0.5 rounded-full transition-all border border-red-500/30"
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                if(confirm('Are you sure you want to permanently delete this incident?')) {
+                                    try {
+                                        await axiosInstance.delete(`/incidents/${incident.id.replace('INC-', '')}`);
+                                    } catch(err) { alert('Failed to delete'); }
+                                }
+                            }}
+                          >
+                            Delete
+                          </button>
+                          <span className="text-blue-600 dark:text-blue-400 font-semibold">{incident.status}</span>
+                        </div>
                       </div>
                     </motion.div>
                   ))}
