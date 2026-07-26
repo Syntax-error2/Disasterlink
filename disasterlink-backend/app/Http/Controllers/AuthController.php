@@ -150,4 +150,18 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Logged out securely.']);
     }
+
+    // Sync Firebase Cloud Messaging Token for Push Notifications
+    public function updateFcmToken(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string'
+        ]);
+
+        $user = $request->user();
+        $user->fcm_token = $request->token;
+        $user->save();
+
+        return response()->json(['message' => 'FCM Token synced securely.']);
+    }
 }

@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
             'department' => 'MDRRMO',
             'assigned_barangay' => 'Command Center',
             'contact_number' => '09123456789',
-            'account_status' => 'Active',
+            'account_status' => 'active',
         ]);
     }
 }

@@ -23,6 +23,10 @@ Route::middleware('throttle:auth')->group(function () {
 });
 Route::get('/tenant-config/{subdomain}', [AuthController::class, 'tenantConfig'])->middleware('throttle:api');
 
+Route::get('/telemetry', [App\Http\Controllers\TelemetryController::class, 'index']);
+Route::get('/route', [App\Http\Controllers\TelemetryController::class, 'getRoute']);
+Route::get('/ai/predictions', [App\Http\Controllers\TelemetryController::class, 'aiPredictions']);
+
 use App\Http\Controllers\IncidentReportController;
 use App\Http\Controllers\EvacuationCenterController;
 use App\Http\Controllers\DashboardController;
@@ -32,6 +36,7 @@ use App\Http\Controllers\ResponderTelemetryController;
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/fcm-token', [AuthController::class, 'updateFcmToken']);
 
     // ==========================================
     // INCIDENT REPORTING API
@@ -41,9 +46,6 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::put('/incidents/{id}', [IncidentReportController::class, 'update'])->middleware('role:admin,responder');
     Route::delete('/incidents/{id}', [IncidentReportController::class, 'destroy'])->middleware('role:admin');
     Route::post('/incidents/{id}/verify', [IncidentReportController::class, 'verify'])->middleware('role:admin,responder');
-    Route::get('/telemetry', [App\Http\Controllers\TelemetryController::class, 'index']);
-    Route::get('/route', [App\Http\Controllers\TelemetryController::class, 'getRoute']);
-    Route::get('/ai/predictions', [App\Http\Controllers\TelemetryController::class, 'aiPredictions']);
     Route::get('/broadcast', [App\Http\Controllers\BroadcastController::class, 'get']);
     Route::post('/broadcast', [App\Http\Controllers\BroadcastController::class, 'store'])->middleware('role:admin');
 

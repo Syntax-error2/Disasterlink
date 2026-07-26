@@ -21,6 +21,23 @@ class BroadcastController extends Controller
         
         Cache::put('active_broadcast', $message, now()->addMinutes($duration));
         
+        // ----------------------------------------------------
+        // FIREBASE PUSH NOTIFICATIONS
+        // ----------------------------------------------------
+        try {
+            $tokens = \App\Models\User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
+            
+            if (!empty($tokens)) {
+                $messaging = \Kreait\Laravel\Firebase\Facades\Firebase::messaging();
+                $notification = \Kreait\Firebase\Messaging\Notification::create('🚨 EMERGENCY ALERT', $message);
+                $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()->withNotification($notification);
+                
+                $messaging->sendMulticast($cloudMessage, $tokens);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Firebase Push Failed: ' . $e->getMessage());
+        }
+
         if ($request->input('include_sms')) {
             $phones = \App\Models\User::whereNotNull('phone')->pluck('phone')->toArray();
             if (empty($phones)) {

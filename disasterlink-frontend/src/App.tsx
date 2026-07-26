@@ -62,10 +62,13 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
   return children;
 };
 
+import { PushNotificationManager } from "./components/PushNotificationManager";
+
 export default function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="disasterlink-theme">
       <AuthProvider>
+        <PushNotificationManager />
         <ErrorBoundary>
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>

@@ -157,6 +157,20 @@ export default function Overview() {
   // ==========================================
   const fetchDashboardData = async () => {
     setIsRefreshing(true);
+    
+    // Fetch Local Weather Data (Independent)
+    try {
+      const weatherUrl = "https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,wind_speed_10m&timezone=Asia%2FManila";
+      const weatherResponse = await fetch(weatherUrl);
+      if (weatherResponse.ok) {
+         const wData = await weatherResponse.json();
+         setWeatherTemp(wData.current.temperature_2m.toFixed(1));
+         setWeatherWind(wData.current.wind_speed_10m.toFixed(1));
+      }
+    } catch (error) {
+      console.warn("Weather fetch failed.", error);
+    }
+
     try {
       // Fetch Real Incident Data from Laravel
       const dbResponse = await axiosInstance.get("/incidents");
@@ -178,15 +192,6 @@ export default function Overview() {
         setActiveBroadcast(broadcastRes.data.broadcast);
       } catch (err) {
         console.warn("Could not fetch new analytics (Endpoints may not exist yet)", err);
-      }
-
-      // Fetch Local Weather Data
-      const weatherUrl = "https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,wind_speed_10m&timezone=Asia%2FManila";
-      const weatherResponse = await fetch(weatherUrl);
-      if (weatherResponse.ok) {
-         const wData = await weatherResponse.json();
-         setWeatherTemp(wData.current.temperature_2m.toFixed(1));
-         setWeatherWind(wData.current.wind_speed_10m.toFixed(1));
       }
     } catch (error) {
       console.error("Dashboard sync failed. Ensure Laravel backend is running.", error);
