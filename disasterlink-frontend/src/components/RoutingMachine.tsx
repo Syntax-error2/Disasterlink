@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import L from "leaflet";
-import "leaflet-routing-machine";
-import { useMap } from "react-leaflet";
+import { Polyline, useMap } from "react-leaflet";
+import axiosInstance from "../lib/axios";
 
 interface RoutingMachineProps {
   start: [number, number] | null;
@@ -10,54 +9,37 @@ interface RoutingMachineProps {
 
 export default function RoutingMachine({ start, end }: RoutingMachineProps) {
   const map = useMap();
-  const [routingControl, setRoutingControl] = useState<L.Routing.Control | null>(null);
+  const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
 
   useEffect(() => {
     if (!start || !end) {
-      if (routingControl) {
-        map.removeControl(routingControl);
-        setRoutingControl(null);
-      }
+      setRoutePoints([]);
       return;
     }
 
-    if (routingControl) {
-      routingControl.setWaypoints([
-        L.latLng(start[0], start[1]),
-        L.latLng(end[0], end[1])
-      ]);
-    } else {
-      const control = L.Routing.control({
-        waypoints: [
-          L.latLng(start[0], start[1]),
-          L.latLng(end[0], end[1])
-        ],
-        lineOptions: {
-          styles: [{ color: "#3b82f6", weight: 6, opacity: 0.8 }],
-          extendToWaypoints: true,
-          missingRouteTolerance: 0
-        },
-        show: false, // Hide the turn-by-turn text box to keep UI clean
-        addWaypoints: false,
-        routeWhileDragging: false,
-        fitSelectedRoutes: true,
-        showAlternatives: false,
-      }).addTo(map);
-
-      // We only want the line, not the default markers
-      control.on('routesfound', function(e) {
-          // You can extract distance/time here if needed:
-          // const routes = e.routes;
-          // const summary = routes[0].summary;
-      });
-
-      setRoutingControl(control);
-    }
-
-    return () => {
-      // Cleanup on unmount, but not on every render
+    const fetchRoute = async () => {
+      try {
+        const response = await axiosInstance.get(`/route?start=${start[0]},${start[1]}&end=${end[0]},${end[1]}`);
+        if (response.data && response.data.points) {
+          setRoutePoints(response.data.points);
+          // Optional: fit map bounds to route
+          // const bounds = L.latLngBounds(response.data.points);
+          // map.fitBounds(bounds, { padding: [50, 50] });
+        }
+      } catch (e) {
+        console.error("Failed to fetch Google route", e);
+      }
     };
+
+    fetchRoute();
   }, [start, end, map]);
 
-  return null;
+  if (routePoints.length === 0) return null;
+
+  return (
+    <Polyline 
+      positions={routePoints} 
+      pathOptions={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} 
+    />
+  );
 }

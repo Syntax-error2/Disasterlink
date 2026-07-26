@@ -72,4 +72,77 @@ class TelemetryController extends Controller
 
         return response()->json($predictions, 200);
     }
+
+    public function getRoute(Request $request)
+    {
+        $start = $request->query('start');
+        $end = $request->query('end');
+
+        if (!$start || !$end) {
+            return response()->json(['error' => 'Missing start or end coordinates'], 400);
+        }
+
+        $apiKey = env('GOOGLE_MAPS_API_KEY');
+        if (!$apiKey) {
+            return response()->json(['error' => 'Google Maps API key not configured'], 500);
+        }
+
+        try {
+            $url = "https://maps.googleapis.com/maps/api/directions/json?origin={$start}&destination={$end}&key={$apiKey}";
+            $response = Http::get($url)->json();
+
+            if ($response['status'] !== 'OK') {
+                return response()->json(['error' => 'Google Routing Failed', 'details' => $response], 500);
+            }
+
+            // Decode polyline points (Google's encoded polyline algorithm)
+            $encoded = $response['routes'][0]['overview_polyline']['points'];
+            $points = $this->decodePolyline($encoded);
+
+            return response()->json([
+                'points' => $points,
+                'distance' => $response['routes'][0]['legs'][0]['distance']['text'],
+                'duration' => $response['routes'][0]['legs'][0]['duration']['text'],
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    private function decodePolyline($string)
+    {
+        $points = [];
+        $index = $i = 0;
+        $previous = [0,0];
+        while ($i < strlen($string)) {
+            $j = 0;
+            $shift = 0;
+            $result = 0;
+            do {
+                $bit = ord(substr($string, $i++)) - 63;
+                $result |= ($bit & 0x1f) << $shift;
+                $shift += 5;
+            } while ($bit >= 0x20);
+            
+            $diff = ($result & 1) ? ~($result >> 1) : ($result >> 1);
+            $number = $previous[$j % 2] + $diff;
+            $previous[$j % 2] = $number;
+            $j++;
+            $shift = 0;
+            $result = 0;
+            do {
+                $bit = ord(substr($string, $i++)) - 63;
+                $result |= ($bit & 0x1f) << $shift;
+                $shift += 5;
+            } while ($bit >= 0x20);
+            
+            $diff = ($result & 1) ? ~($result >> 1) : ($result >> 1);
+            $number = $previous[$j % 2] + $diff;
+            $previous[$j % 2] = $number;
+            $j++;
+            
+            $points[] = [$previous[0] * 1e-5, $previous[1] * 1e-5];
+        }
+        return $points;
+    }
 }
