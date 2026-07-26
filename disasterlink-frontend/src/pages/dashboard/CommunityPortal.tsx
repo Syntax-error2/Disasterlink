@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import { MapContainer, TileLayer, Marker, Popup, Circle, LayersControl, useMap } from "react-leaflet";
 import L from "leaflet";
 import axiosInstance from "../../lib/axios";
@@ -180,6 +181,30 @@ export default function CommunityPortal() {
           const dismissed = JSON.parse(localStorage.getItem("dismissed_broadcasts") || "[]");
           if (!dismissed.includes(broadcastMsg)) {
             setActiveBroadcast(broadcastMsg);
+            
+            // Trigger Native Push Notification on Android
+            try {
+               await LocalNotifications.schedule({
+                 notifications: [
+                   {
+                     title: broadcastMsg.includes("VOLCANIC") ? "🌋 Volcanic Eruption Alert" :
+                            broadcastMsg.includes("EARTHQUAKE") ? "⚠️ Earthquake Detected" :
+                            broadcastMsg.includes("RED") ? "🔴 Severe Rain Warning" :
+                            broadcastMsg.includes("ORANGE") ? "🟠 Heavy Rain Warning" :
+                            "🟡 Weather Alert",
+                     body: broadcastMsg,
+                     id: new Date().getTime(),
+                     schedule: { at: new Date(Date.now() + 1000) },
+                     sound: null,
+                     attachments: null,
+                     actionTypeId: "",
+                     extra: null
+                   }
+                 ]
+               });
+            } catch (err) {
+               console.log("LocalNotifications not available or permission denied", err);
+            }
           }
         } else {
           setActiveBroadcast(null);
@@ -553,14 +578,49 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
 
       {(!myReports || myReports.length === 0) && (!alerts || alerts.length === 0) && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 pt-2">
-          <div className="bg-gradient-to-br from-zinc-800/80 to-zinc-900 border border-zinc-700/50 rounded-3xl p-6 relative overflow-hidden shadow-xl">
-             <div className="absolute -top-4 -right-4 p-4 opacity-5"><ShieldCheck className="h-40 w-40" /></div>
-             <div className="relative z-10 flex items-center gap-3 mb-3">
-                <div className="h-2.5 w-2.5 bg-emerald-500 rounded-full animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
-                <span className="text-xs font-black text-emerald-500 tracking-widest uppercase">System Normal</span>
+          
+          {/* DYNAMIC THREAT CARD */}
+          <div className={`border rounded-3xl p-6 relative overflow-hidden shadow-xl transition-colors duration-500 ${
+            !activeBroadcast ? "bg-gradient-to-br from-zinc-800/80 to-zinc-900 border-zinc-700/50" :
+            activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') ? "bg-gradient-to-br from-red-950/80 to-red-900 border-red-500/50 shadow-red-900/20" :
+            activeBroadcast.includes('ORANGE') ? "bg-gradient-to-br from-orange-950/80 to-orange-900 border-orange-500/50 shadow-orange-900/20" :
+            "bg-gradient-to-br from-yellow-950/80 to-yellow-900 border-yellow-500/50 shadow-yellow-900/20"
+          }`}>
+             <div className="absolute -top-4 -right-4 p-4 opacity-5">
+               {!activeBroadcast ? <ShieldCheck className="h-40 w-40" /> : <AlertTriangle className="h-40 w-40" />}
              </div>
-             <h3 className="text-2xl font-black text-white mb-2 tracking-tight">No Active Threats</h3>
-             <p className="text-sm text-zinc-400 leading-relaxed max-w-[85%]">Your community is currently safe. No severe weather or emergency alerts have been issued for your area.</p>
+             
+             <div className="relative z-10 flex items-center gap-3 mb-3">
+                <div className={`h-2.5 w-2.5 rounded-full animate-[pulse_2s_ease-in-out_infinite] ${
+                  !activeBroadcast ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" :
+                  activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" :
+                  activeBroadcast.includes('ORANGE') ? "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]" :
+                  "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"
+                }`}></div>
+                <span className={`text-xs font-black tracking-widest uppercase ${
+                  !activeBroadcast ? "text-emerald-500" :
+                  activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') ? "text-red-400" :
+                  activeBroadcast.includes('ORANGE') ? "text-orange-400" :
+                  "text-yellow-400"
+                }`}>
+                  {!activeBroadcast ? "System Normal" : 
+                   activeBroadcast.includes('VOLCANIC') ? "Volcanic Alert" :
+                   activeBroadcast.includes('EARTHQUAKE') ? "Seismic Alert" : "Weather Alert"}
+                </span>
+             </div>
+             
+             <h3 className="text-2xl font-black text-white mb-2 tracking-tight">
+               {!activeBroadcast ? "No Active Threats" :
+                activeBroadcast.includes('VOLCANIC') ? "Kanlaon Eruption" :
+                activeBroadcast.includes('EARTHQUAKE') ? "Earthquake Detected" :
+                "Possible Flooding"}
+             </h3>
+             
+             <p className="text-sm text-zinc-300 leading-relaxed max-w-[90%] font-medium">
+               {!activeBroadcast 
+                 ? "Your community is currently safe. No severe weather or emergency alerts have been issued for your area."
+                 : activeBroadcast}
+             </p>
           </div>
           
           <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-[20px] p-4 flex items-center justify-between backdrop-blur-sm">

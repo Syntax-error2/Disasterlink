@@ -97,6 +97,9 @@ export default function Overview() {
   const [isSearching, setIsSearching] = useState(false);
   const [evacForm, setEvacForm] = useState<{name: string, location: string, capacity: number, current_occupants: number, status: string, lat?: number, lng?: number}>({ name: '', location: '', capacity: 100, current_occupants: 0, status: 'Active' });
 
+  // BROADCAST STATE
+  const [activeBroadcast, setActiveBroadcast] = useState<string | null>(null);
+
   // ==========================================
   // DATA PROCESSING ENGINE
   // ==========================================
@@ -168,6 +171,9 @@ export default function Overview() {
         
         const evacRes = await axiosInstance.get("/evacuation-centers");
         setEvacCentersData(evacRes.data);
+
+        const broadcastRes = await axiosInstance.get("/broadcast");
+        setActiveBroadcast(broadcastRes.data.broadcast);
       } catch (err) {
         console.warn("Could not fetch new analytics (Endpoints may not exist yet)", err);
       }
@@ -239,6 +245,32 @@ export default function Overview() {
   return (
     <div className="flex flex-col gap-8 pb-8 animate-in fade-in duration-500 relative">
       
+      {/* ACTIVE BROADCAST BANNER */}
+      <AnimatePresence>
+        {activeBroadcast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`w-full p-4 rounded-xl flex items-center gap-3 border shadow-lg ${
+              activeBroadcast.includes('RED') 
+                ? 'bg-red-500/10 border-red-500 text-red-500 dark:text-red-400' 
+                : activeBroadcast.includes('ORANGE')
+                  ? 'bg-orange-500/10 border-orange-500 text-orange-500 dark:text-orange-400'
+                  : activeBroadcast.includes('YELLOW')
+                    ? 'bg-yellow-500/10 border-yellow-500 text-yellow-600 dark:text-yellow-400'
+                    : 'bg-blue-500/10 border-blue-500 text-blue-500 dark:text-blue-400'
+            }`}
+          >
+            <ShieldAlert className="h-6 w-6 shrink-0 animate-pulse" />
+            <div className="flex-1 font-bold">
+              {activeBroadcast}
+            </div>
+            <Badge variant="outline" className="bg-transparent uppercase tracking-wider text-[10px]">Automated Warning</Badge>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* MODAL OVERLAY FOR EVACUATION CENTER */}
       {createPortal(
         <AnimatePresence>
