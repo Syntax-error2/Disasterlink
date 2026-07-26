@@ -842,16 +842,18 @@ function MapView({ showToast, evacCenters }: any) {
         </div>
 
         {/* WINDY IFRAME (Live Weather Radar) */}
-        <div className={`absolute inset-0 transition-opacity duration-500 ${showWindy ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'}`}>
-           <iframe 
-             width="100%" 
-             height="100%" 
-             src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=11&overlay=wind&product=ecmwf&level=surface&lat=${center[0]}&lon=${center[1]}&detailLat=${center[0]}&detailLon=${center[1]}&marker=true`}
-             frameBorder="0"
-             title="Windy Live Radar"
-             className="w-full h-full border-none filter brightness-90 contrast-125"
-           ></iframe>
-        </div>
+        {showWindy && (
+          <div className="absolute inset-0 z-20 animate-in fade-in duration-500">
+             <iframe 
+               width="100%" 
+               height="100%" 
+               src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=11&overlay=wind&product=ecmwf&level=surface&lat=${center[0]}&lon=${center[1]}&detailLat=${center[0]}&detailLon=${center[1]}&marker=true`}
+               frameBorder="0"
+               title="Windy Live Radar"
+               className="w-full h-full border-none filter brightness-90 contrast-125"
+             ></iframe>
+          </div>
+        )}
 
       </div>
     </motion.div>
