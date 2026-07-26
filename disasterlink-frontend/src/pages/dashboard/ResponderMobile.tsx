@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Navigation, CheckCircle, AlertTriangle, Radio, Clock, Camera, ArrowLeft, Info, Send, Loader2, CameraOff, Activity, ShieldAlert } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { MapContainer, TileLayer, Marker, Circle, useMap } from "react-leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";

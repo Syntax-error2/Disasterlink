@@ -4,6 +4,7 @@ import { ThemeProvider } from "./components/theme-provider";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Loader2 } from "lucide-react";
+import ErrorBoundary from "./components/ErrorBoundary";
 import 'leaflet/dist/leaflet.css';
 
 // Helper to simulate network delay so the beautiful loader is actually visible on localhost!
@@ -65,37 +66,39 @@ export default function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="disasterlink-theme">
       <AuthProvider>
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Auth Routes (No Sidebar) */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} /> 
+        <ErrorBoundary>
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Auth Routes (No Sidebar) */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} /> 
 
-            {/* Mobile-First Routes (No Sidebar) */}
-            <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdmin /></ProtectedRoute>} />
-            <Route path="/responder-dispatch" element={<ProtectedRoute allowedRoles={['responder']}><ResponderMobile /></ProtectedRoute>} />
-            <Route path="/portal" element={<ProtectedRoute allowedRoles={['resident', 'citizen']}><CommunityPortal /></ProtectedRoute>} />
+              {/* Mobile-First Routes (No Sidebar) */}
+              <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdmin /></ProtectedRoute>} />
+              <Route path="/responder-dispatch" element={<ProtectedRoute allowedRoles={['responder']}><ResponderMobile /></ProtectedRoute>} />
+              <Route path="/portal" element={<ProtectedRoute allowedRoles={['resident', 'citizen']}><CommunityPortal /></ProtectedRoute>} />
 
-            {/* Admin & Barangay Dashboard Routes (With Sidebar) */}
-            <Route element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff', 'barangay_captain']}><DashboardLayout /></ProtectedRoute>}>
-              {/* Master Admin Pages */}
-              <Route path="/" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><Overview /></ProtectedRoute>} />
-              <Route path="/map" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><GisMap /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><IncidentReports /></ProtectedRoute>} />
-              <Route path="/weather" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><LiveWeather /></ProtectedRoute>} />
-              <Route path="/alerts" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><EmergencyAlerts /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><Settings /></ProtectedRoute>} /> 
+              {/* Admin & Barangay Dashboard Routes (With Sidebar) */}
+              <Route element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff', 'barangay_captain']}><DashboardLayout /></ProtectedRoute>}>
+                {/* Master Admin Pages */}
+                <Route path="/" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><Overview /></ProtectedRoute>} />
+                <Route path="/map" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><GisMap /></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><IncidentReports /></ProtectedRoute>} />
+                <Route path="/weather" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><LiveWeather /></ProtectedRoute>} />
+                <Route path="/alerts" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><EmergencyAlerts /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><Settings /></ProtectedRoute>} /> 
+                
+                {/* Localized Barangay Command Center */}
+                <Route path="/barangay-command" element={<ProtectedRoute allowedRoles={['barangay_captain']}><BarangayDashboard /></ProtectedRoute>} />
+              </Route>
               
-              {/* Localized Barangay Command Center */}
-              <Route path="/barangay-command" element={<ProtectedRoute allowedRoles={['barangay_captain']}><BarangayDashboard /></ProtectedRoute>} />
-            </Route>
-            
-            {/* Catch-all redirect */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
+              {/* Catch-all redirect */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </ErrorBoundary>
       </AuthProvider>
     </ThemeProvider>
   );

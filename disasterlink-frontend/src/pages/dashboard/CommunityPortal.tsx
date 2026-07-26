@@ -14,6 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import { Geolocation } from '@capacitor/geolocation';
 import echo from "../../lib/echo";
 import RoutingMachine from "../../components/RoutingMachine";
+import ErrorBoundary from "../../components/ErrorBoundary";
 
 const responderIcon = new L.Icon({
   iconUrl: "https://cdn-icons-png.flaticon.com/512/9309/9309228.png",
@@ -402,13 +403,15 @@ export default function CommunityPortal() {
       </AnimatePresence>
 
       <main className="flex-1 overflow-y-auto no-scrollbar relative min-h-0">
-        <AnimatePresence mode="wait">
-          {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} isOffline={isOffline} activeBroadcast={activeBroadcast} />}
-          {activeTab === "map" && <MapView key="map" showToast={showToast} evacCenters={evacCenters} />}
-          {activeTab === "report" && <ReportView key="report" showToast={showToast} user={activeUser} refreshMyReports={fetchMyReports} setActiveTab={setActiveTab} isOffline={isOffline} />}
-          {activeTab === "feed" && <FeedView key="feed" showToast={showToast} posts={feedPosts} setPosts={setFeedPosts} user={activeUser} isOffline={isOffline} />}
-          {activeTab === "family" && <FamilyView key="family" showToast={showToast} members={familyMembers} setMembers={setFamilyMembers} userStatus={userStatus} setUserStatus={setUserStatus} />}
-        </AnimatePresence>
+        <ErrorBoundary>
+          <AnimatePresence mode="wait">
+            {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} isOffline={isOffline} activeBroadcast={activeBroadcast} />}
+            {activeTab === "map" && <MapView key="map" showToast={showToast} evacCenters={evacCenters} liveResponders={liveResponders} targetRoute={targetRoute} setTargetRoute={setTargetRoute} />}
+            {activeTab === "report" && <ReportView key="report" showToast={showToast} user={activeUser} refreshMyReports={fetchMyReports} setActiveTab={setActiveTab} isOffline={isOffline} />}
+            {activeTab === "feed" && <FeedView key="feed" showToast={showToast} posts={feedPosts} setPosts={setFeedPosts} user={activeUser} isOffline={isOffline} />}
+            {activeTab === "family" && <FamilyView key="family" showToast={showToast} members={familyMembers} setMembers={setFamilyMembers} userStatus={userStatus} setUserStatus={setUserStatus} />}
+          </AnimatePresence>
+        </ErrorBoundary>
 
         <AnimatePresence>
           {isSOSActive && (
@@ -687,7 +690,7 @@ function MapFlyTo({ center }: { center: [number, number] }) {
   return null;
 }
 
-function MapView({ showToast, evacCenters }: any) {
+function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTargetRoute }: any) {
   const { user } = useAuth();
   const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
   const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
@@ -696,8 +699,12 @@ function MapView({ showToast, evacCenters }: any) {
   const [center, setCenter] = useState<[number, number]>(MAP_CENTER);
   const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
   const [weather, setWeather] = useState<any>(() => {
-    const cached = sessionStorage.getItem('cp_weather_cache');
-    return cached ? JSON.parse(cached) : null;
+    try {
+      const cached = sessionStorage.getItem('cp_weather_cache');
+      return cached && cached !== "undefined" ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
   });
   const [showWindy, setShowWindy] = useState(false);
 
