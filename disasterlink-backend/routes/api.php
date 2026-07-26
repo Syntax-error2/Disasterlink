@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Route;
 // --------------------------------------------------------
 // SuperAdmin Routes
 // --------------------------------------------------------
-Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:superadmin'])->group(function () {
     Route::get('/superadmin/lgus', [\App\Http\Controllers\SuperAdminController::class, 'getLgus']);
     Route::post('/superadmin/lgus', [\App\Http\Controllers\SuperAdminController::class, 'createLgu']);
 });
@@ -38,20 +38,20 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // ==========================================
     Route::get('/incidents', [IncidentReportController::class, 'index']);
     Route::post('/incidents', [IncidentReportController::class, 'store']);
-    Route::put('/incidents/{id}', [IncidentReportController::class, 'update']);
-    Route::delete('/incidents/{id}', [IncidentReportController::class, 'destroy']);
-    Route::post('/incidents/{id}/verify', [IncidentReportController::class, 'verify']);
+    Route::put('/incidents/{id}', [IncidentReportController::class, 'update'])->middleware('role:admin,responder');
+    Route::delete('/incidents/{id}', [IncidentReportController::class, 'destroy'])->middleware('role:admin');
+    Route::post('/incidents/{id}/verify', [IncidentReportController::class, 'verify'])->middleware('role:admin,responder');
     Route::get('/telemetry', [App\Http\Controllers\TelemetryController::class, 'index']);
     Route::get('/route', [App\Http\Controllers\TelemetryController::class, 'getRoute']);
     Route::get('/ai/predictions', [App\Http\Controllers\TelemetryController::class, 'aiPredictions']);
     Route::get('/broadcast', [App\Http\Controllers\BroadcastController::class, 'get']);
-    Route::post('/broadcast', [App\Http\Controllers\BroadcastController::class, 'store']);
+    Route::post('/broadcast', [App\Http\Controllers\BroadcastController::class, 'store'])->middleware('role:admin');
 
     // ==========================================
     // EVACUATION CENTERS API
     // ==========================================
     Route::get('/evacuation-centers', [EvacuationCenterController::class, 'index']);
-    Route::post('/evacuation-centers', [EvacuationCenterController::class, 'store']);
+    Route::post('/evacuation-centers', [EvacuationCenterController::class, 'store'])->middleware('role:admin');
 
     // ==========================================
     // DASHBOARD STATS API
@@ -76,5 +76,5 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // RESPONDER TELEMETRY API
     // ==========================================
     Route::get('/responder/locations', [ResponderTelemetryController::class, 'index']);
-    Route::post('/responder/ping', [ResponderTelemetryController::class, 'ping']);
+    Route::post('/responder/ping', [ResponderTelemetryController::class, 'ping'])->middleware('role:responder,admin');
 });
