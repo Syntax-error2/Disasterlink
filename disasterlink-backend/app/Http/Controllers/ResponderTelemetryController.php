@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ResponderTelemetry;
 use Illuminate\Http\Request;
+use App\Events\ResponderMoved;
 
 class ResponderTelemetryController extends Controller
 {
@@ -29,6 +30,8 @@ class ResponderTelemetryController extends Controller
                 ['unit_name' => $unit_name],
                 ['lat' => $lat, 'lng' => $lng, 'status' => $status]
             );
+
+            event(new ResponderMoved($telemetry));
 
             return response()->json($telemetry, 200);
         } catch (\Exception $e) {

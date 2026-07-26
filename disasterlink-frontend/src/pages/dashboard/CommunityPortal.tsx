@@ -13,6 +13,13 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { Geolocation } from '@capacitor/geolocation';
 import echo from "../../lib/echo";
+import RoutingMachine from "../../components/RoutingMachine";
+
+const responderIcon = new L.Icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/9309/9309228.png",
+  iconSize: [35, 35],
+  iconAnchor: [17, 17],
+});
 
 // ==========================================
 // 1. DYNAMIC USER & MOCK DATA
@@ -59,6 +66,8 @@ export default function CommunityPortal() {
   const [evacCenters, setEvacCenters] = useState<any[]>([]);
   const [feedPosts, setFeedPosts] = useState<any[]>([]);
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
+  const [liveResponders, setLiveResponders] = useState<any[]>([]);
+  const [targetRoute, setTargetRoute] = useState<[number, number] | null>(null);
   const [myReports, setMyReports] = useState<any[]>([]);
 
   const fetchMyReports = async () => {
@@ -77,17 +86,23 @@ export default function CommunityPortal() {
 
   const fetchEvacuationCenters = async () => {
     try {
-      const response = await axiosInstance.get("/evacuation-centers");
-      const withCoords = response.data.map((ec: any) => ({
+      const response = await axiosInstance.get('/evacuation-centers');
+      const mapped = response.data.map((ec: any) => ({
         ...ec,
         lat: parseFloat(ec.lat) || (10.1866 + (Math.random() * 0.02 - 0.01)),
         lng: parseFloat(ec.lng) || (122.8587 + (Math.random() * 0.02 - 0.01)),
-        dist: "1.2km"
+        capacity: ec.capacity || 1000,
+        current_occupants: ec.current_occupants || Math.floor(Math.random() * 800)
       }));
-      setEvacCenters(withCoords);
-    } catch (error) {
-      console.error("Failed to fetch evac centers:", error);
-    }
+      setEvacCenters(mapped);
+    } catch (e) {}
+  };
+
+  const fetchLiveResponders = async () => {
+    try {
+      const response = await axiosInstance.get('/responder/locations');
+      setLiveResponders(response.data);
+    } catch (e) {}
   };
 
   const fetchFeedPosts = async () => {
@@ -226,11 +241,19 @@ export default function CommunityPortal() {
     fetchBroadcast();
     fetchFeedPosts();
     fetchFamilyMembers();
+    fetchLiveResponders();
     
     const channel = echo.channel('incidents');
     channel.listen('.incident.event', (e: any) => {
       console.log('Real-time Incident Event:', e);
       fetchMyReportsWrapper();
+    });
+
+    const responderChannel = echo.channel('responders');
+    responderChannel.listen('.responder.moved', (e: any) => {
+      console.log('Real-time Responder Event:', e);
+      // Fetch latest locations or update local state directly
+      fetchLiveResponders();
     });
 
     const broadcastInterval = setInterval(fetchBroadcast, 60000); // 1-minute interval for weather alerts
@@ -241,6 +264,7 @@ export default function CommunityPortal() {
       window.removeEventListener('offline', handleOffline);
       clearInterval(broadcastInterval);
       echo.leaveChannel('incidents');
+      echo.leaveChannel('responders');
     };
   }, []);
 
@@ -785,14 +809,32 @@ function MapView({ showToast, evacCenters }: any) {
               <Marker position={center} icon={userIcon}><Popup>Approximate Location</Popup></Marker>
             )}
             
-            {evacCenters.map((evac:any) => (
-              <Marker key={evac.id} position={[evac.lat, evac.lng]} icon={evacIcon}>
+            {liveResponders.map((resp:any) => (
+              <Marker key={`resp-${resp.unit_name}`} position={[resp.lat, resp.lng]} icon={responderIcon}>
                  <Popup className="custom-popup">
-                    <div className="font-bold mb-1 text-zinc-900">{evac.name}</div>
-                    <button onClick={() => showToast(`Routing to ${evac.name}`)} className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded transition-colors">Navigate</button>
+                    <div className="font-bold mb-1 text-zinc-900">{resp.unit_name}</div>
+                    <div className="text-xs text-blue-600 font-semibold">{resp.status}</div>
                  </Popup>
               </Marker>
             ))}
+
+            <RoutingMachine start={userLoc || center} end={targetRoute} />
+
+            {evacCenters.map((evac:any) => {
+               const percentage = (evac.current_occupants / evac.capacity) * 100;
+               const capColor = percentage >= 100 ? 'text-red-600' : percentage > 80 ? 'text-yellow-600' : 'text-green-600';
+               return (
+              <Marker key={evac.id} position={[evac.lat, evac.lng]} icon={evacIcon}>
+                 <Popup className="custom-popup">
+                    <div className="font-bold mb-1 text-zinc-900">{evac.name}</div>
+                    <div className={`text-xs font-bold mb-2 ${capColor}`}>{evac.current_occupants} / {evac.capacity} Occupants</div>
+                    <button onClick={() => {
+                        showToast(`Routing to ${evac.name}`);
+                        setTargetRoute([evac.lat, evac.lng]);
+                    }} className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded transition-colors">Navigate</button>
+                 </Popup>
+              </Marker>
+            )})}
           </MapContainer>
         </div>
 
