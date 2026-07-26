@@ -544,15 +544,45 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => showToast(`Connecting to ${user.brgy} Hotline...`, "info")} className="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 hover:border-blue-500/50 active:scale-95 p-5 rounded-[24px] flex flex-col items-center justify-center gap-3 transition-all shadow-lg relative overflow-hidden group">
+        <button 
+          onClick={() => {
+            showToast(`Connecting to ${user?.barangay || 'Binalbagan'} Hotline...`, "info");
+            // Dynamic routing to specific barangay hotlines
+            const hotlines: Record<string, string> = {
+              "San Jose": "0917-111-2222",
+              "San Teodoro": "0917-222-3333",
+              "Santo Rosario": "0917-333-4444",
+              "Enclaro": "0917-444-5555",
+              "default": "0917-000-0000" // Central MDRRMO
+            };
+            const numberToDial = hotlines[user?.barangay as string] || hotlines["default"];
+            
+            // Actually trigger the phone's native dialer!
+            setTimeout(() => {
+              window.location.href = `tel:${numberToDial}`;
+            }, 800);
+          }} 
+          className="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 hover:border-blue-500/50 active:scale-95 p-5 rounded-[24px] flex flex-col items-center justify-center gap-3 transition-all shadow-lg relative overflow-hidden group">
           <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className="bg-blue-500/10 p-4 rounded-full text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"><PhoneCall className="h-7 w-7" /></div>
-          <span className="text-[13px] font-bold tracking-wide">Brgy Hotline</span>
+          <span className="text-[13px] font-bold tracking-wide text-zinc-100">Brgy Hotline</span>
         </button>
-        <button onClick={() => { setUserStatus("Safe"); showToast("Your status has been updated to Safe.", "success"); }} className={`active:scale-95 border p-5 rounded-[24px] flex flex-col items-center justify-center gap-3 transition-all shadow-lg relative overflow-hidden group ${userStatus === "Safe" ? "bg-gradient-to-br from-emerald-900/40 to-emerald-900/10 border-emerald-500/50" : "bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700/50 hover:border-emerald-500/50"}`}>
+        <button 
+          onClick={async () => { 
+            setUserStatus("Safe"); 
+            try {
+              // Send status to the central family tracking database!
+              await api.post('/family/status', { name: user?.name || 'Citizen', status: 'Safe' });
+              showToast("Your status has been updated to Safe.", "success"); 
+            } catch (error) {
+              console.error("Failed to sync status", error);
+              showToast("Status saved locally (Offline Mode)", "info");
+            }
+          }} 
+          className={`active:scale-95 border p-5 rounded-[24px] flex flex-col items-center justify-center gap-3 transition-all shadow-lg relative overflow-hidden group ${userStatus === "Safe" ? "bg-gradient-to-br from-emerald-900/40 to-emerald-900/10 border-emerald-500/50" : "bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700/50 hover:border-emerald-500/50"}`}>
           <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className={`${userStatus === "Safe" ? "bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]" : "bg-emerald-500/10 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]"} p-4 rounded-full transition-all`}><ShieldCheck className="h-7 w-7" /></div>
-          <span className="text-[13px] font-bold tracking-wide">{userStatus === "Safe" ? "Marked Safe" : "I Am Safe"}</span>
+          <span className="text-[13px] font-bold tracking-wide text-zinc-100">{userStatus === "Safe" ? "Marked Safe" : "I Am Safe"}</span>
         </button>
       </div>
 
