@@ -16,10 +16,10 @@ import echo from "../../lib/echo";
 import RoutingMachine from "../../components/RoutingMachine";
 import ErrorBoundary from "../../components/ErrorBoundary";
 
-const responderIcon = new L.Icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/9309/9309228.png",
-  iconSize: [35, 35],
-  iconAnchor: [17, 17],
+const responderIcon = L.divIcon({ 
+  className: "bg-transparent", 
+  html: `<div class="h-8 w-8 bg-red-600 rounded-full border-2 border-white flex items-center justify-center shadow-lg animate-pulse"><svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10H6"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.68-.95l-1.92-.64A2.33 2.33 0 0 0 16.65 12H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>`, 
+  iconSize: [32, 32] 
 });
 
 // ==========================================
