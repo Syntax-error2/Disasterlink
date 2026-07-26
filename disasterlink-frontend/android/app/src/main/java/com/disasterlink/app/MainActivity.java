@@ -1,4 +1,4 @@
-package com.syntaxerror2.disasterlink;
+package com.disasterlink.app;
 
 import com.getcapacitor.BridgeActivity;
 
