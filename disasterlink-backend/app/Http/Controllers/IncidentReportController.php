@@ -87,7 +87,10 @@ class IncidentReportController extends Controller
             ]);
             
             event(new IncidentEvent('created', $incident));
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . (auth()->check() ? auth()->user()->lgu_id : 'guest'));
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
+        if (auth()->check()) {
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
+        }
             
             return response()->json(['message' => 'Incident created!', 'id' => $incident->id], 201);
         } catch (\Exception $e) {
@@ -100,7 +103,10 @@ class IncidentReportController extends Controller
         $incident = IncidentReport::findOrFail($id);
         $incident->update($request->all());
         event(new IncidentEvent('updated', $incident));
-        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . (auth()->check() ? auth()->user()->lgu_id : 'guest'));
+        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
+        if (auth()->check()) {
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
+        }
         return response()->json($incident, 200);
     }
 
@@ -119,7 +125,10 @@ class IncidentReportController extends Controller
             }
             
             event(new IncidentEvent('updated', $incident));
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . (auth()->check() ? auth()->user()->lgu_id : 'guest'));
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
+        if (auth()->check()) {
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
+        }
             return response()->json($incident, 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -132,7 +141,10 @@ class IncidentReportController extends Controller
             $incident = IncidentReport::findOrFail($id);
             $incident->delete();
             event(new IncidentEvent('deleted', ['id' => $id]));
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . (auth()->check() ? auth()->user()->lgu_id : 'guest'));
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
+        if (auth()->check()) {
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
+        }
             return response()->json(['message' => 'Incident deleted successfully'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
