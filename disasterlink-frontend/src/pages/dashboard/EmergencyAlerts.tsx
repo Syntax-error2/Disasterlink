@@ -12,6 +12,12 @@ export default function EmergencyAlerts() {
   const [message, setMessage] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [isDispatching, setIsDispatching] = useState(false);
+  const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 5000);
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem("broadcast_history");
@@ -47,8 +53,9 @@ export default function EmergencyAlerts() {
       
       setTitle("");
       setMessage("");
-    } catch (e) {
-      alert("Failed to dispatch broadcast");
+      showToast("Alert broadcast successfully deployed to all citizen devices.", 'success');
+    } catch (e: any) {
+      showToast(e.response?.data?.message || "Failed to dispatch broadcast. Check server.", 'error');
     } finally {
       setIsDispatching(false);
     }
@@ -56,6 +63,22 @@ export default function EmergencyAlerts() {
 
   return (
     <div className="flex flex-col gap-6 pb-8 animate-in fade-in duration-500 font-sans relative">
+      
+      {/* CUSTOM TOAST NOTIFICATION */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -50, scale: 0.9 }} 
+            animate={{ opacity: 1, y: 0, scale: 1 }} 
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            className={`absolute top-0 right-0 z-[2000] px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500' : 'bg-red-500/10 border-red-500/50 text-red-500'} backdrop-blur-md`}
+          >
+            {toast.type === 'success' ? <CheckCircle2 className="h-6 w-6" /> : <AlertTriangle className="h-6 w-6" />}
+            <span className="font-semibold">{toast.msg}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex items-end justify-between shrink-0">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase">

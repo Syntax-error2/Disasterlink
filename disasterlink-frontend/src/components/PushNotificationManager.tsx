@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import axiosInstance from '@/lib/axios';
 import { useAuth } from '@/context/AuthContext';
 
@@ -60,9 +61,17 @@ export function PushNotificationManager() {
     });
 
     // Show us the notification payload if the app is open on our device
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    PushNotifications.addListener('pushNotificationReceived', async (notification) => {
       console.log('Push received: ', notification);
-      // Optional: Show a local toast or alert here if app is in foreground
+      
+      // FORCE HAPTIC VIBRATION FEEDBACK WHEN ALERT APPEARS!
+      try {
+        await Haptics.vibrate({ duration: 1500 }); // Strong long vibration
+        setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1600);
+        setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1800);
+      } catch (e) {
+        // Fallback for devices without advanced haptics
+      }
     });
 
     // Method called when tapping on a notification
