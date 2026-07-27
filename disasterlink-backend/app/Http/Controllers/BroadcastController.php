@@ -30,7 +30,20 @@ class BroadcastController extends Controller
             if (!empty($tokens)) {
                 $messaging = \Kreait\Laravel\Firebase\Facades\Firebase::messaging();
                 $notification = \Kreait\Firebase\Messaging\Notification::create('🚨 EMERGENCY ALERT', $message);
-                $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()->withNotification($notification);
+                
+                $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                    'priority' => 'high',
+                    'notification' => [
+                        'channel_id' => 'emergency_alerts',
+                        'sound' => 'default',
+                        'default_vibrate_timings' => true,
+                        'default_light_settings' => true,
+                    ],
+                ]);
+
+                $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()
+                    ->withNotification($notification)
+                    ->withAndroidConfig($config);
                 
                 $messaging->sendMulticast($cloudMessage, $tokens);
             }
