@@ -225,7 +225,7 @@ export default function IncidentReports() {
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Database synchronization and review of all community reports.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={fetchIncidents} variant="outline" size="sm" className="h-9 dark:border-zinc-800 dark:bg-[#111115]">
+          <Button onClick={() => fetchIncidents(true)} variant="outline" size="sm" className="h-9 dark:border-zinc-800 dark:bg-[#111115]">
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Sync DB
           </Button>
           <Button size="sm" className="h-9 bg-red-600 hover:bg-red-700 text-white border-none">

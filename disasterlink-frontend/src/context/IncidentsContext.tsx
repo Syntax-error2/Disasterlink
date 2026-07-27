@@ -7,7 +7,7 @@ interface IncidentsContextType {
   incidents: any[];
   setIncidents: React.Dispatch<React.SetStateAction<any[]>>;
   loading: boolean;
-  fetchIncidents: () => Promise<void>;
+  fetchIncidents: (force?: boolean) => Promise<void>;
 }
 
 const IncidentsContext = createContext<IncidentsContextType | undefined>(undefined);
@@ -18,9 +18,10 @@ export const IncidentsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Only show loading true initially. Once loaded, background refetches don't trigger loading state
   const [loading, setLoading] = useState(true);
 
-  const fetchIncidents = async () => {
+  const fetchIncidents = async (force: boolean = false) => {
     try {
-      const response = await axiosInstance.get('/incidents');
+      if (force) setLoading(true); // show loader on manual sync
+      const response = await axiosInstance.get(force ? '/incidents/sync' : '/incidents');
       if (Array.isArray(response.data)) {
         setIncidents(response.data);
       }
