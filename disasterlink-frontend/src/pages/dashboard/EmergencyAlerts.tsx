@@ -20,15 +20,19 @@ export default function EmergencyAlerts() {
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem("broadcast_history");
-    if (saved) {
-      setHistory(JSON.parse(saved));
-    } else {
-      const defaultHistory = [
-        { id: 1, title: "Heavy Rain Advisory", message: "Please be advised of expected heavy rainfall tonight. Ensure all emergency kits are prepared.", targetArea: "All Barangays (Municipality Wide)", time: new Date().toISOString() }
-      ];
-      setHistory(defaultHistory);
-      localStorage.setItem("broadcast_history", JSON.stringify(defaultHistory));
+    try {
+      const saved = localStorage.getItem("broadcast_history");
+      if (saved) {
+        setHistory(JSON.parse(saved));
+      } else {
+        const defaultHistory = [
+          { id: 1, title: "Heavy Rain Advisory", message: "Please be advised of expected heavy rainfall tonight. Ensure all emergency kits are prepared.", targetArea: "All Barangays (Municipality Wide)", time: new Date().toISOString() }
+        ];
+        setHistory(defaultHistory);
+        localStorage.setItem("broadcast_history", JSON.stringify(defaultHistory));
+      }
+    } catch (e) {
+      console.warn("Error parsing broadcast history", e);
     }
   }, []);
 
@@ -38,7 +42,10 @@ export default function EmergencyAlerts() {
     setIsDispatching(true);
     
     try {
-      await axiosInstance.post("/broadcast", { message: title + " - " + message });
+      await axiosInstance.post("/broadcast", { 
+        message: title + " - " + message,
+        target_area: targetArea 
+      });
       const newAlert = {
         id: Date.now(),
         title,

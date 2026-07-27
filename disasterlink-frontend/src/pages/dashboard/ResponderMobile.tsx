@@ -28,6 +28,11 @@ function MapUpdater({ center }: { center: [number, number] }) {
   useEffect(() => {
     map.panTo(center, { animate: true });
   }, [center, map]);
+  useEffect(() => {
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+  }, [map]);
   return null;
 }
 
@@ -128,6 +133,7 @@ export default function ResponderMobile() {
         if (incomingDispatch) {
           setIncident(incomingDispatch);
           setStatus("Dispatched");
+          setElapsedTime(0);
           showToast("URGENT: New Incident Dispatched to your unit!", "alert");
         }
     } catch (error) {
@@ -361,6 +367,7 @@ export default function ResponderMobile() {
                   zoom={16} zoomControl={false} scrollWheelZoom={false} dragging={false} className="h-full w-full"
                 >
                   <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                  <MapUpdater center={incident.latitude && incident.longitude ? [parseFloat(incident.latitude), parseFloat(incident.longitude)] : responderLocation} />
                   <Marker 
                     position={incident.latitude && incident.longitude ? [parseFloat(incident.latitude), parseFloat(incident.longitude)] : responderLocation} 
                     icon={emergencyIcon} 

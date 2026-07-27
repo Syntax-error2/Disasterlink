@@ -39,6 +39,23 @@ export default function IncidentReports() {
     }
   };
 
+  const exportCSV = () => {
+    if (filteredReports.length === 0) return;
+    const headers = ["ID,Date,Time,Hazard,Location,Severity,Status"];
+    const rows = filteredReports.map(r => {
+      const d = r.created_at ? new Date(r.created_at) : new Date();
+      return `${r.id},${d.toLocaleDateString()},${d.toLocaleTimeString()},"${r.incident_type}","${r.exact_location}, ${r.reporting_barangay}",${r.severity_level},${r.status}`;
+    });
+    const csvContent = "data:text/csv;charset=utf-8," + headers.concat(rows).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `DisasterLink_Reports_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleOpenDispatch = (incident: any) => {
     // Dynamically auto-suggest responder units based on the classified hazard category
     const hazard = incident.incident_type?.toLowerCase() || "";
@@ -228,7 +245,7 @@ export default function IncidentReports() {
           <Button onClick={() => fetchIncidents(true)} variant="outline" size="sm" className="h-9 dark:border-zinc-800 dark:bg-[#111115]">
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Sync DB
           </Button>
-          <Button size="sm" className="h-9 bg-red-600 hover:bg-red-700 text-white border-none">
+          <Button onClick={exportCSV} size="sm" className="h-9 bg-red-600 hover:bg-red-700 text-white border-none">
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
         </div>
@@ -352,10 +369,10 @@ export default function IncidentReports() {
                             onClick={(e) => { e.stopPropagation(); handleVerify(r.id); }} 
                             size="sm" 
                             variant="outline" 
-                            disabled={r.verifications >= 3}
-                            className={`h-8 text-xs font-bold border-blue-200 text-blue-600 ${r.verifications >= 3 ? 'opacity-50' : 'hover:bg-blue-50'}`}
+                            disabled={(r.verifications?.length ?? r.verifications ?? 0) >= 3}
+                            className={`h-8 text-xs font-bold border-blue-200 text-blue-600 ${(r.verifications?.length ?? r.verifications ?? 0) >= 3 ? 'opacity-50' : 'hover:bg-blue-50'}`}
                           >
-                            {r.verifications >= 3 ? 'Verified' : 'Verify'} ({Math.min(r.verifications || 0, 3)}/3)
+                            {(r.verifications?.length ?? r.verifications ?? 0) >= 3 ? 'Verified' : 'Verify'} ({Math.min((r.verifications?.length ?? r.verifications ?? 0), 3)}/3)
                           </Button>
                           <Button onClick={() => handleOpenDispatch(r)} size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs font-bold shadow-md flex items-center gap-1.5">
                             <ShieldAlert className="h-3.5 w-3.5" /> Deploy Responder

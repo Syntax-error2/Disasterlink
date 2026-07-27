@@ -45,9 +45,11 @@ const getActiveUser = () => {
   };
 };
 
-const Avatar = ({ name, size = "10" }: { name: string, size?: string }) => (
-  <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${name}&backgroundColor=ef4444&textColor=ffffff`} alt={name} className={`h-${size} w-${size} rounded-full object-cover shadow-sm border border-zinc-800`} />
-);
+const Avatar = ({ name, size = "10" }: { name: string, size?: string }) => {
+  const sizeMap: any = { "8": "h-8 w-8", "10": "h-10 w-10", "12": "h-12 w-12" };
+  const sClass = sizeMap[size] || "h-10 w-10";
+  return <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${name}&backgroundColor=ef4444&textColor=ffffff`} alt={name} className={`${sClass} rounded-full object-cover shadow-sm border border-zinc-800`} />
+};
 
 const userIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-4 w-4 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-pulse"></div>`, iconSize: [16, 16] });
 const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6 w-6 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center shadow-lg"><svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></div>`, iconSize: [24, 24] });
@@ -178,7 +180,8 @@ export default function CommunityPortal() {
           try {
             const res = await axiosInstance.post('/incidents', incident);
             if (res.data && res.data.id) {
-              const userKey = "my_report_ids_" + (activeUser?.id || activeUser?.email || 'guest');
+              const currentUser = getActiveUser();
+              const userKey = "my_report_ids_" + (currentUser?.id || currentUser?.email || 'guest');
               const existingIds = JSON.parse(localStorage.getItem(userKey) || "[]");
               if (!existingIds.includes(res.data.id)) {
                 existingIds.push(res.data.id);
@@ -1011,6 +1014,7 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
 
           const runAI = async () => {
             try {
+              if (!window.mobilenet) throw new Error("Mobilenet not available");
               const model = await window.mobilenet.load();
               const predictions = await model.classify(img);
               
@@ -1377,7 +1381,8 @@ function FamilyView({ showToast, members, setMembers, userStatus, setUserStatus 
     setUserStatus("Safe");
     showToast("Your safety status has been broadcasted.", "success");
     try {
-      await axiosInstance.post('/family/status', { name: "Juan Dela Cruz", status: "Safe" });
+      const currentUser = getActiveUser();
+      await axiosInstance.post('/family/status', { name: currentUser.name || "Citizen", status: "Safe" });
     } catch (e) {}
   };
 

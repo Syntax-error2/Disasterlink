@@ -43,6 +43,7 @@ export default function BarangayDashboard() {
   const [showAddCenter, setShowAddCenter] = useState(false);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const provider = new OpenStreetMapProvider();
   
   const [centerForm, setCenterForm] = useState({ name: "", location: "", capacity: 100, current_occupants: 0, status: "Active", lat: 10.203, lng: 122.862 });
@@ -55,11 +56,16 @@ export default function BarangayDashboard() {
   });
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (storedUser && storedUser.name) {
-      setUser(storedUser);
-      fetchLocalIncidents(storedUser.assigned_barangay);
-      fetchEvacuationCenters(storedUser.assigned_barangay);
+    try {
+      const storedUserStr = localStorage.getItem("user");
+      const storedUser = storedUserStr ? JSON.parse(storedUserStr) : {};
+      if (storedUser && storedUser.name) {
+        setUser(storedUser);
+        fetchLocalIncidents(storedUser.assigned_barangay);
+        fetchEvacuationCenters(storedUser.assigned_barangay);
+      }
+    } catch (e) {
+      console.warn("Failed to parse user from local storage", e);
     }
   }, []);
 
@@ -112,20 +118,27 @@ export default function BarangayDashboard() {
     setCenterForm({ ...centerForm, [e.target.name]: e.target.value });
   };
 
-  const handleLocationSearch = async (query: string) => {
+  const handleLocationSearch = (query: string) => {
+    if (searchTimeout) clearTimeout(searchTimeout);
+
     if (!query || query.length < 3) {
       setSearchResults([]);
       return;
     }
-    setIsSearchingLocation(true);
-    try {
-      const results = await provider.search({ query });
-      setSearchResults(results);
-    } catch (error) {
-      console.error("GeoSearch Error:", error);
-    } finally {
-      setIsSearchingLocation(false);
-    }
+
+    const timeout = setTimeout(async () => {
+      setIsSearchingLocation(true);
+      try {
+        const results = await provider.search({ query });
+        setSearchResults(results);
+      } catch (error) {
+        console.error("GeoSearch Error:", error);
+      } finally {
+        setIsSearchingLocation(false);
+      }
+    }, 500);
+
+    setSearchTimeout(timeout);
   };
 
   const handleSelectLocation = (result: any) => {

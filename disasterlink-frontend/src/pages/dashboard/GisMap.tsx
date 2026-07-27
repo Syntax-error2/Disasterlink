@@ -92,7 +92,7 @@ export default function GisDashboard() {
     const mapped = unresolvedData.map((inc: any) => {
        let lat = parseFloat(inc.latitude);
        let lng = parseFloat(inc.longitude);
-       if (!lat || !lng || isNaN(lat)) {
+       if (lat === null || lat === undefined || isNaN(lat) || lng === null || lng === undefined || isNaN(lng)) {
           lat = MAP_CENTER[0] + (Math.random() - 0.5) * 0.02;
           lng = MAP_CENTER[1] + (Math.random() - 0.5) * 0.02;
        }
@@ -124,7 +124,7 @@ export default function GisDashboard() {
     });
     const trends = Object.keys(buckets).sort().map(k => ({ time: k, incidents: buckets[k] }));
     setTrendData(trends.length ? trends : [{ time: '12:00', incidents: 0 }]);
-  }, [rawIncidents, MAP_CENTER[0], MAP_CENTER[1]]);
+  }, [rawIncidents]);
 
   useEffect(() => {
 
@@ -402,7 +402,7 @@ export default function GisDashboard() {
               </Polygon>
             ))}
 
-            {activeLayers.floodRisk && liveIncidents.filter((i:any) => i.type.includes('Flood')).map(inc => (
+            {activeLayers.floodRisk && liveIncidents.filter((i:any) => i.type?.includes('Flood')).map(inc => (
               <Circle key={`risk-${inc.id}`} center={[inc.lat, inc.lng]} radius={1200} pathOptions={{ fillColor: '#06b6d4', color: '#06b6d4', fillOpacity: 0.15, weight: 1, dashArray: '5, 5' }} />
             ))}
 
@@ -548,7 +548,7 @@ export default function GisDashboard() {
                       {/* Dynamic AI Bounding Box Simulation */}
                       <div className="absolute top-[20%] left-[25%] w-[50%] h-[60%] border-2 border-red-500 bg-red-500/20">
                         <div className="absolute -top-5 left-0 bg-red-500 text-white text-[8px] font-mono px-1 py-0.5 whitespace-nowrap">
-                          {selectedIncident.type.toUpperCase().replace(/[^A-Z]/g, '_')}_DETECTED: {selectedIncident.confidence}%
+                          {selectedIncident.type?.toUpperCase().replace(/[^A-Z]/g, '_') || 'UNKNOWN'}_DETECTED: {selectedIncident.confidence}%
                         </div>
                       </div>
                     </>
