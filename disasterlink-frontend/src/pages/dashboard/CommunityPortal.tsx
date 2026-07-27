@@ -14,6 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import { Geolocation } from '@capacitor/geolocation';
 import { useIncidents } from '../../context/IncidentsContext';
 import echo from "../../lib/echo";
+import { KeepAwake } from '@capacitor-community/keep-awake';
 import RoutingMachine from "../../components/RoutingMachine";
 import ErrorBoundary from "../../components/ErrorBoundary";
 
@@ -75,6 +76,22 @@ export default function CommunityPortal() {
   const [myReports, setMyReports] = useState<any[]>([]);
 
   const { incidents: globalIncidents, fetchIncidents } = useIncidents();
+
+  useEffect(() => {
+    // Keep the screen awake for citizens so they don't lose the app in emergencies
+    const keepScreenAwake = async () => {
+      try {
+        await KeepAwake.keepAwake();
+      } catch (e) {
+        console.log("KeepAwake not supported on this platform.");
+      }
+    };
+    keepScreenAwake();
+
+    return () => {
+      KeepAwake.allowSleep().catch(() => {});
+    };
+  }, []);
 
   useEffect(() => {
     const userKey = "my_report_ids_" + (activeUser.id || activeUser.email || 'guest');

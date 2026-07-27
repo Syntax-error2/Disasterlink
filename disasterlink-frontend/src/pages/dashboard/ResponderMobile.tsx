@@ -8,6 +8,7 @@ import { MapContainer, TileLayer, Marker, Circle, useMap } from "react-leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";
 import axiosInstance from "../../lib/axios";
+import { KeepAwake } from '@capacitor-community/keep-awake';
 
 // Map Icons
 const responderIcon = L.divIcon({
@@ -59,8 +60,24 @@ export default function ResponderMobile() {
   const [responderLocation, setResponderLocation] = useState<[number, number]>(MAP_CENTER);
 
   // ==========================================
-  // REAL-TIME GPS TRACKING
+  // REAL-TIME GPS TRACKING & KEEP AWAKE
   // ==========================================
+  useEffect(() => {
+    // Keep the screen awake for responders so they don't lose the app while driving
+    const keepScreenAwake = async () => {
+      try {
+        await KeepAwake.keepAwake();
+      } catch (e) {
+        console.log("KeepAwake not supported on this platform.");
+      }
+    };
+    keepScreenAwake();
+
+    return () => {
+      KeepAwake.allowSleep().catch(() => {});
+    };
+  }, []);
+
   useEffect(() => {
     if (!navigator.geolocation) return;
 

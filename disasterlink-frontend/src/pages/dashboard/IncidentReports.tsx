@@ -66,8 +66,8 @@ export default function IncidentReports() {
         status: `Dispatched: ${selectedResponder}`
       });
       
-      // Update local state to reflect change instantly
-      setReports(reports.map(r => r.id === selectedIncident.id ? { ...r, status: `Dispatched: ${selectedResponder}` } : r));
+      // Update global state to reflect change instantly
+      await fetchIncidents();
     } catch (error) {
       console.error("Dispatch failed:", error);
     } finally {

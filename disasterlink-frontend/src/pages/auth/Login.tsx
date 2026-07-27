@@ -62,38 +62,32 @@ export default function Login() {
       localStorage.setItem('auth_token', token);
       localStorage.setItem('user', JSON.stringify(user));
 
-      // 2. Trigger the "Boot Sequence" UI
+      // 2. Trigger the "Boot Sequence" UI momentarily (skip long loading)
       setLoginState('booting');
+      setBootText("Establishing secure connection...");
 
-      // 3. Cycle through realistic loading phrases to give the dashboard time to prep
-      setTimeout(() => setBootText("Establishing secure connection..."), 600);
-      setTimeout(() => setBootText("Synchronizing GIS telemetry..."), 1200);
-      setTimeout(() => setBootText("Loading operational dashboard..."), 1800);
-
-      // 4. Secure Role-Based Redirection after the boot sequence completes
-      setTimeout(() => {
-        login(token, user); // Officially log them in
-        
-        try {
-          const userRole = user?.role || 'admin';
-          if (userRole === 'superadmin') {
-            navigate("/superadmin");
-          } else if (userRole === 'admin' || userRole === 'mdrrmo_staff') {
-            navigate("/"); // Send to Master Dashboard
-          } else if (userRole === 'barangay_captain') {
-            navigate("/barangay-command"); // Send to Localized Dashboard
-          } else if (userRole === 'responder') {
-            navigate("/responder-dispatch"); // Send to Mobile Field UI
-          } else if (userRole === 'resident' || userRole === 'citizen') {
-            navigate("/portal"); // Send to Community Portal
-          } else {
-            navigate("/"); // Fallback
-          }
-        } catch (navError) {
-          console.error("Navigation error", navError);
-          navigate("/");
+      // 3. Immediately log in and redirect (no artificial delay!)
+      login(token, user); // Officially log them in
+      
+      try {
+        const userRole = user?.role || 'admin';
+        if (userRole === 'superadmin') {
+          navigate("/superadmin");
+        } else if (userRole === 'admin' || userRole === 'mdrrmo_staff') {
+          navigate("/"); // Send to Master Dashboard
+        } else if (userRole === 'barangay_captain') {
+          navigate("/barangay-command"); // Send to Localized Dashboard
+        } else if (userRole === 'responder') {
+          navigate("/responder-dispatch"); // Send to Mobile Field UI
+        } else if (userRole === 'resident' || userRole === 'citizen') {
+          navigate("/portal"); // Send to Community Portal
+        } else {
+          navigate("/"); // Fallback
         }
-      }, 2500); // 2.5 seconds total loading time
+      } catch (navError) {
+        console.error("Navigation error", navError);
+        navigate("/");
+      }
 
     } catch (error: any) {
       setErrorMsg(error.response?.data?.message || error.message || "Login failed");
