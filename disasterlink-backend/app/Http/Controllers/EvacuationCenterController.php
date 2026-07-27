@@ -10,7 +10,10 @@ class EvacuationCenterController extends Controller
 {
     public function index()
     {
-        return response()->json(EvacuationCenter::orderBy('created_at', 'desc')->get());
+        $centers = \Illuminate\Support\Facades\Cache::remember('evac_centers', 600, function () {
+            return EvacuationCenter::orderBy('created_at', 'desc')->get()->toArray();
+        });
+        return response()->json($centers);
     }
 
     public function store(Request $request)
@@ -27,6 +30,7 @@ class EvacuationCenterController extends Controller
         ]);
 
         $center = EvacuationCenter::create($validated);
+        \Illuminate\Support\Facades\Cache::forget('evac_centers');
         return response()->json($center, 201);
     }
 }

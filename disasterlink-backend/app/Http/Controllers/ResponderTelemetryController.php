@@ -11,7 +11,9 @@ class ResponderTelemetryController extends Controller
     public function index()
     {
         try {
-            $telemetry = ResponderTelemetry::all();
+            $telemetry = \Illuminate\Support\Facades\Cache::remember('responder_locations', 600, function () {
+                return ResponderTelemetry::all()->toArray();
+            });
             return response()->json($telemetry, 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -32,6 +34,7 @@ class ResponderTelemetryController extends Controller
             );
 
             event(new ResponderMoved($telemetry));
+            \Illuminate\Support\Facades\Cache::forget('responder_locations');
 
             return response()->json($telemetry, 200);
         } catch (\Exception $e) {

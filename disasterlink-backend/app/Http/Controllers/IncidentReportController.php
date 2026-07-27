@@ -11,7 +11,11 @@ class IncidentReportController extends Controller
     public function index()
     {
         try {
-            $incidents = IncidentReport::orderBy('created_at', 'desc')->get();
+            $lguId = auth()->check() ? auth()->user()->lgu_id : 'guest';
+            $incidents = \Illuminate\Support\Facades\Cache::remember('incidents_lgu_' . $lguId, 600, function () {
+                // Select specific columns to dramatically reduce JSON payload size and speed up rendering
+                return IncidentReport::select(['id', 'reporting_barangay', 'incident_type', 'severity_level', 'exact_location', 'latitude', 'longitude', 'status', 'created_at', 'verifications', 'image_path'])->orderBy('created_at', 'desc')->get()->toArray();
+            });
             return response()->json($incidents, 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -83,6 +87,7 @@ class IncidentReportController extends Controller
             ]);
             
             event(new IncidentEvent('created', $incident));
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . (auth()->check() ? auth()->user()->lgu_id : 'guest'));
             
             return response()->json(['message' => 'Incident created!', 'id' => $incident->id], 201);
         } catch (\Exception $e) {
@@ -95,6 +100,7 @@ class IncidentReportController extends Controller
         $incident = IncidentReport::findOrFail($id);
         $incident->update($request->all());
         event(new IncidentEvent('updated', $incident));
+        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . (auth()->check() ? auth()->user()->lgu_id : 'guest'));
         return response()->json($incident, 200);
     }
 
@@ -113,6 +119,7 @@ class IncidentReportController extends Controller
             }
             
             event(new IncidentEvent('updated', $incident));
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . (auth()->check() ? auth()->user()->lgu_id : 'guest'));
             return response()->json($incident, 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -125,6 +132,7 @@ class IncidentReportController extends Controller
             $incident = IncidentReport::findOrFail($id);
             $incident->delete();
             event(new IncidentEvent('deleted', ['id' => $id]));
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . (auth()->check() ? auth()->user()->lgu_id : 'guest'));
             return response()->json(['message' => 'Incident deleted successfully'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
