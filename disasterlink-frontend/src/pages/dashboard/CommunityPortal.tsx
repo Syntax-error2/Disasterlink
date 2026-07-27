@@ -16,6 +16,7 @@ import { useIncidents } from '../../context/IncidentsContext';
 import echo from "../../lib/echo";
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import RoutingMachine from "../../components/RoutingMachine";
 import ErrorBoundary from "../../components/ErrorBoundary";
 
@@ -303,30 +304,29 @@ export default function CommunityPortal() {
       runVibration(); // run immediately
       vibInterval = setInterval(runVibration, 2500);
 
-      // 2. Start Text-to-Speech
-      try {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel(); // Cancel any ongoing speech
-          const utterance = new SpeechSynthesisUtterance(`EMERGENCY ALERT. ${activeBroadcast}`);
-          utterance.rate = 0.9;
-          utterance.pitch = 1.1; 
-          
-          const voices = window.speechSynthesis.getVoices();
-          const enVoice = voices.find(v => v.lang.startsWith('en'));
-          if (enVoice) utterance.voice = enVoice;
-          
-          window.speechSynthesis.speak(utterance);
+      // 2. Start Text-to-Speech (Native Capacitor Plugin)
+      const playTTS = async () => {
+        try {
+          await TextToSpeech.speak({
+            text: `EMERGENCY ALERT. ${activeBroadcast}`,
+            lang: 'en-US',
+            rate: 0.9,
+            pitch: 1.1,
+            volume: 1.0,
+            category: 'ambient',
+          });
+        } catch (e) {
+          console.warn("Native TTS Failed", e);
         }
-      } catch (e) {
-         console.warn("TTS Failed", e);
-      }
+      };
+      
+      // Delay TTS slightly to let the modal animate in and haptics start
+      setTimeout(playTTS, 800);
     }
 
     return () => {
       clearInterval(vibInterval);
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      TextToSpeech.stop().catch(() => {});
     };
   }, [activeBroadcast]);
 

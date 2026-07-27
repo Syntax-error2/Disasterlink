@@ -26,10 +26,10 @@ const IncidentReports = lazyWithDelay(() => import("./pages/dashboard/IncidentRe
 const LiveWeather = lazyWithDelay(() => import("./pages/dashboard/LiveWeather"));
 const EmergencyAlerts = lazyWithDelay(() => import("./pages/dashboard/EmergencyAlerts"));
 const Settings = lazyWithDelay(() => import("./pages/dashboard/Settings"));
-const ResponderMobile = lazyWithDelay(() => import("./pages/dashboard/ResponderMobile"));
-const BarangayDashboard = lazyWithDelay(() => import("./pages/dashboard/BarangayDashboard"));
-const CommunityPortal = lazyWithDelay(() => import("./pages/dashboard/CommunityPortal"));
-const SuperAdmin = lazyWithDelay(() => import("./pages/dashboard/SuperAdmin"));
+const ResponderMobile = lazyWithDelay(() => import("./pages/dashboard/ResponderMobile"), 0);
+const BarangayDashboard = lazyWithDelay(() => import("./pages/dashboard/BarangayDashboard"), 0);
+const CommunityPortal = lazyWithDelay(() => import("./pages/dashboard/CommunityPortal"), 0);
+const SuperAdmin = lazyWithDelay(() => import("./pages/dashboard/SuperAdmin"), 0);
 
 // Global Page Loader
 const PageLoader = () => (
