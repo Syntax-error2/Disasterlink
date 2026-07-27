@@ -42,6 +42,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // INCIDENT REPORTING API
     // ==========================================
     Route::get('/incidents', [IncidentReportController::class, 'index']);
+    Route::get('/incidents/sync', [IncidentReportController::class, 'sync']);
     Route::post('/incidents', [IncidentReportController::class, 'store']);
     Route::put('/incidents/{id}', [IncidentReportController::class, 'update'])->middleware('role:admin,responder');
     Route::delete('/incidents/{id}', [IncidentReportController::class, 'destroy'])->middleware('role:admin');

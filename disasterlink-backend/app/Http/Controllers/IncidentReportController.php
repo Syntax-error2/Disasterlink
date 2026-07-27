@@ -8,6 +8,15 @@ use App\Events\IncidentEvent;
 
 class IncidentReportController extends Controller
 {
+    public function sync()
+    {
+        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
+        if (auth()->check()) {
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
+        }
+        return $this->index();
+    }
+
     public function index()
     {
         try {
