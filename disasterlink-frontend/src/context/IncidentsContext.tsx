@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axiosInstance from '../lib/axios';
 import echo from '../lib/echo';
+import { useAuth } from './AuthContext';
 
 interface IncidentsContextType {
   incidents: any[];
@@ -12,6 +13,7 @@ interface IncidentsContextType {
 const IncidentsContext = createContext<IncidentsContextType | undefined>(undefined);
 
 export const IncidentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [incidents, setIncidents] = useState<any[]>([]);
   // Only show loading true initially. Once loaded, background refetches don't trigger loading state
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,8 @@ export const IncidentsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     fetchIncidents();
     // Auto-refresh in the background every 15s as a fallback.
     const interval = setInterval(fetchIncidents, 15000);
@@ -45,7 +49,7 @@ export const IncidentsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       clearInterval(interval);
       echo.leaveChannel('incidents');
     };
-  }, []);
+  }, [isAuthenticated]);
 
   return (
     <IncidentsContext.Provider value={{ incidents, setIncidents, loading, fetchIncidents }}>
