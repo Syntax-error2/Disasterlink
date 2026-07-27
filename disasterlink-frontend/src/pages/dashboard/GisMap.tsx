@@ -159,7 +159,6 @@ export default function GisDashboard() {
     // WebSockets for incidents are now handled globally by IncidentsContext!
 
     return () => {
-      clearInterval(timer);
     };
   }, []);
 
