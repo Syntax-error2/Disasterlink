@@ -15,6 +15,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { useIncidents } from '../../context/IncidentsContext';
 import echo from "../../lib/echo";
 import { KeepAwake } from '@capacitor-community/keep-awake';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import RoutingMachine from "../../components/RoutingMachine";
 import ErrorBoundary from "../../components/ErrorBoundary";
 
@@ -251,8 +252,12 @@ export default function CommunityPortal() {
     };
 
     // Listen to window event from PushNotificationManager
-    const handlePushTap = () => {
-      fetchBroadcast(true); // Force show
+    const handlePushTap = (e: any) => {
+      if (e.detail) {
+        setActiveBroadcast(e.detail); // Instantly show the modal without waiting for network!
+      } else {
+        fetchBroadcast(true); 
+      }
     };
     window.addEventListener('mass_alert_tapped', handlePushTap);
 
@@ -275,10 +280,55 @@ export default function CommunityPortal() {
       isSubscribed = false;
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('mass_alert_tapped', handlePushTap);
       clearInterval(broadcastInterval);
       echo.leaveChannel('responders');
     };
   }, []);
+
+  // --- TTS & VIBRATION LOOP WHEN ALERT IS ACTIVE ---
+  useEffect(() => {
+    let vibInterval: any;
+    
+    if (activeBroadcast) {
+      // 1. Start continuous vibration
+      const runVibration = async () => {
+        try {
+          await Haptics.vibrate({ duration: 1000 });
+          setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1100);
+          setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1300);
+        } catch (e) {}
+      };
+      
+      runVibration(); // run immediately
+      vibInterval = setInterval(runVibration, 2500);
+
+      // 2. Start Text-to-Speech
+      try {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel(); // Cancel any ongoing speech
+          const utterance = new SpeechSynthesisUtterance(`EMERGENCY ALERT. ${activeBroadcast}`);
+          utterance.rate = 0.9;
+          utterance.pitch = 1.1; 
+          
+          const voices = window.speechSynthesis.getVoices();
+          const enVoice = voices.find(v => v.lang.startsWith('en'));
+          if (enVoice) utterance.voice = enVoice;
+          
+          window.speechSynthesis.speak(utterance);
+        }
+      } catch (e) {
+         console.warn("TTS Failed", e);
+      }
+    }
+
+    return () => {
+      clearInterval(vibInterval);
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [activeBroadcast]);
 
   const showToast = (msg: string, type: 'success' | 'info' | 'error' = 'info') => {
     setToast({ msg, type });
