@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Geolocation } from '@capacitor/geolocation';
+import { useIncidents } from '../../context/IncidentsContext';
 import echo from "../../lib/echo";
 import RoutingMachine from "../../components/RoutingMachine";
 import ErrorBoundary from "../../components/ErrorBoundary";
@@ -73,18 +74,18 @@ export default function CommunityPortal() {
   const [targetRoute, setTargetRoute] = useState<[number, number] | null>(null);
   const [myReports, setMyReports] = useState<any[]>([]);
 
+  const { incidents: globalIncidents, fetchIncidents } = useIncidents();
+
+  useEffect(() => {
+    const userKey = "my_report_ids_" + (activeUser.id || activeUser.email || 'guest');
+    const myIds = JSON.parse(localStorage.getItem(userKey) || "[]");
+    const myActiveReports = (globalIncidents || []).filter((inc: any) => myIds.includes(inc.id));
+    setMyReports(myActiveReports);
+  }, [globalIncidents, activeUser]);
+
   const fetchMyReports = async () => {
-    try {
-      const response = await axiosInstance.get("/incidents");
-      const allIncidents = response.data;
-      const userKey = "my_report_ids_" + (activeUser.id || activeUser.email || 'guest');
-      const myIds = JSON.parse(localStorage.getItem(userKey) || "[]");
-      const myActiveReports = allIncidents.filter((inc: any) => myIds.includes(inc.id));
-      setMyReports(myActiveReports);
-    } catch (error) {
-      console.error("Failed to fetch incidents:", error);
-      setMyReports([]);
-    }
+    // Just refresh the global context
+    await fetchIncidents();
   };
 
   const fetchEvacuationCenters = async () => {
@@ -234,29 +235,14 @@ export default function CommunityPortal() {
 
     let isSubscribed = true;
 
-    const fetchMyReportsWrapper = async () => {
-      if (isSubscribed) {
-        await fetchMyReports();
-      }
-    };
-
     fetchMyReports();
     fetchEvacuationCenters();
     fetchBroadcast();
     fetchFeedPosts();
     fetchFamilyMembers();
-    fetchLiveResponders();
-    
-    const channel = echo.channel('incidents');
-    channel.listen('.incident.event', (e: any) => {
-      console.log('Real-time Incident Event:', e);
-      fetchMyReportsWrapper();
-    });
-
     const responderChannel = echo.channel('responders');
     responderChannel.listen('.responder.moved', (e: any) => {
       console.log('Real-time Responder Event:', e);
-      // Fetch latest locations or update local state directly
       fetchLiveResponders();
     });
 
@@ -267,7 +253,6 @@ export default function CommunityPortal() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(broadcastInterval);
-      echo.leaveChannel('incidents');
       echo.leaveChannel('responders');
     };
   }, []);
@@ -340,6 +325,8 @@ export default function CommunityPortal() {
           existingIds.push(response.data.id);
           localStorage.setItem(userKey, JSON.stringify(existingIds));
         }
+        // Force update the UI list immediately
+        fetchMyReports();
       }
     } catch (error) {
       console.warn("Failed to transmit SOS to backend", error);
