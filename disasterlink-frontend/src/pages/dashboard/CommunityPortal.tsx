@@ -211,13 +211,13 @@ export default function CommunityPortal() {
       } catch (e) {}
     };
 
-    const fetchBroadcast = async () => {
+    const fetchBroadcast = async (forceShow = false) => {
       try {
         const res = await axiosInstance.get("/broadcast");
         const broadcastMsg = res.data.broadcast;
         if (broadcastMsg) {
-          const dismissed = JSON.parse(localStorage.getItem("dismissed_broadcasts") || "[]");
-          if (!dismissed.includes(broadcastMsg)) {
+          const dismissed = JSON.parse(sessionStorage.getItem("dismissed_session_broadcasts") || "[]");
+          if (forceShow || !dismissed.includes(broadcastMsg)) {
             setActiveBroadcast(broadcastMsg);
             
             // Trigger Native Push Notification on Android
@@ -249,6 +249,12 @@ export default function CommunityPortal() {
         }
       } catch (e) {}
     };
+
+    // Listen to window event from PushNotificationManager
+    const handlePushTap = () => {
+      fetchBroadcast(true); // Force show
+    };
+    window.addEventListener('mass_alert_tapped', handlePushTap);
 
     let isSubscribed = true;
 
@@ -380,10 +386,10 @@ export default function CommunityPortal() {
             </p>
             <button 
               onClick={() => {
-                const dismissed = JSON.parse(localStorage.getItem("dismissed_broadcasts") || "[]");
+                const dismissed = JSON.parse(sessionStorage.getItem("dismissed_session_broadcasts") || "[]");
                 if (activeBroadcast && !dismissed.includes(activeBroadcast)) {
                   dismissed.push(activeBroadcast);
-                  localStorage.setItem("dismissed_broadcasts", JSON.stringify(dismissed));
+                  sessionStorage.setItem("dismissed_session_broadcasts", JSON.stringify(dismissed));
                 }
                 setActiveBroadcast(null);
               }} 

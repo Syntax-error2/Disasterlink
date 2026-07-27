@@ -75,8 +75,9 @@ export function PushNotificationManager() {
     });
 
     // Method called when tapping on a notification
-    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-      console.log('Push action performed: ', notification);
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      console.log('Push action performed: ', action);
+      window.dispatchEvent(new CustomEvent('mass_alert_tapped', { detail: action.notification.body }));
     });
 
     return () => {
