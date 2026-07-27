@@ -47,8 +47,11 @@ const icons = {
 // ==========================================
 // 3. MAIN DASHBOARD COMPONENT
 // ==========================================
+import { useIncidents } from "../../context/IncidentsContext";
+
 export default function GisDashboard() {
   const { user } = useAuth();
+  const { incidents: rawIncidents } = useIncidents();
   const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
   const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
   const MAP_CENTER: [number, number] = [isNaN(lat) ? 10.1866 : lat, isNaN(lng) ? 122.8587 : lng];
@@ -73,56 +76,51 @@ export default function GisDashboard() {
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Process incidents from context instead of refetching
+  useEffect(() => {
+    const data = rawIncidents || [];
+    const unresolvedData = data.filter((inc: any) => inc.status !== 'Resolved');
+    const mapped = unresolvedData.map((inc: any) => {
+       let lat = parseFloat(inc.latitude);
+       let lng = parseFloat(inc.longitude);
+       if (!lat || !lng || isNaN(lat)) {
+          lat = MAP_CENTER[0] + (Math.random() - 0.5) * 0.02;
+          lng = MAP_CENTER[1] + (Math.random() - 0.5) * 0.02;
+       }
+       return {
+          id: `INC-${inc.id}`,
+          type: inc.incident_type,
+          brgy: inc.reporting_barangay,
+          lat,
+          lng,
+          severity: inc.severity_level,
+          status: inc.status,
+          time: new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          reporter: "Civilian Report",
+          image: inc.image_path || inc.image_data || null,
+          confidence: Math.floor(Math.random() * 11) + 88
+       };
+    });
+    setLiveIncidents(mapped);
     
-    let isSubscribed = true;
+    // Compute Trend Data
+    const now = new Date();
+    const buckets: any = {};
+    data.forEach((inc: any) => {
+       const d = new Date(inc.created_at);
+       if (now.getTime() - d.getTime() < 24 * 60 * 60 * 1000) {
+          const h = d.getHours().toString().padStart(2, '0') + ':00';
+          buckets[h] = (buckets[h] || 0) + 1;
+       }
+    });
+    const trends = Object.keys(buckets).sort().map(k => ({ time: k, incidents: buckets[k] }));
+    setTrendData(trends.length ? trends : [{ time: '12:00', incidents: 0 }]);
+  }, [rawIncidents, MAP_CENTER[0], MAP_CENTER[1]]);
 
-    const fetchIncidents = async () => {
-      try {
-        const response = await axiosInstance.get('/incidents');
-        if (!isSubscribed) return;
-        const data = response.data;
-        
-        const unresolvedData = data.filter((inc: any) => inc.status !== 'Resolved');
-        const mapped = unresolvedData.map((inc: any) => {
-           let lat = parseFloat(inc.latitude);
-           let lng = parseFloat(inc.longitude);
-           if (!lat || !lng || isNaN(lat)) {
-              lat = MAP_CENTER[0] + (Math.random() - 0.5) * 0.02;
-              lng = MAP_CENTER[1] + (Math.random() - 0.5) * 0.02;
-           }
-           return {
-              id: `INC-${inc.id}`,
-              type: inc.incident_type,
-              brgy: inc.reporting_barangay,
-              lat,
-              lng,
-              severity: inc.severity_level,
-              status: inc.status,
-              time: new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              reporter: "Civilian Report",
-              image: inc.image_path || inc.image_data || null,
-              confidence: Math.floor(Math.random() * 11) + 88
-           };
-        });
-        setLiveIncidents(mapped);
-        
-        // Compute Trend Data
-        const now = new Date();
-        const buckets: any = {};
-        data.forEach((inc: any) => {
-           const d = new Date(inc.created_at);
-           if (now.getTime() - d.getTime() < 24 * 60 * 60 * 1000) {
-              const h = d.getHours().toString().padStart(2, '0') + ':00';
-              buckets[h] = (buckets[h] || 0) + 1;
-           }
-        });
-        const trends = Object.keys(buckets).sort().map(k => ({ time: k, incidents: buckets[k] }));
-        setTrendData(trends.length ? trends : [{ time: '12:00', incidents: 0 }]);
-
-      } catch (err) {
-        console.error("Failed to fetch GIS data:", err);
-      }
-    };
+  useEffect(() => {
 
     const fetchEvacCenters = async () => {
       try {
@@ -154,22 +152,14 @@ export default function GisDashboard() {
       } catch (e) {}
     };
 
-    fetchIncidents();
     fetchEvacCenters();
     fetchResponders();
     fetchAiPredictions();
     
-    const channel = echo.channel('incidents');
-    channel.listen('.incident.event', (e: any) => {
-      console.log('Real-time Incident Event:', e);
-      // Fast refresh without waiting 15 seconds!
-      fetchIncidents();
-    });
+    // WebSockets for incidents are now handled globally by IncidentsContext!
 
     return () => {
-      isSubscribed = false;
       clearInterval(timer);
-      echo.leaveChannel('incidents');
     };
   }, []);
 

@@ -63,15 +63,17 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 };
 
 import { PushNotificationManager } from "./components/PushNotificationManager";
+import { IncidentsProvider } from "./context/IncidentsContext";
 
 export default function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="disasterlink-theme">
       <AuthProvider>
-        <PushNotificationManager />
-        <ErrorBoundary>
-          <BrowserRouter>
-            <Suspense fallback={<PageLoader />}>
+        <IncidentsProvider>
+          <PushNotificationManager />
+          <ErrorBoundary>
+            <BrowserRouter>
+              <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Auth Routes (No Sidebar) */}
               <Route path="/login" element={<Login />} />
@@ -100,8 +102,9 @@ export default function App() {
               <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
             </Suspense>
-          </BrowserRouter>
-        </ErrorBoundary>
+            </BrowserRouter>
+          </ErrorBoundary>
+        </IncidentsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

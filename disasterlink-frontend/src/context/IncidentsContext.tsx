@@ -1,0 +1,63 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axiosInstance from '../lib/axios';
+import echo from '../lib/echo';
+
+interface IncidentsContextType {
+  incidents: any[];
+  setIncidents: React.Dispatch<React.SetStateAction<any[]>>;
+  loading: boolean;
+  fetchIncidents: () => Promise<void>;
+}
+
+const IncidentsContext = createContext<IncidentsContextType | undefined>(undefined);
+
+export const IncidentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [incidents, setIncidents] = useState<any[]>([]);
+  // Only show loading true initially. Once loaded, background refetches don't trigger loading state
+  const [loading, setLoading] = useState(true);
+
+  const fetchIncidents = async () => {
+    try {
+      const response = await axiosInstance.get('/incidents');
+      if (Array.isArray(response.data)) {
+        setIncidents(response.data);
+      }
+    } catch (error) {
+      console.warn("API Offline, check Laravel server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchIncidents();
+    // Auto-refresh in the background every 15s as a fallback.
+    const interval = setInterval(fetchIncidents, 15000);
+
+    // Real-time WebSocket listener
+    const channel = echo.channel('incidents');
+    channel.listen('.incident.event', (e: any) => {
+      console.log('Global Real-time Incident Event:', e);
+      fetchIncidents(); // Fast refresh the global state without spinners
+    });
+
+    return () => {
+      clearInterval(interval);
+      echo.leaveChannel('incidents');
+    };
+  }, []);
+
+  return (
+    <IncidentsContext.Provider value={{ incidents, setIncidents, loading, fetchIncidents }}>
+      {children}
+    </IncidentsContext.Provider>
+  );
+};
+
+export const useIncidents = () => {
+  const context = useContext(IncidentsContext);
+  if (context === undefined) {
+    throw new Error('useIncidents must be used within an IncidentsProvider');
+  }
+  return context;
+};

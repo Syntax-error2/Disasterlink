@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Search, Download, Loader2, RefreshCw, AlertCircle, Send, X, CheckCircle, Eye, ShieldAlert, CameraOff, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axiosInstance from "../../lib/axios";
+import { useIncidents } from "../../context/IncidentsContext";
 
 export default function IncidentReports() {
-  const [reports, setReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { incidents: reports, loading, fetchIncidents } = useIncidents();
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState("Today");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
@@ -30,21 +30,6 @@ export default function IncidentReports() {
   const [selectedResponder, setSelectedResponder] = useState("Alpha-1 Unit");
   const [isDispatching, setIsDispatching] = useState(false);
 
-  // Real Database Fetch - NO FAKE DATA
-  const fetchIncidents = async () => {
-    setLoading(true);
-    try {
-      const response = await axiosInstance.get('/incidents');
-      const data = response.data;
-      setReports(data);
-    } catch (error) {
-      console.warn("API Offline, check Laravel server.");
-      setReports([]); // If offline, show empty. No more fake fallbacks.
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleVerify = async (id: number) => {
     try {
       await axiosInstance.post(`/incidents/${id}/verify`);
@@ -53,12 +38,6 @@ export default function IncidentReports() {
       console.error("Failed to verify incident", error);
     }
   };
-
-  useEffect(() => {
-    fetchIncidents();
-    const interval = setInterval(fetchIncidents, 15000); // Auto-refresh every 15s
-    return () => clearInterval(interval);
-  }, []);
 
   const handleOpenDispatch = (incident: any) => {
     // Dynamically auto-suggest responder units based on the classified hazard category
