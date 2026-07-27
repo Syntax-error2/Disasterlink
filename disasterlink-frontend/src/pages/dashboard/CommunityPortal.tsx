@@ -572,7 +572,20 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
             setUserStatus("Safe"); 
             try {
               // Send status to the central family tracking database!
-              await api.post('/family/status', { name: user?.name || 'Citizen', status: 'Safe' });
+              await axiosInstance.post('/family/status', { name: activeUser?.name || 'Citizen', status: 'Safe' });
+              
+              // Try to get geolocation to put on GIS map
+              if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                  await axiosInstance.post('/responder/ping', { 
+                    unit_name: (activeUser?.name || 'Citizen') + " (Marked Safe)",
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                    status: 'Safe'
+                  });
+                }, () => {}, { enableHighAccuracy: true });
+              }
+
               showToast("Your status has been updated to Safe.", "success"); 
             } catch (error) {
               console.error("Failed to sync status", error);
