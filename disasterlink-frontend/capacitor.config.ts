@@ -6,6 +6,11 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     cleartext: true
+  },
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"]
+    }
   }
 };
 
