@@ -9,8 +9,18 @@ class BroadcastController extends Controller
 {
     public function get()
     {
+        $broadcast = Cache::get('active_broadcast');
+        
+        if (is_array($broadcast)) {
+            return response()->json([
+                'broadcast' => $broadcast['message'] ?? null,
+                'broadcast_id' => $broadcast['id'] ?? null
+            ]);
+        }
+        
         return response()->json([
-            'broadcast' => Cache::get('active_broadcast')
+            'broadcast' => $broadcast,
+            'broadcast_id' => $broadcast ? md5($broadcast) : null
         ]);
     }
 
@@ -19,7 +29,8 @@ class BroadcastController extends Controller
         $message = $request->input('message');
         $duration = $request->input('duration', 60);
         
-        Cache::put('active_broadcast', $message, now()->addMinutes($duration));
+        $broadcast = ['id' => uniqid('alert_'), 'message' => $message];
+        Cache::put('active_broadcast', $broadcast, now()->addMinutes($duration));
         
         // ----------------------------------------------------
         // FIREBASE PUSH NOTIFICATIONS

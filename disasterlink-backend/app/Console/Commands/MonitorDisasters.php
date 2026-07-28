@@ -33,19 +33,23 @@ class MonitorDisasters extends Command
         } else {
             // 1. Check USGS Earthquakes (M4.5+ in the last day)
             $this->info("Checking USGS Earthquakes...");
-            $usgs = Http::get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson");
-            if ($usgs->successful()) {
-                $quakes = $usgs->json()['features'] ?? [];
-                foreach ($quakes as $q) {
-                    $coords = $q['geometry']['coordinates'] ?? [0,0];
-                    $lon = $coords[0]; $lat = $coords[1];
-                    // Bounding box for Negros roughly Lat 9-11, Lon 122-124
-                    if ($lat > 9.0 && $lat < 11.5 && $lon > 122.0 && $lon < 124.0) {
-                        $mag = $q['properties']['mag'];
-                        $warningMsg = "⚠️ EARTHQUAKE DETECTED: Magnitude {$mag} earthquake detected near Negros. Expect aftershocks. Stay away from damaged structures.";
-                        break;
+            try {
+                $usgs = Http::timeout(5)->get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson");
+                if ($usgs->successful()) {
+                    $quakes = $usgs->json()['features'] ?? [];
+                    foreach ($quakes as $q) {
+                        $coords = $q['geometry']['coordinates'] ?? [0,0];
+                        $lon = $coords[0]; $lat = $coords[1];
+                        // Bounding box for Negros roughly Lat 9-11, Lon 122-124
+                        if ($lat > 9.0 && $lat < 11.5 && $lon > 122.0 && $lon < 124.0) {
+                            $mag = $q['properties']['mag'];
+                            $warningMsg = "⚠️ EARTHQUAKE DETECTED: Magnitude {$mag} earthquake detected near Negros. Expect aftershocks. Stay away from damaged structures.";
+                            break;
+                        }
                     }
                 }
+            } catch (\Exception $e) {
+                $this->warn("USGS API check failed: " . $e->getMessage());
             }
 
             // 2. Check PHIVOLCS Kanlaon (Scraping the RSS/HTML) if no earthquake warning
@@ -68,34 +72,40 @@ class MonitorDisasters extends Command
             // 3. Check Open-Meteo Rain if no higher priority warning
             if (!$warningMsg) {
                 $this->info("Checking Open-Meteo Weather...");
-                $weather = Http::get("https://api.open-meteo.com/v1/forecast", [
-                    'latitude' => $latitude,
-                    'longitude' => $longitude,
-                    'current' => 'precipitation',
-                ]);
-                
-                if ($weather->successful()) {
-                    $precipitation = $weather->json()['current']['precipitation'] ?? 0;
-                    $this->info("Current precipitation rate: {$precipitation} mm/hr");
+                try {
+                    $weather = Http::timeout(5)->get("https://api.open-meteo.com/v1/forecast", [
+                        'latitude' => $latitude,
+                        'longitude' => $longitude,
+                        'current' => 'precipitation',
+                    ]);
                     
-                    if ($precipitation > 30.0) {
-                        $warningMsg = "🔴 PAGASA RED RAINFALL WARNING: Severe flooding expected in low-lying areas of Binalbagan.";
-                    } elseif ($precipitation > 15.0) {
-                        $warningMsg = "🟠 PAGASA ORANGE RAINFALL WARNING: Flooding is threatening Binalbagan.";
-                    } elseif ($precipitation > 7.5) {
-                        $warningMsg = "🟡 PAGASA YELLOW RAINFALL WARNING: Flooding is possible in Binalbagan.";
+                    if ($weather->successful()) {
+                        $precipitation = $weather->json()['current']['precipitation'] ?? 0;
+                        $this->info("Current precipitation rate: {$precipitation} mm/hr");
+                        
+                        if ($precipitation > 30.0) {
+                            $warningMsg = "🔴 PAGASA RED RAINFALL WARNING: Severe flooding expected in low-lying areas of Binalbagan.";
+                        } elseif ($precipitation > 15.0) {
+                            $warningMsg = "🟠 PAGASA ORANGE RAINFALL WARNING: Flooding is threatening Binalbagan.";
+                        } elseif ($precipitation > 7.5) {
+                            $warningMsg = "🟡 PAGASA YELLOW RAINFALL WARNING: Flooding is possible in Binalbagan.";
+                        }
                     }
+                } catch (\Exception $e) {
+                    $this->warn("Open-Meteo check failed: " . $e->getMessage());
                 }
             }
         }
 
         if ($warningMsg) {
             $this->warn("Broadcasting: " . $warningMsg);
-            Cache::put('active_broadcast', $warningMsg, now()->addMinutes($duration));
+            $broadcast = ['id' => uniqid('monitor_'), 'message' => $warningMsg];
+            Cache::put('active_broadcast', $broadcast, now()->addMinutes($duration));
         } else {
             $this->info("No active weather or seismic threats. System Normal.");
             $currentBroadcast = Cache::get('active_broadcast');
-            if ($currentBroadcast && (str_contains($currentBroadcast, 'PAGASA') || str_contains($currentBroadcast, 'EARTHQUAKE') || str_contains($currentBroadcast, 'VOLCANIC'))) {
+            $msg = is_array($currentBroadcast) ? ($currentBroadcast['message'] ?? '') : ($currentBroadcast ?? '');
+            if ($msg && (str_contains($msg, 'PAGASA') || str_contains($msg, 'EARTHQUAKE') || str_contains($msg, 'VOLCANIC'))) {
                 Cache::forget('active_broadcast');
             }
         }
