@@ -77,6 +77,8 @@ export function PushNotificationManager() {
     // Method called when tapping on a notification
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       console.log('Push action performed: ', action);
+      // Store in session storage so cold-booting CommunityPortal can catch it
+      sessionStorage.setItem("pending_mass_alert_body", action.notification.body || "");
       window.dispatchEvent(new CustomEvent('mass_alert_tapped', { detail: action.notification.body }));
     });
 

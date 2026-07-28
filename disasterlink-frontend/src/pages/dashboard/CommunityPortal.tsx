@@ -220,10 +220,13 @@ export default function CommunityPortal() {
       try {
         const res = await axiosInstance.get("/broadcast");
         const broadcastMsg = res.data.broadcast;
+        const broadcastId = res.data.broadcast_id || broadcastMsg; // fallback to msg if id missing
+        
         if (broadcastMsg) {
           const dismissed = JSON.parse(sessionStorage.getItem("dismissed_session_broadcasts") || "[]");
-          if (forceShow || !dismissed.includes(broadcastMsg)) {
+          if (forceShow || !dismissed.includes(broadcastId)) {
             setActiveBroadcast(broadcastMsg);
+            sessionStorage.setItem("current_broadcast_id", broadcastId);
             
             // Trigger Native Push Notification on Android
             try {
@@ -257,13 +260,17 @@ export default function CommunityPortal() {
 
     // Listen to window event from PushNotificationManager
     const handlePushTap = (e: any) => {
-      if (e.detail) {
-        setActiveBroadcast(e.detail); // Instantly show the modal without waiting for network!
-      } else {
-        fetchBroadcast(true); 
-      }
+      // We force a fetch to ensure we get the latest ID so dismissal works perfectly
+      fetchBroadcast(true); 
     };
     window.addEventListener('mass_alert_tapped', handlePushTap);
+    
+    // Check if app was just cold-booted from a mass alert push tap
+    const pendingAlert = sessionStorage.getItem("pending_mass_alert_body");
+    if (pendingAlert) {
+      sessionStorage.removeItem("pending_mass_alert_body");
+      fetchBroadcast(true); // force fetch to get the ID and show modal
+    }
 
     let isSubscribed = true;
 
@@ -439,9 +446,10 @@ export default function CommunityPortal() {
             </p>
             <button 
               onClick={() => {
+                const currentId = sessionStorage.getItem("current_broadcast_id") || activeBroadcast;
                 const dismissed = JSON.parse(sessionStorage.getItem("dismissed_session_broadcasts") || "[]");
-                if (activeBroadcast && !dismissed.includes(activeBroadcast)) {
-                  dismissed.push(activeBroadcast);
+                if (currentId && !dismissed.includes(currentId)) {
+                  dismissed.push(currentId);
                   sessionStorage.setItem("dismissed_session_broadcasts", JSON.stringify(dismissed));
                 }
                 setActiveBroadcast(null);
