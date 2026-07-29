@@ -66,28 +66,30 @@ export default function Login() {
       setLoginState('booting');
       setBootText("Establishing secure connection...");
 
-      // 3. Immediately log in and redirect (no artificial delay!)
-      login(token, user); // Officially log them in
-      
-      try {
-        const userRole = user?.role || 'admin';
-        if (userRole === 'superadmin') {
-          navigate("/superadmin");
-        } else if (userRole === 'admin' || userRole === 'mdrrmo_staff') {
-          navigate("/"); // Send to Master Dashboard
-        } else if (userRole === 'barangay_captain') {
-          navigate("/barangay-command"); // Send to Localized Dashboard
-        } else if (userRole === 'responder') {
-          navigate("/responder-dispatch"); // Send to Mobile Field UI
-        } else if (userRole === 'resident' || userRole === 'citizen') {
-          navigate("/portal"); // Send to Community Portal
-        } else {
-          navigate("/"); // Fallback
+      // 3. Add a small delay to show the boot sequence UI
+      setTimeout(() => {
+        login(token, user); // Officially log them in
+        
+        try {
+          const userRole = user?.role || 'admin';
+          if (userRole === 'superadmin') {
+            navigate("/superadmin");
+          } else if (userRole === 'admin' || userRole === 'mdrrmo_staff') {
+            navigate("/"); // Send to Master Dashboard
+          } else if (userRole === 'barangay_captain') {
+            navigate("/barangay-command"); // Send to Localized Dashboard
+          } else if (userRole === 'responder') {
+            navigate("/responder-dispatch"); // Send to Mobile Field UI
+          } else if (userRole === 'resident' || userRole === 'citizen') {
+            navigate("/portal"); // Send to Community Portal
+          } else {
+            navigate("/"); // Fallback
+          }
+        } catch (navError) {
+          console.error("Navigation error", navError);
+          navigate("/");
         }
-      } catch (navError) {
-        console.error("Navigation error", navError);
-        navigate("/");
-      }
+      }, 1500);
 
     } catch (error: any) {
       setErrorMsg(error.response?.data?.message || error.message || "Login failed");
