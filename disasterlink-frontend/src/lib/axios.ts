@@ -14,7 +14,7 @@ if (typeof window !== 'undefined') {
     }
     // Use the official Capacitor module to detect native environments
     else if (Capacitor.isNativePlatform()) {
-        apiBase = 'https://spoiler-hanky-prideful.ngrok-free.dev/api';
+        apiBase = 'https://darkgoldenrod-anteater-579870.hostingersite.com/api';
     } 
     else if (hostname.includes('.devtunnels.ms') || hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
         // Use relative path to let Vite Proxy handle the routing securely, bypassing ALL CORS and Microsoft Proxy issues!
