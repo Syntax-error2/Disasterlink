@@ -24,7 +24,7 @@ export default function Login() {
   // Extract Subdomain for SaaS Branding
   const hostname = window.location.hostname;
   // Default to binalbagan for local dev, local IPs, and VS Code Dev Tunnels
-  const isLocalDev = hostname === "localhost" || hostname === "127.0.0.1" || hostname.includes(".devtunnels.ms") || /^\d+\.\d+\.\d+\.\d+$/.test(hostname);
+  const isLocalDev = hostname === "localhost" || hostname === "127.0.0.1" || hostname.includes(".devtunnels.ms") || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes("vercel.app");
   const currentSubdomain = isLocalDev 
     ? "binalbagan" 
     : hostname.split('.')[0];
