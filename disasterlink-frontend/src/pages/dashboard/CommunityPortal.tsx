@@ -1247,6 +1247,7 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
   const isOffline = !navigator.onLine;
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   const handlePost = async () => {
     if(!newPost.trim() && !selectedImage) return;
@@ -1265,6 +1266,8 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
     formData.append('content', newPost);
     formData.append('verified', 'false');
     formData.append('type', 'update');
+    formData.append('is_anonymous', isAnonymous.toString());
+    
     if (user.assigned_barangay) {
         formData.append('barangay', user.assigned_barangay);
     }
@@ -1280,9 +1283,20 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
     try {
       // Must set multipart/form-data implicitly by sending FormData
       const res = await axiosInstance.post('/feed', formData);
-      setPosts([res.data, ...posts]);
+      
+      // Update local state by manually applying the backend masking if anonymous
+      // to avoid waiting for a refetch (since backend masks in index, not in store response if we use the raw object).
+      // Actually, the backend store method returns the raw object.
+      const newPostData = { ...res.data };
+      if (newPostData.is_anonymous) {
+          newPostData.author = 'Anonymous Citizen';
+          newPostData.barangay = newPostData.barangay ? 'Local Resident' : null;
+      }
+      
+      setPosts([newPostData, ...posts]);
       setNewPost("");
       setSelectedImage(null);
+      setIsAnonymous(false);
       showToast("Update shared with the community.", "success");
     } catch(e: any) {
       const msg = e.response?.data?.message || "Failed to post update";
@@ -1333,14 +1347,22 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
                <button onClick={triggerFileInput} className="p-2 text-zinc-400 hover:text-white transition-colors"><Camera className="h-5 w-5" /></button>
             )}
         </div>
-        {selectedImage && (
-            <div className="flex items-center gap-2 pl-12">
+        <div className="flex items-center justify-between pl-12 pr-2">
+            {selectedImage ? (
                 <div className="bg-zinc-800 text-xs text-zinc-300 px-3 py-1 rounded-full flex items-center gap-2">
                     <Camera className="h-3 w-3" /> {selectedImage.name}
                     <button onClick={() => setSelectedImage(null)} className="hover:text-red-400"><X className="h-3 w-3" /></button>
                 </div>
-            </div>
-        )}
+            ) : <div />}
+            
+            <label className="flex items-center gap-2 cursor-pointer group">
+                <span className="text-xs font-semibold text-zinc-500 group-hover:text-zinc-300 transition-colors">Anonymous Mode</span>
+                <div className={`relative w-8 h-4 rounded-full transition-colors ${isAnonymous ? 'bg-red-500' : 'bg-zinc-700'}`}>
+                    <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${isAnonymous ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+                <input type="checkbox" className="hidden" checked={isAnonymous} onChange={(e) => setIsAnonymous(e.target.checked)} />
+            </label>
+        </div>
       </div>
 
       <div className="space-y-4">

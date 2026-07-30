@@ -328,6 +328,7 @@ export default function IncidentReports() {
               <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
                 <TrashHeader HeadName="ID" width="w-[100px] px-6" />
                 <TrashHeader HeadName="Time" />
+                <TrashHeader HeadName="Reporter" />
                 <TrashHeader HeadName="Hazard" />
                 <TrashHeader HeadName="Location" />
                 <TrashHeader HeadName="Level" />
@@ -337,9 +338,9 @@ export default function IncidentReports() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="h-48 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-red-500" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="h-48 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-red-500" /></TableCell></TableRow>
               ) : filteredReports.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="h-32 text-center text-zinc-500">No records found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="h-32 text-center text-zinc-500">No records found.</TableCell></TableRow>
               ) : (
                 filteredReports.map((r) => (
                   <TableRow key={r.id} className="border-zinc-200 dark:border-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
@@ -351,6 +352,16 @@ export default function IncidentReports() {
                           <span className="text-[10px] text-zinc-500">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                         </div>
                       ) : 'Just Now'}
+                    </TableCell>
+                    <TableCell className="text-sm text-zinc-600 dark:text-zinc-300">
+                      {r.user ? (
+                          <div className="flex flex-col">
+                              <span className="font-bold text-zinc-900 dark:text-zinc-100">{r.user.name}</span>
+                              <span className="text-[10px] text-blue-500">{r.user.phone || 'No Number'}</span>
+                          </div>
+                      ) : (
+                          <span className="text-xs text-zinc-500 italic">Anonymous</span>
+                      )}
                     </TableCell>
                     <TableCell className="font-bold text-zinc-900 dark:text-zinc-100">{r.incident_type}</TableCell>
                     <TableCell className="text-sm text-zinc-600 dark:text-zinc-300">
