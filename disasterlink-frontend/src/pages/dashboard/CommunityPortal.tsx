@@ -1244,31 +1244,56 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
   const [activeReplyId, setActiveReplyId] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
   const isOffline = !navigator.onLine;
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePost = async () => {
-    if(!newPost.trim()) return;
-    const postPayload = { author: user.name, content: newPost, verified: false, type: "update" };
+    if(!newPost.trim() && !selectedImage) return;
+    
+    // Check local blocklist visually as well
+    const bannedWords = ['spam', 'malicious', 'scam', 'abuse', 'stupid', 'idiot', 'fake'];
+    for (const word of bannedWords) {
+        if (newPost.toLowerCase().includes(word)) {
+            showToast("Your post contains prohibited language.", "error");
+            return;
+        }
+    }
+    
+    const formData = new FormData();
+    formData.append('author', user.name);
+    formData.append('content', newPost);
+    formData.append('verified', 'false');
+    formData.append('type', 'update');
+    if (selectedImage) {
+        formData.append('image', selectedImage);
+    }
     
     if (isOffline) {
-      const offlinePosts = JSON.parse(localStorage.getItem("offline_posts") || "[]");
-      offlinePosts.push(postPayload);
-      localStorage.setItem("offline_posts", JSON.stringify(offlinePosts));
-      
-      const optimisticPost = { ...postPayload, id: Date.now(), created_at: new Date().toISOString(), _isOfflinePending: true };
-      setPosts([optimisticPost, ...posts]);
-      setNewPost("");
-      showToast("Offline: Update saved to local mesh buffer. Will sync when online.", "info");
+      showToast("Offline: Cannot upload image/feed without connection.", "error");
       return;
     }
 
     try {
-      const res = await axiosInstance.post('/feed', postPayload);
+      // Must set multipart/form-data implicitly by sending FormData
+      const res = await axiosInstance.post('/feed', formData);
       setPosts([res.data, ...posts]);
       setNewPost("");
+      setSelectedImage(null);
       showToast("Update shared with the community.", "success");
-    } catch(e) {
-      showToast("Failed to post update", "error");
+    } catch(e: any) {
+      const msg = e.response?.data?.message || "Failed to post update";
+      showToast(msg, "error");
     }
+  };
+
+  const triggerFileInput = () => {
+      fileInputRef.current?.click();
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+          setSelectedImage(e.target.files[0]);
+      }
   };
 
   const handleReplySubmit = (postId: number) => {
@@ -1293,13 +1318,24 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
         <button onClick={()=>showToast("Filters applied", "info")} className="bg-white/10 p-2 rounded-full"><Filter className="h-5 w-5 text-zinc-300" /></button>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-4 flex gap-3 items-center focus-within:border-zinc-600 transition-colors shadow-sm">
-        <Avatar name={user.name} size="10" />
-        <input value={newPost} onChange={(e)=>setNewPost(e.target.value)} onKeyDown={(e)=>e.key === 'Enter' && handlePost()} type="text" placeholder="Share an update or request help..." className="bg-transparent border-none outline-none text-sm w-full text-zinc-100 placeholder:text-zinc-600" />
-        {newPost.trim() ? (
-           <button onClick={handlePost} className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full text-white transition-colors"><Send className="h-4 w-4" /></button>
-        ) : (
-           <button onClick={()=>showToast("Camera opening...", "info")} className="p-2 text-zinc-400 hover:text-white transition-colors"><Camera className="h-5 w-5" /></button>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-4 flex flex-col gap-3 focus-within:border-zinc-600 transition-colors shadow-sm">
+        <div className="flex gap-3 items-center">
+            <Avatar name={user.name} size="10" />
+            <input value={newPost} onChange={(e)=>setNewPost(e.target.value)} onKeyDown={(e)=>e.key === 'Enter' && handlePost()} type="text" placeholder="Share an update or request help..." className="bg-transparent border-none outline-none text-sm w-full text-zinc-100 placeholder:text-zinc-600" />
+            <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
+            {newPost.trim() || selectedImage ? (
+               <button onClick={handlePost} className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full text-white transition-colors"><Send className="h-4 w-4" /></button>
+            ) : (
+               <button onClick={triggerFileInput} className="p-2 text-zinc-400 hover:text-white transition-colors"><Camera className="h-5 w-5" /></button>
+            )}
+        </div>
+        {selectedImage && (
+            <div className="flex items-center gap-2 pl-12">
+                <div className="bg-zinc-800 text-xs text-zinc-300 px-3 py-1 rounded-full flex items-center gap-2">
+                    <Camera className="h-3 w-3" /> {selectedImage.name}
+                    <button onClick={() => setSelectedImage(null)} className="hover:text-red-400"><X className="h-3 w-3" /></button>
+                </div>
+            </div>
         )}
       </div>
 
@@ -1325,6 +1361,12 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
               </div>
               
               <p className="text-sm text-zinc-300 leading-relaxed mb-4">{post.content}</p>
+              
+              {post.image_url && (
+                  <div className="mb-4 rounded-2xl overflow-hidden border border-zinc-800">
+                      <img src={post.image_url} alt="Community upload" className="w-full object-cover max-h-96" />
+                  </div>
+              )}
               
               <div className="flex items-center justify-between border-t border-zinc-800 pt-3">
                 <div className="flex items-center gap-4">
