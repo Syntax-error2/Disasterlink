@@ -383,20 +383,25 @@ export default function CommunityPortal() {
     let exactLocationText = `${activeUser.purok}, ${activeUser.brgy}`;
     
     if (isOffline) {
-       exactLocationText = `[OFFLINE GPS] Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
-    } else {
-       try {
-         const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-         const geoData = await geoRes.json();
-         if (geoData && geoData.display_name) {
-             // Extract just the street / local area to keep it concise
-             const parts = geoData.display_name.split(',');
-             exactLocationText = parts.slice(0, 3).join(',').trim();
+         exactLocationText = `[OFFLINE GPS] Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+      } else {
+         try {
+           const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+           const geoData = await geoRes.json();
+           if (geoData && geoData.address) {
+               const addr = geoData.address;
+               const street = addr.road || addr.neighbourhood || addr.residential || '';
+               // Ensure we don't duplicate barangay names in weird ways
+               if (street) {
+                 exactLocationText = `${street}, ${activeUser.brgy}`;
+               } else {
+                 exactLocationText = `${activeUser.purok}, ${activeUser.brgy}`;
+               }
+           }
+         } catch (e) {
+            console.error("Reverse geocoding failed", e);
          }
-       } catch (e) {
-         exactLocationText = `[GPS] Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
-       }
-    }
+      }
 
     const payload = {
       reporting_barangay: activeUser.brgy,

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Navigation, CheckCircle, AlertTriangle, Radio, Clock, Camera, ArrowLeft, Info, Send, Loader2, CameraOff, Activity, ShieldAlert } from "lucide-react";
+import { MapPin, Navigation, CheckCircle, AlertTriangle, Radio, Clock, Camera, ArrowLeft, Info, Send, Loader2, CameraOff, Activity, ShieldAlert, Phone, User as UserIcon, Lock, Key, EyeOff, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MapContainer, TileLayer, Marker, Circle, useMap } from "react-leaflet";
 import { motion, AnimatePresence } from "framer-motion";
@@ -63,6 +63,13 @@ export default function ResponderMobile() {
 
   // Real-time responder location (defaults to a central point until GPS locks)
   const [responderLocation, setResponderLocation] = useState<[number, number]>(MAP_CENTER);
+
+  // ==========================================
+  const [showProfile, setShowProfile] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
 
   // ==========================================
   // REAL-TIME GPS TRACKING & KEEP AWAKE
@@ -224,11 +231,33 @@ export default function ResponderMobile() {
   // ==========================================
   // RESPONDER PROFILE & LOGOUT
   // ==========================================
-  const [showProfile, setShowProfile] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordData.new !== passwordData.confirm) {
+      showToast("New passwords do not match", "error");
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      await axiosInstance.post('/change-password', {
+        current_password: passwordData.current,
+        new_password: passwordData.new,
+        new_password_confirmation: passwordData.confirm
+      });
+      showToast("Password updated securely.", "success");
+      setShowPasswordModal(false);
+      setPasswordData({ current: '', new: '', confirm: '' });
+    } catch (e: any) {
+      showToast(e.response?.data?.message || "Failed to update password", "error");
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   return (
@@ -301,8 +330,11 @@ export default function ResponderMobile() {
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span> SYSTEM CONNECTED
                   </div>
                 </div>
-                <div className="p-2">
-                  <button onClick={handleLogout} className="w-full text-left px-3 py-3 rounded-xl hover:bg-red-500/10 text-red-400 text-sm font-bold flex items-center gap-2 transition-colors">
+                <div className="p-2 space-y-1">
+                  <button onClick={() => { setShowProfile(false); setShowPasswordModal(true); }} className="w-full text-left px-3 py-3 rounded-xl hover:bg-zinc-800 text-zinc-300 text-sm font-medium flex items-center gap-3 transition-colors">
+                    <Key className="h-4 w-4 text-zinc-400" /> Change Password
+                  </button>
+                  <button onClick={handleLogout} className="w-full text-left px-3 py-3 rounded-xl hover:bg-red-500/10 text-red-400 text-sm font-bold flex items-center gap-3 transition-colors">
                     <ArrowLeft className="h-4 w-4" /> Sign Out
                   </button>
                 </div>
@@ -536,6 +568,43 @@ export default function ResponderMobile() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* CHANGE PASSWORD MODAL */}
+      <AnimatePresence>
+        {showPasswordModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[300] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
+              <button onClick={() => setShowPasswordModal(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-white">&times;</button>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-zinc-800 p-3 rounded-full"><Lock className="h-6 w-6 text-white" /></div>
+                <div><h3 className="text-xl font-bold text-white">Security</h3><p className="text-xs text-zinc-500">Update your access credentials</p></div>
+              </div>
+              
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Current Password</label>
+                  <div className="relative">
+                    <input type={showPwd ? "text" : "password"} required value={passwordData.current} onChange={e => setPasswordData({...passwordData, current: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:border-red-500 outline-none pr-10" />
+                    <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-3 text-zinc-500">{showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">New Password</label>
+                  <input type="password" required minLength={8} value={passwordData.new} onChange={e => setPasswordData({...passwordData, new: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:border-red-500 outline-none" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Confirm New Password</label>
+                  <input type="password" required minLength={8} value={passwordData.confirm} onChange={e => setPasswordData({...passwordData, confirm: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:border-red-500 outline-none" />
+                </div>
+                <button type="submit" disabled={passwordLoading} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl mt-2 transition-colors">
+                  {passwordLoading ? "Updating..." : "Update Password"}
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

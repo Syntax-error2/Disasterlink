@@ -3,15 +3,59 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/theme-provider";
-import { User, Bell, Palette, Shield, Save, Smartphone, Mail, Key, MonitorSmartphone, LogOut } from "lucide-react";
+import { User, Bell, Palette, Shield, Save, Smartphone, Mail, Key, MonitorSmartphone, LogOut, Loader2, CheckCircle } from "lucide-react";
+import axiosInstance from "../../lib/axios";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
   const { theme, setTheme } = useTheme();
 
+  const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 5000);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordData.new !== passwordData.confirm) {
+      showToast("New passwords do not match", "error");
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      await axiosInstance.post('/change-password', {
+        current_password: passwordData.current,
+        new_password: passwordData.new,
+        new_password_confirmation: passwordData.confirm
+      });
+      showToast("Password updated securely.", "success");
+      setPasswordData({ current: '', new: '', confirm: '' });
+    } catch (e: any) {
+      showToast(e.response?.data?.message || "Failed to update password", "error");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-8 pb-8 max-w-5xl animate-in fade-in duration-500">
+    <div className="flex flex-col gap-8 pb-8 max-w-5xl animate-in fade-in duration-500 relative">
       
+      {/* TOAST NOTIFICATION */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="absolute top-0 right-0 z-50">
+            <div className={`px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 text-sm font-bold ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+              <CheckCircle className="h-4 w-4" /> {toast.msg}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">System Settings</h1>
@@ -198,24 +242,36 @@ export default function Settings() {
                   <CardTitle>Change Password</CardTitle>
                   <CardDescription>Ensure your account is using a long, random password to stay secure.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300">Current Password</label>
-                    <div className="relative">
-                      <Key className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
-                      <Input type="password" placeholder="••••••••" className="pl-9 bg-zinc-50 dark:bg-zinc-900/50 max-w-md" />
+                <CardContent>
+                  <form onSubmit={handleChangePassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300">Current Password</label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+                        <Input type="password" required value={passwordData.current} onChange={e => setPasswordData({...passwordData, current: e.target.value})} placeholder="••••••••" className="pl-9 bg-zinc-50 dark:bg-zinc-900/50 max-w-md" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300">New Password</label>
-                    <div className="relative">
-                      <Key className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
-                      <Input type="password" placeholder="••••••••" className="pl-9 bg-zinc-50 dark:bg-zinc-900/50 max-w-md" />
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300">New Password</label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+                        <Input type="password" required minLength={8} value={passwordData.new} onChange={e => setPasswordData({...passwordData, new: e.target.value})} placeholder="••••••••" className="pl-9 bg-zinc-50 dark:bg-zinc-900/50 max-w-md" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="pt-2">
-                    <Button className="bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900 text-white">Update Password</Button>
-                  </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300">Confirm New Password</label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+                        <Input type="password" required minLength={8} value={passwordData.confirm} onChange={e => setPasswordData({...passwordData, confirm: e.target.value})} placeholder="••••••••" className="pl-9 bg-zinc-50 dark:bg-zinc-900/50 max-w-md" />
+                      </div>
+                    </div>
+                    <div className="pt-2">
+                      <Button type="submit" disabled={passwordLoading} className="bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900 text-white">
+                        {passwordLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Update Password
+                      </Button>
+                    </div>
+                  </form>
                 </CardContent>
               </Card>
 

@@ -19,7 +19,9 @@ import {
   AlertTriangle,
   Info,
   Loader2,
-  ShieldAlert
+  ShieldAlert,
+  ShieldCheck,
+  Users
 } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../context/AuthContext";
@@ -218,6 +220,14 @@ export default function DashboardLayout() {
           {isAdmin && (
             <>
               <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 mt-8 px-2">System</div>
+              <Link to="/admin/users" className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${location.pathname === "/admin/users" ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400" : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-50"}`}>
+                <ShieldCheck className="h-4 w-4" />
+                Personnel Clearance
+              </Link>
+              <Link to="/admin/teams" className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${location.pathname === "/admin/teams" ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400" : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-50"}`}>
+                <Users className="h-4 w-4" />
+                Deployment Teams
+              </Link>
               <Link to="/settings" className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${location.pathname === "/settings" ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400" : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-50"}`}>
                 <Settings className="h-4 w-4" />
                 System Settings

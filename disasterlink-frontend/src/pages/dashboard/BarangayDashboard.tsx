@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Home, Users, AlertTriangle, ShieldCheck, MapPin, Send, Loader2, CheckCircle, AlertCircle, RefreshCw, Building, Tent, Plus, Search, Radio } from "lucide-react";
+import { Home, Users, AlertTriangle, ShieldCheck, MapPin, Send, Loader2, CheckCircle, AlertCircle, RefreshCw, Building, Tent, Plus, Search, Radio, Key, EyeOff, Eye } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -40,6 +40,12 @@ export default function BarangayDashboard() {
   const [activeTab, setActiveTab] = useState<'reports' | 'evacuation' | 'broadcast'>('reports');
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  // Password State
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
 
   const handleLocalBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,13 +239,54 @@ export default function BarangayDashboard() {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordData.new !== passwordData.confirm) {
+      alert("New passwords do not match");
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      await axiosInstance.post('/change-password', {
+        current_password: passwordData.current,
+        new_password: passwordData.new,
+        new_password_confirmation: passwordData.confirm
+      });
+      alert("Password updated securely.");
+      setShowPasswordModal(false);
+      setPasswordData({ current: '', new: '', confirm: '' });
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Failed to update password");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-500 max-w-6xl mx-auto pb-12">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500 max-w-6xl mx-auto pb-12 relative">
       
+      {/* Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-xl w-full max-w-sm">
+            <h3 className="font-bold text-lg mb-4">Change Password</h3>
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <input type="password" placeholder="Current Password" required onChange={e => setPasswordData({...passwordData, current: e.target.value})} className="w-full h-10 px-3 bg-zinc-100 dark:bg-zinc-800 rounded border border-zinc-700"/>
+              <input type={showPwd ? "text" : "password"} placeholder="New Password" required onChange={e => setPasswordData({...passwordData, new: e.target.value})} className="w-full h-10 px-3 bg-zinc-100 dark:bg-zinc-800 rounded border border-zinc-700"/>
+              <input type="password" placeholder="Confirm New Password" required onChange={e => setPasswordData({...passwordData, confirm: e.target.value})} className="w-full h-10 px-3 bg-zinc-100 dark:bg-zinc-800 rounded border border-zinc-700"/>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setShowPasswordModal(false)} className="flex-1 py-2 text-sm">Cancel</button>
+                <button type="submit" disabled={passwordLoading} className="flex-1 bg-red-600 text-white rounded py-2 text-sm">{passwordLoading ? 'Updating...' : 'Update'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Strict Jurisdiction Header */}
       <div className="relative rounded-xl overflow-hidden bg-zinc-900 dark:bg-[#0c0c0e] border border-zinc-800 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/2" />
-        <div className="relative z-10">
+        <div className="relative z-10 flex-1">
           <div className="flex items-center gap-2 mb-2">
             <div className="bg-emerald-500/20 p-1.5 rounded-md">
               <ShieldCheck className="h-4 w-4 text-emerald-500" />
@@ -248,15 +295,20 @@ export default function BarangayDashboard() {
           </div>
           <h1 className="text-3xl font-black tracking-tight text-white mb-1">Local Command Center</h1>
           <p className="text-zinc-400 text-sm">
-            Displaying real-time telemetry restricted to Brgy. <strong className="text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded-md ml-1">{user.assigned_barangay}</strong>
+            Managing internal affairs and emergency dispatches exclusively for <span className="font-bold text-white">Brgy. {user.assigned_barangay}</span>
           </p>
         </div>
-        <div className="relative z-10 bg-black/40 backdrop-blur-md border border-zinc-800 px-5 py-3 rounded-lg text-right shadow-inner">
-          <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Active Officer</div>
-          <div className="text-base font-bold text-white flex items-center gap-2 justify-end">
-            {user.name}
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="bg-black/40 backdrop-blur-md border border-zinc-800 px-5 py-3 rounded-lg text-right shadow-inner">
+            <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Active Officer</div>
+            <div className="text-base font-bold text-white flex items-center gap-2 justify-end">
+              {user.name}
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
           </div>
+          <button onClick={() => setShowPasswordModal(true)} className="px-4 py-3 h-full bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold rounded-lg border border-zinc-700 transition-colors flex items-center gap-2">
+            <Key className="h-4 w-4" /> Security
+          </button>
         </div>
       </div>
 
@@ -616,6 +668,42 @@ export default function BarangayDashboard() {
           </Card>
         </div>
       )}
+
+      {/* CHANGE PASSWORD MODAL */}
+      <AnimatePresence>
+        {showPasswordModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
+              <button onClick={() => setShowPasswordModal(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-white">&times;</button>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-zinc-800 p-3 rounded-full"><Lock className="h-6 w-6 text-white" /></div>
+                <div><h3 className="text-xl font-bold text-white">Security</h3><p className="text-xs text-zinc-500">Update your access credentials</p></div>
+              </div>
+              
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Current Password</label>
+                  <div className="relative">
+                    <input type={showPwd ? "text" : "password"} required value={passwordData.current} onChange={e => setPasswordData({...passwordData, current: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:border-red-500 outline-none pr-10" />
+                    <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-3 text-zinc-500">{showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">New Password</label>
+                  <input type="password" required minLength={8} value={passwordData.new} onChange={e => setPasswordData({...passwordData, new: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:border-red-500 outline-none" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Confirm New Password</label>
+                  <input type="password" required minLength={8} value={passwordData.confirm} onChange={e => setPasswordData({...passwordData, confirm: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:border-red-500 outline-none" />
+                </div>
+                <button type="submit" disabled={passwordLoading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl mt-2 transition-colors">
+                  {passwordLoading ? "Updating..." : "Update Password"}
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

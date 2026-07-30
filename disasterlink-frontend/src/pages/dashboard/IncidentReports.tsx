@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -27,8 +27,24 @@ export default function IncidentReports() {
   // Dispatch Modal State
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
-  const [selectedResponder, setSelectedResponder] = useState("Alpha-1 Unit");
+  const [selectedResponder, setSelectedResponder] = useState("");
   const [isDispatching, setIsDispatching] = useState(false);
+  const [deploymentTeams, setDeploymentTeams] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const res = await axiosInstance.get('/teams');
+        setDeploymentTeams(res.data);
+        if (res.data.length > 0) {
+            setSelectedResponder(res.data[0].name);
+        }
+      } catch (error) {
+        console.error("Failed to fetch teams", error);
+      }
+    };
+    fetchTeams();
+  }, []);
 
   const handleVerify = async (id: number) => {
     try {
@@ -58,15 +74,20 @@ export default function IncidentReports() {
 
   const handleOpenDispatch = (incident: any) => {
     // Dynamically auto-suggest responder units based on the classified hazard category
-    const hazard = incident.incident_type?.toLowerCase() || "";
-    if (hazard.includes("flood") || hazard.includes("rescue")) {
-      setSelectedResponder("Charlie Squad");
-    } else if (hazard.includes("fire")) {
-      setSelectedResponder("BFP Fire Unit");
-    } else if (hazard.includes("landslide") || hazard.includes("damage")) {
-      setSelectedResponder("Bravo Team");
-    } else {
-      setSelectedResponder("Alpha-1 Unit");
+    const hazard = incident.incident_type.toLowerCase();
+    
+    // We try to match team category to hazard if possible, otherwise use the first team
+    const bestTeam = deploymentTeams.find(t => 
+        (hazard.includes("fire") && t.category?.toLowerCase().includes("fire")) ||
+        ((hazard.includes("medical") || hazard.includes("injury")) && t.category?.toLowerCase().includes("medical")) ||
+        (hazard.includes("flood") && t.category?.toLowerCase().includes("water")) ||
+        ((hazard.includes("landslide") || hazard.includes("damage")) && t.category?.toLowerCase().includes("clearing"))
+    );
+
+    if (bestTeam) {
+        setSelectedResponder(bestTeam.name);
+    } else if (deploymentTeams.length > 0) {
+        setSelectedResponder(deploymentTeams[0].name);
     }
     
     setSelectedIncident(incident);
@@ -214,10 +235,10 @@ export default function IncidentReports() {
                     onChange={(e) => setSelectedResponder(e.target.value)} 
                     className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-3 text-sm outline-none focus:border-red-500 font-bold text-zinc-800 dark:text-zinc-100"
                   >
-                    <option value="Alpha-1 Unit">Alpha-1 (Medical Emergency Rescue)</option>
-                    <option value="Bravo Team">Bravo Team (Roads & Heavy Infrastructure Clearing)</option>
-                    <option value="Charlie Squad">Charlie Squad (Amphibious Evacuation Unit)</option>
-                    <option value="BFP Fire Unit">Bureau of Fire Protection (BFP Truck)</option>
+                    {deploymentTeams.length === 0 && <option value="">No Teams Available</option>}
+                    {deploymentTeams.map(team => (
+                        <option key={team.id} value={team.name}>{team.name} {team.category ? `(${team.category})` : ''}</option>
+                    ))}
                   </select>
                 </div>
                 

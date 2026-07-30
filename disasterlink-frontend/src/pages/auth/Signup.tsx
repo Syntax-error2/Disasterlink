@@ -95,18 +95,7 @@ export default function Signup() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">Department / Role</label>
-              <div className="relative group">
-                <Briefcase className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors" />
-                <select name="role" className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner appearance-none" disabled={loading}>
-                  <option value="mdrrmo_staff">MDRRMO Staff</option>
-                  <option value="responder">Emergency Responder</option>
-                  <option value="barangay_captain">Barangay Captain</option>
-                  <option value="resident">Resident / Citizen</option>
-                </select>
-              </div>
-            </div>
+            <input type="hidden" name="role" value="resident" />
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

@@ -30,6 +30,8 @@ const ResponderMobile = lazyWithDelay(() => import("./pages/dashboard/ResponderM
 const BarangayDashboard = lazyWithDelay(() => import("./pages/dashboard/BarangayDashboard"), 0);
 const CommunityPortal = lazyWithDelay(() => import("./pages/dashboard/CommunityPortal"), 0);
 const SuperAdmin = lazyWithDelay(() => import("./pages/dashboard/SuperAdmin"), 0);
+const AdminUserManagement = lazyWithDelay(() => import("./pages/dashboard/AdminUserManagement"), 0);
+const AdminTeamManagement = lazyWithDelay(() => import("./pages/dashboard/AdminTeamManagement"), 0);
 
 // Global Page Loader
 const PageLoader = () => (
@@ -97,6 +99,8 @@ export default function App() {
                 <Route path="/weather" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><LiveWeather /></ProtectedRoute>} />
                 <Route path="/alerts" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><EmergencyAlerts /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff']}><Settings /></ProtectedRoute>} /> 
+                <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUserManagement /></ProtectedRoute>} />
+                <Route path="/admin/teams" element={<ProtectedRoute allowedRoles={['admin']}><AdminTeamManagement /></ProtectedRoute>} />
                 
                 {/* Localized Barangay Command Center */}
                 <Route path="/barangay-command" element={<ProtectedRoute allowedRoles={['barangay_captain']}><BarangayDashboard /></ProtectedRoute>} />
