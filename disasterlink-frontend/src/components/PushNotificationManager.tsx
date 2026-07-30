@@ -46,19 +46,23 @@ export function PushNotificationManager() {
     // On success, we should be able to receive notifications
     PushNotifications.addListener('registration', async (token) => {
       console.log('Push registration success, token: ' + token.value);
+      alert('Firebase Token Generated! Saving to DB...');
       try {
         // Send the FCM token to Laravel Backend
         await axiosInstance.post('/fcm-token', {
           token: token.value
         });
-      } catch (error) {
+        alert('Firebase Token successfully saved to database!');
+      } catch (error: any) {
         console.error('Failed to sync FCM token with backend', error);
+        alert('Failed to save FCM token to backend! ' + (error.response?.data?.message || error.message));
       }
     });
 
     // Some issue with our setup and push will not work
     PushNotifications.addListener('registrationError', (error: any) => {
       console.error('Error on registration: ' + JSON.stringify(error));
+      alert('Capacitor Registration Error: ' + JSON.stringify(error));
     });
 
     // Show us the notification payload if the app is open on our device
