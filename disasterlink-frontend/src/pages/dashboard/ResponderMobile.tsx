@@ -442,8 +442,34 @@ export default function ResponderMobile() {
                         </div>
                       </div>
 
+                      {/* Reporter Information */}
+                      {incident.user && (
+                        <div className="flex items-start gap-4 bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800/80 shadow-inner mt-3">
+                          <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Reporter Information</div>
+                            <div className="text-sm text-zinc-100 font-medium">
+                              {incident.user.name}
+                            </div>
+                            {incident.user.phone && (
+                              <div className="text-xs text-zinc-400 mt-1 flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                {incident.user.phone}
+                              </div>
+                            )}
+                          </div>
+                          {incident.user.phone && (
+                            <a href={`tel:${incident.user.phone}`} className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20 active:scale-95 transition-transform">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            </a>
+                          )}
+                        </div>
+                      )}
+
                       {incident.details && (
-                        <div className="mt-4 p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 border-l-4 border-l-zinc-700 italic text-sm text-zinc-400 leading-relaxed shadow-inner">
+                        <div className="mt-3 p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 italic text-sm text-zinc-300 leading-relaxed shadow-inner">
                           "{incident.details}"
                         </div>
                       )}
