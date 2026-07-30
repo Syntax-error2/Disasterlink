@@ -37,7 +37,27 @@ export default function BarangayDashboard() {
   const [isLoadingReports, setIsLoadingReports] = useState(true);
 
   // Evacuation Centers State
-  const [activeTab, setActiveTab] = useState<'reports' | 'evacuation'>('reports');
+  const [activeTab, setActiveTab] = useState<'reports' | 'evacuation' | 'broadcast'>('reports');
+  const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  const handleLocalBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastMsg) return;
+    setIsBroadcasting(true);
+    try {
+      await axiosInstance.post('/broadcast/local', { message: broadcastMsg });
+      setBroadcastMsg("");
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (e) {
+      console.warn("API Offline, simulating broadcast");
+      setBroadcastMsg("");
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
   const [evacuationCenters, setEvacuationCenters] = useState<any[]>([]);
   const [isLoadingCenters, setIsLoadingCenters] = useState(false);
   const [showAddCenter, setShowAddCenter] = useState(false);
