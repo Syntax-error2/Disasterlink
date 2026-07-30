@@ -251,7 +251,11 @@ export default function GisDashboard() {
               <button onClick={() => setIsAlertModalOpen(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-white">&times;</button>
               <div className="flex items-center gap-3 mb-4">
                 <div className="bg-red-500/20 p-3 rounded-full"><ShieldAlert className="h-6 w-6 text-red-500" /></div>
-                <div><h2 className="text-xl font-bold text-white tracking-tight">Mass Broadcast Alert</h2><p className="text-xs text-zinc-400">Send an emergency SMS to all registered residents.</p></div>
+                <div>
+                  <h2 className="text-xl font-bold text-white tracking-tight">Mass Broadcast Alert</h2>
+                  <p className="text-xs text-zinc-400">Send an emergency SMS to all registered residents.</p>
+                  <p className="text-[10px] font-bold text-red-400 mt-1 uppercase tracking-wider">Note: Global alert state remains active for 60 minutes.</p>
+                </div>
               </div>
               <textarea placeholder="Enter emergency message..." className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-100 min-h-[100px] mb-4 outline-none focus:border-red-500 transition-colors" defaultValue={`EMERGENCY ALERT: Pre-emptive evacuation is now in effect for all low-lying areas in Binalbagan. Please proceed to designated Evacuation Centers immediately.`}></textarea>
               <button 
