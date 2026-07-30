@@ -51,7 +51,6 @@ class BroadcastController extends Controller
         ======================================================================
         */
         
-        /* 
         try {
             $tokens = \App\Models\User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
             
@@ -79,7 +78,6 @@ class BroadcastController extends Controller
             \Illuminate\Support\Facades\Log::error('Firebase Push Failed: ' . $e->getMessage());
             // return response()->json(['success' => false, 'message' => 'Firebase Push Failed: ' . $e->getMessage()], 500);
         }
-        */
 
         if ($request->input('include_sms')) {
             $phones = \App\Models\User::whereNotNull('phone')->pluck('phone')->toArray();
