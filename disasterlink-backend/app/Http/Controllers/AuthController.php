@@ -94,6 +94,7 @@ class AuthController extends Controller
             'purok' => $request->purok,
             'account_status' => 'active',
             'lgu_id' => $lgu ? $lgu->id : null,
+            'email_verified_at' => now(),
         ]);
 
         return response()->json([
