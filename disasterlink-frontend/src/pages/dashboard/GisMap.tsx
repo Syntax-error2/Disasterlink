@@ -74,6 +74,7 @@ export default function GisDashboard() {
   const [evacCenters, setEvacCenters] = useState<any[]>([]);
   const [liveResponders, setLiveResponders] = useState<any[]>([]);
   const [aiPredictions, setAiPredictions] = useState<any[]>([]);
+  const [incomingSOS, setIncomingSOS] = useState<any>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -162,9 +163,18 @@ export default function GisDashboard() {
     fetchResponders();
     fetchAiPredictions();
     
-    // WebSockets for incidents are now handled globally by IncidentsContext!
+    const handleSOS = (e: any) => {
+      setIncomingSOS(e.detail);
+      // Try to play an alert sound
+      try {
+        const audio = new Audio('/alarm.mp3'); // Assuming there's a loud alarm sound
+        audio.play().catch(e => console.log('Audio autoplay blocked'));
+      } catch(e) {}
+    };
+    window.addEventListener('new_sos_alert', handleSOS);
 
     return () => {
+       window.removeEventListener('new_sos_alert', handleSOS);
     };
   }, []);
 
@@ -192,6 +202,43 @@ export default function GisDashboard() {
           >
             {toast.type === 'success' ? <Zap className="h-6 w-6" /> : <ShieldAlert className="h-6 w-6" />}
             <span className="font-semibold">{toast.msg}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* INCOMING SOS FULL-SCREEN OVERLAY */}
+      <AnimatePresence>
+        {incomingSOS && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-[9999] bg-red-950/90 backdrop-blur-xl flex flex-col items-center justify-center p-8"
+          >
+            <motion.div 
+              animate={{ scale: [1, 1.1, 1] }} 
+              transition={{ repeat: Infinity, duration: 1 }}
+              className="bg-red-600 p-8 rounded-full shadow-[0_0_100px_rgba(220,38,38,1)] mb-8"
+            >
+              <ShieldAlert className="h-32 w-32 text-white" />
+            </motion.div>
+            <h1 className="text-6xl font-black text-white uppercase tracking-tighter mb-4 text-center">
+              Critical SOS Detected!
+            </h1>
+            <div className="bg-white/10 border border-white/20 p-8 rounded-3xl max-w-2xl w-full text-center mb-8">
+              <h2 className="text-3xl font-bold text-red-400 mb-2">{incomingSOS.incident_type || "Emergency Signal"}</h2>
+              <p className="text-xl text-white mb-6 font-medium">{incomingSOS.details || "A citizen is requesting immediate assistance."}</p>
+              <div className="flex items-center justify-center gap-4 text-zinc-300 font-mono text-lg">
+                <MapPin className="h-6 w-6 text-red-500" /> 
+                {incomingSOS.exact_location || incomingSOS.reporting_barangay || "Tracking coordinates..."}
+              </div>
+            </div>
+            <button 
+              onClick={() => setIncomingSOS(null)}
+              className="px-12 py-5 bg-white text-red-600 text-2xl font-black uppercase tracking-widest rounded-full shadow-2xl hover:bg-zinc-200 active:scale-95 transition-all"
+            >
+              Acknowledge Dispatch
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

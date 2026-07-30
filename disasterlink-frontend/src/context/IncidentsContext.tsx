@@ -66,6 +66,9 @@ export const IncidentsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const channel = echo.channel('incidents');
     channel.listen('.incident.event', (e: any) => {
       console.log('Global Real-time Incident Event:', e);
+      if (e && e.incident) {
+          window.dispatchEvent(new CustomEvent('new_sos_alert', { detail: e.incident }));
+      }
       fetchIncidents(); // Fast refresh the global state without spinners
     });
 
