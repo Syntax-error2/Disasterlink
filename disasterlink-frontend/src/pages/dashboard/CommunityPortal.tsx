@@ -701,12 +701,7 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
           <div className="space-y-3">
             {myReports.map((report: any) => (
               <div key={report.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 relative overflow-hidden shadow-sm">
-                <div className={`absolute top-0 left-0 w-1 h-full ${
-                  report.status.includes("Dispatch") ? "bg-blue-500" : 
-                  report.status.includes("Resolved") ? "bg-emerald-500" : 
-                  "bg-amber-500"
-                }`} />
-                <div className="pl-2">
+                <div>
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-bold text-zinc-100">{report.incident_type || report.category}</h4>
                     <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-1">
