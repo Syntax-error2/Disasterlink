@@ -174,9 +174,9 @@ export default function Overview() {
     try {
       // Fetch Real Incident Data from Laravel
       const dbResponse = await axiosInstance.get("/incidents");
-      const dbData = dbResponse.data;
-      setRawIncidents(dbData);
-      processDatabaseRecords(dbData);
+      const dbIncidents = dbResponse.data.data ? dbResponse.data.data : dbResponse.data;
+      setRawIncidents(dbIncidents);
+      processDatabaseRecords(dbIncidents);
 
       // Fetch Stats & Evacuation Centers
       try {

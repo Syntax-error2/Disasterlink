@@ -93,7 +93,7 @@ export default function BarangayDashboard() {
     setIsLoadingReports(true);
     try {
       const response = await axiosInstance.get("/incidents");
-      const data = response.data;
+      const data = response.data.data ? response.data.data : response.data;
       
       // Filter so the Captain ONLY sees reports from their Barangay
       const filtered = data.filter((report: any) => report.reporting_barangay === barangay);

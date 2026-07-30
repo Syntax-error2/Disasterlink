@@ -123,10 +123,10 @@ export default function ResponderMobile() {
 
     try {
       const response = await axiosInstance.get("/incidents");
-      const data = response.data;
+      const dbIncidents = response.data.data ? response.data.data : response.data;
         
         // Find incidents assigned to a responder unit AND ensure it hasn't already been resolved by this device
-        const incomingDispatch = data.find((inc: any) => 
+        const incomingDispatch = dbIncidents.find((inc: any) => 
           inc.status?.startsWith("Dispatched:") && !resolvedIds.includes(inc.id)
         );
 
