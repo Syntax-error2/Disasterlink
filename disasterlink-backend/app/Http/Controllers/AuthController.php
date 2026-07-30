@@ -79,7 +79,7 @@ class AuthController extends Controller
 
         // Default to Binalbagan LGU if not dynamically specified in request
         $subdomain = $request->input('lgu_subdomain', 'binalbagan');
-        $lgu = \App\Models\Lgu::where('subdomain', $subdomain)->first();
+        $lgu = \App\Models\Lgu::where('subdomain', $subdomain)->first() ?? \App\Models\Lgu::first();
 
         // Clear the OTP
         Cache::forget('register_otp_' . $request->email);
@@ -93,7 +93,7 @@ class AuthController extends Controller
             'barangay' => $request->barangay,
             'purok' => $request->purok,
             'account_status' => 'active',
-            'lgu_id' => $lgu ? $lgu->id : null,
+            'lgu_id' => $lgu ? $lgu->id : 1,
             'email_verified_at' => now(),
         ]);
 
