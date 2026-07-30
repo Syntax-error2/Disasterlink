@@ -11,6 +11,7 @@ import {
   LogOut, User as UserIcon
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { formatDistanceToNow } from 'date-fns';
 import { Geolocation } from '@capacitor/geolocation';
 import { useIncidents } from '../../context/IncidentsContext';
 import echo from "../../lib/echo";
@@ -1264,6 +1265,9 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
     formData.append('content', newPost);
     formData.append('verified', 'false');
     formData.append('type', 'update');
+    if (user.assigned_barangay) {
+        formData.append('barangay', user.assigned_barangay);
+    }
     if (selectedImage) {
         formData.append('image', selectedImage);
     }
@@ -1348,14 +1352,21 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
                   <div className={`h-10 w-10 rounded-full flex items-center justify-center border-2 border-zinc-800 shadow-sm ${post.type === 'official' ? 'bg-blue-900/50' : ''}`}>
                     {post.type === 'official' ? <ShieldCheck className="h-5 w-5 text-blue-400" /> : <Avatar name={post.author} size="10" />}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-sm text-zinc-100">{post.author}</span>
-                      {post.verified && <CheckCircle className="h-3 w-3 text-blue-500" />}
-                      {post._isOfflinePending && <span className="bg-orange-900/30 text-orange-400 text-[8px] px-1 rounded uppercase font-bold">Pending Sync</span>}
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-sm text-zinc-100">{post.author}</span>
+                        {post.verified && <CheckCircle className="h-3 w-3 text-blue-500" />}
+                        {post.barangay && (
+                            <span className="flex items-center gap-0.5 text-xs text-zinc-400">
+                                <span className="text-[10px]">📍</span> {post.barangay}
+                            </span>
+                        )}
+                        {post._isOfflinePending && <span className="bg-orange-900/30 text-orange-400 text-[8px] px-1 rounded uppercase font-bold ml-1">Pending</span>}
+                      </div>
+                      <p className="text-[10px] text-zinc-500">
+                          {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true }) : post.time}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-zinc-500">{post.time}</p>
-                  </div>
                 </div>
                 {post.type === 'official' && <span className="bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Official</span>}
               </div>
