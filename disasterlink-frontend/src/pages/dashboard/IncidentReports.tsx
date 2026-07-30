@@ -10,7 +10,7 @@ import axiosInstance from "../../lib/axios";
 import { useIncidents } from "../../context/IncidentsContext";
 
 export default function IncidentReports() {
-  const { incidents: reports, loading, fetchIncidents } = useIncidents();
+  const { incidents: reports, loading, fetchIncidents, fetchMoreIncidents, hasMore } = useIncidents();
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState("Today");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
@@ -400,6 +400,14 @@ export default function IncidentReports() {
               )}
             </TableBody>
           </Table>
+          
+          {hasMore && !loading && (
+            <div className="flex justify-center p-6 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30">
+              <Button onClick={() => fetchMoreIncidents()} variant="outline" className="w-full max-w-sm rounded-full font-bold border-zinc-300 dark:border-zinc-700">
+                <ChevronDown className="mr-2 h-4 w-4" /> Load More Records
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

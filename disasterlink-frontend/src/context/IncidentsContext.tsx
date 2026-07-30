@@ -8,6 +8,8 @@ interface IncidentsContextType {
   setIncidents: React.Dispatch<React.SetStateAction<any[]>>;
   loading: boolean;
   fetchIncidents: (force?: boolean) => Promise<void>;
+  fetchMoreIncidents: () => Promise<void>;
+  hasMore: boolean;
 }
 
 const IncidentsContext = createContext<IncidentsContextType | undefined>(undefined);
@@ -15,20 +17,41 @@ const IncidentsContext = createContext<IncidentsContextType | undefined>(undefin
 export const IncidentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const [incidents, setIncidents] = useState<any[]>([]);
-  // Only show loading true initially. Once loaded, background refetches don't trigger loading state
   const [loading, setLoading] = useState(true);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   const fetchIncidents = async (force: boolean = false) => {
     try {
-      if (force) setLoading(true); // show loader on manual sync
+      if (force) setLoading(true);
       const response = await axiosInstance.get(force ? '/incidents/sync' : '/incidents');
-      if (Array.isArray(response.data)) {
+      if (response.data && Array.isArray(response.data.data)) {
+        setIncidents(response.data.data);
+        setNextCursor(response.data.next_cursor);
+      } else if (Array.isArray(response.data)) {
+        // Fallback for non-paginated endpoints just in case
         setIncidents(response.data);
       }
     } catch (error) {
       console.warn("API Offline, check Laravel server.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMoreIncidents = async () => {
+    if (!nextCursor) return;
+    try {
+      const response = await axiosInstance.get(`/incidents?cursor=${nextCursor}`);
+      if (response.data && Array.isArray(response.data.data)) {
+        setIncidents(prev => {
+            // Deduplicate to avoid overlap issues during real-time sync
+            const newItems = response.data.data.filter((newItem: any) => !prev.some(oldItem => oldItem.id === newItem.id));
+            return [...prev, ...newItems];
+        });
+        setNextCursor(response.data.next_cursor);
+      }
+    } catch (error) {
+      console.warn("Failed to load more incidents.");
     }
   };
 
@@ -53,7 +76,7 @@ export const IncidentsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [isAuthenticated]);
 
   return (
-    <IncidentsContext.Provider value={{ incidents, setIncidents, loading, fetchIncidents }}>
+    <IncidentsContext.Provider value={{ incidents, setIncidents, loading, fetchIncidents, fetchMoreIncidents, hasMore: !!nextCursor }}>
       {children}
     </IncidentsContext.Provider>
   );

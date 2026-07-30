@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { formatDistanceToNow } from 'date-fns';
+import imageCompression from 'browser-image-compression';
 import { Geolocation } from '@capacitor/geolocation';
 import { useIncidents } from '../../context/IncidentsContext';
 import echo from "../../lib/echo";
@@ -1271,8 +1272,20 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
     if (user.assigned_barangay) {
         formData.append('barangay', user.assigned_barangay);
     }
+    
     if (selectedImage) {
-        formData.append('image', selectedImage);
+        try {
+            const options = {
+              maxSizeMB: 0.3,
+              maxWidthOrHeight: 1280,
+              useWebWorker: true
+            };
+            const compressedFile = await imageCompression(selectedImage, options);
+            formData.append('image', compressedFile);
+        } catch (error) {
+            console.error("Compression error:", error);
+            formData.append('image', selectedImage); // fallback to original
+        }
     }
     
     if (isOffline) {
