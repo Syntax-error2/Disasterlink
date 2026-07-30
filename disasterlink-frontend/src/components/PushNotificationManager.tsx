@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import axiosInstance from '@/lib/axios';
 import { useAuth } from '@/context/AuthContext';
 
@@ -75,7 +76,6 @@ export function PushNotificationManager() {
       
       // FIRE NATIVE TEXT TO SPEECH
       try {
-        const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
         await TextToSpeech.speak({
           text: `EMERGENCY ALERT. ${notification.body || notification.title || "New emergency broadcast."}`,
           lang: 'en-US',
@@ -99,7 +99,6 @@ export function PushNotificationManager() {
       // Vibrate & TTS when tapped
       try {
         await Haptics.vibrate({ duration: 1000 });
-        const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
         await TextToSpeech.speak({
           text: `EMERGENCY ALERT OPENED. ${action.notification.body || action.notification.title || "Review broadcast details."}`,
           lang: 'en-US',
