@@ -76,6 +76,8 @@ export default function CommunityPortal() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [evacCenters, setEvacCenters] = useState<any[]>([]);
   const [feedPosts, setFeedPosts] = useState<any[]>([]);
+  const [nextFeedCursor, setNextFeedCursor] = useState<string | null>(null);
+  const [isLoadingMoreFeed, setIsLoadingMoreFeed] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
   const [liveResponders, setLiveResponders] = useState<any[]>([]);
   const [targetRoute, setTargetRoute] = useState<[number, number] | null>(null);
@@ -136,8 +138,27 @@ export default function CommunityPortal() {
   const fetchFeedPosts = async () => {
     try {
       const response = await axiosInstance.get('/feed');
-      setFeedPosts(response.data);
+      if (response.data && Array.isArray(response.data.data)) {
+        setFeedPosts(response.data.data);
+        setNextFeedCursor(response.data.next_cursor);
+      } else {
+        setFeedPosts(response.data);
+      }
     } catch (e) {}
+  };
+
+  const fetchMoreFeedPosts = async () => {
+    if (!nextFeedCursor) return;
+    setIsLoadingMoreFeed(true);
+    try {
+      const response = await axiosInstance.get(`/feed?cursor=${nextFeedCursor}`);
+      if (response.data && Array.isArray(response.data.data)) {
+        setFeedPosts(prev => [...prev, ...response.data.data]);
+        setNextFeedCursor(response.data.next_cursor);
+      }
+    } catch (e) {} finally {
+      setIsLoadingMoreFeed(false);
+    }
   };
 
   useEffect(() => {
@@ -481,7 +502,7 @@ export default function CommunityPortal() {
             {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} isOffline={isOffline} activeBroadcast={activeBroadcast} />}
             {activeTab === "map" && <MapView key="map" showToast={showToast} evacCenters={evacCenters} liveResponders={liveResponders} targetRoute={targetRoute} setTargetRoute={setTargetRoute} />}
             {activeTab === "report" && <ReportView key="report" showToast={showToast} user={activeUser} refreshMyReports={fetchMyReports} setActiveTab={setActiveTab} isOffline={isOffline} />}
-            {activeTab === "feed" && <FeedView key="feed" showToast={showToast} posts={feedPosts} setPosts={setFeedPosts} user={activeUser} isOffline={isOffline} />}
+            {activeTab === "feed" && <FeedView key="feed" showToast={showToast} posts={feedPosts} setPosts={setFeedPosts} user={activeUser} isOffline={isOffline} fetchMoreFeedPosts={fetchMoreFeedPosts} isLoadingMoreFeed={isLoadingMoreFeed} nextFeedCursor={nextFeedCursor} />}
             {activeTab === "family" && <FamilyView key="family" showToast={showToast} members={familyMembers} setMembers={setFamilyMembers} userStatus={userStatus} setUserStatus={setUserStatus} />}
           </AnimatePresence>
         </ErrorBoundary>
@@ -1000,28 +1021,28 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const simulateAI = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const simulateAI = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
       setAnalyzing(true);
+      let compressedFile = file;
+      try {
+        const options = {
+          maxSizeMB: 0.3,
+          maxWidthOrHeight: 1280,
+          useWebWorker: true
+        };
+        compressedFile = await imageCompression(file, options);
+      } catch (error) {
+        console.error("Compression error:", error);
+      }
+      setSelectedFile(compressedFile);
       
       const reader = new FileReader();
       reader.onload = (event) => {
+        setImagePreview(event.target?.result as string);
         const img = new Image();
         img.onload = () => {
-          const canvas = document.createElement("canvas");
-          const MAX_WIDTH = 600; // Small size to guarantee it passes through PHP limits
-          const scaleSize = Math.min(1, MAX_WIDTH / img.width); // NEVER UPSCALE
-          canvas.width = img.width * scaleSize;
-          canvas.height = img.height * scaleSize;
-
-          const ctx = canvas.getContext("2d");
-          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.5); // 50% quality
-          setImagePreview(compressedBase64);
-
           const runAI = async () => {
             try {
               if (!window.mobilenet) throw new Error("Mobilenet not available");
@@ -1071,7 +1092,7 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
         };
         img.src = event.target?.result as string;
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(compressedFile);
 
       const fetchReportLoc = async () => {
         try {
@@ -1241,7 +1262,7 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
 // ==========================================
 // 6. FEED VIEW
 // ==========================================
-function FeedView({ showToast, posts, setPosts, user }: any) {
+function FeedView({ showToast, posts, setPosts, user, isOffline, fetchMoreFeedPosts, isLoadingMoreFeed, nextFeedCursor }: any) {
   const [newPost, setNewPost] = useState("");
   const [activeReplyId, setActiveReplyId] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -1448,6 +1469,22 @@ function FeedView({ showToast, posts, setPosts, user }: any) {
             </motion.div>
           ))}
         </AnimatePresence>
+        
+        {nextFeedCursor && (
+          <div className="flex justify-center mt-6">
+            <button 
+              onClick={fetchMoreFeedPosts}
+              disabled={isLoadingMoreFeed}
+              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-50 text-sm font-semibold py-2 px-6 rounded-full transition-colors flex items-center gap-2"
+            >
+              {isLoadingMoreFeed ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Loading...</>
+              ) : (
+                'Load More Posts'
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </motion.div>
   );
