@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Home, Users, AlertTriangle, ShieldCheck, MapPin, Send, Loader2, CheckCircle, AlertCircle, RefreshCw, Building, Tent, Plus, Search } from "lucide-react";
+import { Home, Users, AlertTriangle, ShieldCheck, MapPin, Send, Loader2, CheckCircle, AlertCircle, RefreshCw, Building, Tent, Plus, Search, Radio } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -107,6 +107,17 @@ export default function BarangayDashboard() {
       console.warn("API Offline, skipping fetch.");
     } finally {
       setIsLoadingCenters(false);
+    }
+  };
+
+  const handleUpdateCenter = async (id: number, updates: any) => {
+    try {
+      await axiosInstance.put(`/evacuation-centers/${id}`, updates);
+      fetchEvacuationCenters(user.assigned_barangay);
+    } catch (error) {
+      console.warn("Failed to update center");
+      // Optimistic update for UI feel if offline
+      setEvacuationCenters(centers => centers.map(c => c.id === id ? { ...c, ...updates } : c));
     }
   };
 
@@ -242,6 +253,12 @@ export default function BarangayDashboard() {
         >
           Evacuation Centers
         </button>
+        <button 
+          onClick={() => setActiveTab('broadcast')} 
+          className={`pb-2 font-semibold text-sm flex items-center gap-1.5 ${activeTab === 'broadcast' ? 'border-b-2 border-amber-500 text-amber-500' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
+        >
+          <Radio className="h-3 w-3" /> Local Broadcast
+        </button>
       </div>
 
       {activeTab === 'reports' && (
@@ -329,12 +346,30 @@ export default function BarangayDashboard() {
                 <p className="text-sm flex items-center gap-1 text-zinc-500 mt-1"><MapPin className="h-3 w-3"/> {report.exact_location}</p>
                 <p className="text-sm mt-3 text-zinc-700 dark:text-zinc-300 line-clamp-2">{report.details}</p>
                 <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs font-bold text-zinc-400">
-                  <span>Status: <span className={report.status === 'Pending Review' ? 'text-amber-500' : report.status === 'Dismissed' ? 'text-red-500' : 'text-emerald-500'}>{report.status}</span></span>
+                  <span>Status: <span className={
+                    report.status === 'Pending Review' ? 'text-amber-500' : 
+                    report.status === 'Dismissed' ? 'text-red-500' : 
+                    report.status === 'Barangay Responding' ? 'text-blue-500' : 
+                    report.status === 'Needs LGU Backup' ? 'text-red-600 font-bold animate-pulse' :
+                    'text-emerald-500'
+                  }>{report.status}</span></span>
+                  
                   {report.status === 'Pending Review' && (
-                    <div className="flex gap-2">
-                      <button onClick={() => handleVerifyReport(report.id, 'Verified')} className="text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50 px-3 py-1 rounded">Verify</button>
-                      <button onClick={() => handleVerifyReport(report.id, 'Dismissed')} className="text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 px-3 py-1 rounded">Dismiss</button>
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => handleVerifyReport(report.id, 'Barangay Responding')} className="w-full text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-3 py-1.5 rounded flex items-center justify-center gap-2">
+                        <ShieldCheck className="h-3 w-3" /> Deploy Tanod
+                      </button>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleVerifyReport(report.id, 'Verified')} className="flex-1 text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50 px-3 py-1 rounded">Verify</button>
+                        <button onClick={() => handleVerifyReport(report.id, 'Dismissed')} className="flex-1 text-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 px-3 py-1 rounded">Dismiss</button>
+                      </div>
                     </div>
+                  )}
+
+                  {report.status === 'Barangay Responding' && (
+                    <button onClick={() => handleVerifyReport(report.id, 'Needs LGU Backup')} className="w-full mt-2 text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded flex items-center justify-center gap-2 shadow-sm font-bold">
+                      <AlertTriangle className="h-3 w-3" /> Escalate to LGU
+                    </button>
                   )}
                 </div>
               </div>
@@ -474,18 +509,91 @@ export default function BarangayDashboard() {
                   <div className="space-y-3">
                     <div>
                       <div className="flex justify-between text-xs font-semibold mb-1">
-                        <span className="text-zinc-500">Occupancy</span>
-                        <span className="text-zinc-900 dark:text-zinc-100">{center.current_occupants} / {center.capacity}</span>
+                        <span className="text-zinc-500">Occupancy Live Update</span>
+                        <span className="text-zinc-900 dark:text-zinc-100 font-mono">{center.current_occupants} / {center.capacity}</span>
                       </div>
-                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
-                        <div className={`h-2 rounded-full ${center.current_occupants >= center.capacity ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, (center.current_occupants / center.capacity) * 100)}%` }}></div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <button 
+                          onClick={() => handleUpdateCenter(center.id, { current_occupants: Math.max(0, center.current_occupants - 5) })}
+                          className="flex-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 py-1 rounded-md text-xs font-bold"
+                        >
+                          -5
+                        </button>
+                        <button 
+                          onClick={() => handleUpdateCenter(center.id, { current_occupants: Math.min(center.capacity, center.current_occupants + 5) })}
+                          className="flex-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 py-1 rounded-md text-xs font-bold"
+                        >
+                          +5
+                        </button>
                       </div>
+                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 mb-2">
+                        <div className={`h-2 rounded-full ${center.current_occupants >= center.capacity * 0.9 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, (center.current_occupants / center.capacity) * 100)}%` }}></div>
+                      </div>
+                      <select 
+                        value={center.status}
+                        onChange={(e) => handleUpdateCenter(center.id, { status: e.target.value })}
+                        className="w-full text-xs p-1.5 rounded bg-zinc-50 dark:bg-[#1a1a1f] border border-zinc-200 dark:border-zinc-800 outline-none focus:ring-1 focus:ring-emerald-500"
+                      >
+                        <option value="Active">Mark as Active</option>
+                        <option value="Full">Mark as Full Capacity</option>
+                        <option value="Closed">Mark as Closed</option>
+                      </select>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'broadcast' && (
+        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+              <Radio className="h-5 w-5 text-amber-500" />
+              Localized Emergency Broadcast
+            </h2>
+          </div>
+
+          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 overflow-hidden relative">
+            <CardHeader className="bg-amber-50 dark:bg-amber-950/20 border-b border-amber-200 dark:border-amber-900/50">
+              <CardTitle className="text-lg flex items-center gap-2 text-amber-800 dark:text-amber-500">
+                <AlertTriangle className="h-5 w-5" />
+                Dispatch Barangay Alert
+              </CardTitle>
+              <CardDescription className="text-amber-700/70 dark:text-amber-500/70">
+                This will trigger an emergency siren overlay and push notification ONLY to citizens registered in Brgy. {user.assigned_barangay}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {showSuccess ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center animate-in zoom-in">
+                  <CheckCircle className="h-16 w-16 text-amber-500 mb-4" />
+                  <h3 className="text-xl font-bold">Broadcast Dispatched Successfully</h3>
+                  <p className="text-sm text-zinc-500 mt-2">All active residents in your barangay have been notified.</p>
+                </div>
+              ) : (
+                <form className="space-y-5" onSubmit={handleLocalBroadcast}>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">Broadcast Message</label>
+                    <textarea 
+                      value={broadcastMsg} 
+                      onChange={(e) => setBroadcastMsg(e.target.value)} 
+                      placeholder="e.g. Relief goods are now being distributed at the Barangay Hall. Please bring your family ID."
+                      required 
+                      className="w-full h-32 p-4 bg-white dark:bg-[#111115] border border-zinc-200 dark:border-zinc-800 rounded-md outline-none focus:ring-2 focus:ring-amber-500/50 resize-none text-lg"
+                    ></textarea>
+                  </div>
+                  <div className="flex justify-end">
+                    <button type="submit" disabled={isBroadcasting} className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-md text-sm font-bold flex items-center gap-2 shadow-lg">
+                      {isBroadcasting ? <><Loader2 className="h-4 w-4 animate-spin" /> Broadcasting...</> : <><Radio className="h-4 w-4" /> Dispatch Siren Alert</>}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 
