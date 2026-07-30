@@ -285,29 +285,30 @@ export default function BarangayDashboard() {
       )}
 
       {/* Strict Jurisdiction Header */}
-      <div className="relative rounded-xl overflow-hidden bg-zinc-900 dark:bg-[#0c0c0e] border border-zinc-800 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/2" />
-        <div className="relative z-10 flex-1">
+      <div className="rounded-lg bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800/60 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm backdrop-blur-md">
+        <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <div className="bg-emerald-500/20 p-1.5 rounded-md">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
+            <div className="bg-emerald-500/10 p-1 rounded">
+              <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
             </div>
-            <span className="text-[11px] font-black text-emerald-500 tracking-widest uppercase">Verified Jurisdiction Lock</span>
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-500 tracking-wider uppercase">Verified Jurisdiction Lock</span>
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-white mb-1">Local Command Center</h1>
-          <p className="text-zinc-400 text-sm">
-            Managing internal affairs and emergency dispatches exclusively for <span className="font-bold text-white">Brgy. {user.assigned_barangay}</span>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-1">Local Command Center</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm">
+            Managing internal affairs and emergency dispatches exclusively for <span className="font-semibold text-zinc-900 dark:text-zinc-200">Brgy. {user.assigned_barangay}</span>
           </p>
         </div>
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="bg-black/40 backdrop-blur-md border border-zinc-800 px-5 py-3 rounded-lg text-right shadow-inner">
-            <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Active Officer</div>
-            <div className="text-base font-bold text-white flex items-center gap-2 justify-end">
+        <div className="flex items-center gap-3">
+          <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800/80 px-4 py-2.5 rounded-md text-right">
+            <div className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest mb-0.5">Active Officer</div>
+            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 justify-end">
               {user.name}
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="h-2 w-2 rounded-full bg-emerald-500 relative">
+                <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-50"></span>
+              </div>
             </div>
           </div>
-          <button onClick={() => setShowPasswordModal(true)} className="px-4 py-3 h-full bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold rounded-lg border border-zinc-700 transition-colors flex items-center gap-2">
+          <button onClick={() => setShowPasswordModal(true)} className="px-4 py-2 h-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-sm font-medium rounded-md border border-zinc-200 dark:border-zinc-700 transition-colors flex items-center gap-2">
             <Key className="h-4 w-4" /> Security
           </button>
         </div>

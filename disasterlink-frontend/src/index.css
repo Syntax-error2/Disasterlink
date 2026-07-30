@@ -79,30 +79,30 @@
    3. DARK MODE (Deep Zinc, Sleek, Premium)
    ========================================= */
 .dark {
-  --background: oklch(0.13 0 0); /* Very deep gray, almost black */
+  --background: oklch(0.14 0 0); /* Sleek Zinc 950 */
   --foreground: oklch(0.98 0 0);
   
-  --card: oklch(0.16 0 0); /* Slightly elevated from background */
+  --card: oklch(0.17 0 0); /* Subtle elevation */
   --card-foreground: oklch(0.98 0 0);
   
-  --popover: oklch(0.16 0 0);
+  --popover: oklch(0.17 0 0);
   --popover-foreground: oklch(0.98 0 0);
   
-  --primary: oklch(0.65 0.2 25); /* Brighter red for dark mode contrast */
+  --primary: oklch(0.60 0.2 25); /* Premium, slightly muted red */
   --primary-foreground: oklch(0.99 0 0);
   
   --secondary: oklch(0.22 0 0);
   --secondary-foreground: oklch(0.98 0 0);
   
   --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.65 0 0);
+  --muted-foreground: oklch(0.70 0 0);
   
   --accent: oklch(0.22 0 0);
   --accent-foreground: oklch(0.98 0 0);
   
-  --border: oklch(0.22 0 0);
-  --input: oklch(0.22 0 0);
-  --ring: oklch(0.65 0.2 25);
+  --border: oklch(0.24 0 0); /* Crisp, visible thin borders */
+  --input: oklch(0.24 0 0);
+  --ring: oklch(0.60 0.2 25);
 }
 
 /* =========================================
@@ -130,8 +130,8 @@
    5. CUSTOM UI SCROLLBARS
    ========================================= */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;

@@ -298,7 +298,7 @@ export default function GisDashboard() {
       <div className="flex flex-1 gap-4 overflow-hidden relative">
         
         {/* PANE 1: LEFT CONTROL PANEL */}
-        <Card className="w-80 flex flex-col hidden xl:flex border-zinc-200 dark:border-zinc-800 shadow-sm z-10 relative bg-white/95 dark:bg-[#111115]/95 backdrop-blur-md shrink-0">
+        <Card className="w-80 flex flex-col hidden xl:flex border-r border-y-0 border-l-0 rounded-none border-zinc-200 dark:border-zinc-800 shadow-none z-10 relative bg-white/60 dark:bg-zinc-950/60 backdrop-blur-2xl shrink-0">
           <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
@@ -385,7 +385,7 @@ export default function GisDashboard() {
         </Card>
 
         {/* PANE 2: THE GIS MAP CORE */}
-        <div className="flex-1 relative rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm bg-zinc-900 flex flex-col">
+        <div className="flex-1 relative bg-zinc-950 flex flex-col">
           
           {/* Map Overlay Controls (Top Right) */}
           <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
@@ -562,7 +562,7 @@ export default function GisDashboard() {
         </div>
 
         {/* PANE 3: RIGHT ANALYTICS PANEL */}
-        <Card className="w-80 flex flex-col hidden 2xl:flex border-zinc-200 dark:border-zinc-800 shadow-sm z-10 relative bg-white/95 dark:bg-[#111115]/95 backdrop-blur-md shrink-0">
+        <Card className="w-80 flex flex-col hidden 2xl:flex border-l border-y-0 border-r-0 rounded-none border-zinc-200 dark:border-zinc-800 shadow-none z-10 relative bg-white/60 dark:bg-zinc-950/60 backdrop-blur-2xl shrink-0">
           <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-zinc-500" />
             <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">Real-Time Analytics</h2>
@@ -572,13 +572,13 @@ export default function GisDashboard() {
             
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-900/30 p-3 rounded-lg text-center">
-                <div className="text-2xl font-black text-red-600 dark:text-red-400">{liveIncidents.length}</div>
-                <div className="text-[9px] font-bold text-red-800/70 dark:text-red-400/70 uppercase tracking-widest mt-1">Active Alerts</div>
+              <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 p-3 rounded-lg text-center shadow-sm">
+                <div className="text-2xl font-black text-zinc-900 dark:text-zinc-100">{liveIncidents.length}</div>
+                <div className="text-[9px] font-bold text-red-500 uppercase tracking-widest mt-1">Active Alerts</div>
               </div>
-              <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-900/30 p-3 rounded-lg text-center">
-                <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{liveResponders.length}</div>
-                <div className="text-[9px] font-bold text-blue-800/70 dark:text-blue-400/70 uppercase tracking-widest mt-1">Units Deployed</div>
+              <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 p-3 rounded-lg text-center shadow-sm">
+                <div className="text-2xl font-black text-zinc-900 dark:text-zinc-100">{liveResponders.length}</div>
+                <div className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mt-1">Units Deployed</div>
               </div>
             </div>
 
