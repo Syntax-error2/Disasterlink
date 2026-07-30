@@ -35,6 +35,23 @@ class BroadcastController extends Controller
         // ----------------------------------------------------
         // FIREBASE PUSH NOTIFICATIONS
         // ----------------------------------------------------
+        /* 
+        ======================================================================
+        [MANUAL CONFIGURATION REQUIRED FOR FIREBASE PUSH NOTIFICATIONS]
+        
+        To make Push Notifications work on the APK, you MUST provide the Firebase
+        Service Account Credentials to this Laravel backend.
+
+        1. Go to Firebase Console -> Project Settings -> Service Accounts
+        2. Click "Generate new private key" and download the JSON file.
+        3. Place the JSON file in your backend's `storage/` folder (e.g. `storage/firebase-auth.json`).
+        4. Add this line to your `.env` file:
+           FIREBASE_CREDENTIALS=storage/firebase-auth.json
+        5. Uncomment the try-catch block below to enable push notifications!
+        ======================================================================
+        */
+        
+        /* 
         try {
             $tokens = \App\Models\User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
             
@@ -60,11 +77,9 @@ class BroadcastController extends Controller
             }
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Firebase Push Failed: ' . $e->getMessage());
-            return response()->json([
-                'success' => false, 
-                'message' => 'Firebase Push Failed: ' . $e->getMessage()
-            ], 500);
+            // return response()->json(['success' => false, 'message' => 'Firebase Push Failed: ' . $e->getMessage()], 500);
         }
+        */
 
         if ($request->input('include_sms')) {
             $phones = \App\Models\User::whereNotNull('phone')->pluck('phone')->toArray();
