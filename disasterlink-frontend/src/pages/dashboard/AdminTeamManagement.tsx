@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import axiosInstance from "../../lib/axios";
 import { Plus, Users, Loader2, Trash2, Edit2, ShieldAlert } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function AdminTeamManagement() {
   const [teams, setTeams] = useState<any[]>([]);

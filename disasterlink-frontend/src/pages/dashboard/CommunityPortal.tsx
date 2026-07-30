@@ -7,7 +7,7 @@ import axiosInstance from "../../lib/axios";
 import { 
   Home, Map as MapIcon, PlusCircle, Users, AlertTriangle, CloudRain, 
   Navigation, PhoneCall, ShieldCheck, Camera, Send, Heart, 
-  MessageSquare, CheckCircle, Flame, Waves, Wind, Filter, Info, Loader2, Clock, Activity, MapPin, Thermometer, Droplets, Gauge,
+  MessageSquare, CheckCircle, Flame, Waves, Wind, Filter, Info, Loader2, Clock, Activity, MapPin, Thermometer, Droplets, Gauge, X,
   LogOut, User as UserIcon
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -102,7 +102,7 @@ export default function CommunityPortal() {
   }, []);
 
   useEffect(() => {
-    const userKey = "my_report_ids_" + (activeUser.id || activeUser.email || 'guest');
+    const userKey = "my_report_ids_" + (((activeUser as any)?.id) || (activeUser?.email) || 'guest');
     const myIds = JSON.parse(localStorage.getItem(userKey) || "[]");
     const myActiveReports = (globalIncidents || []).filter((inc: any) => myIds.includes(inc.id));
     setMyReports(myActiveReports);
@@ -204,7 +204,7 @@ export default function CommunityPortal() {
             const res = await axiosInstance.post('/incidents', incident);
             if (res.data && res.data.id) {
               const currentUser = getActiveUser();
-              const userKey = "my_report_ids_" + (currentUser?.id || currentUser?.email || 'guest');
+              const userKey = "my_report_ids_" + ((activeUser as any)?.id || (activeUser as any)?.email || 'guest');
               const existingIds = JSON.parse(localStorage.getItem(userKey) || "[]");
               if (!existingIds.includes(res.data.id)) {
                 existingIds.push(res.data.id);
@@ -264,10 +264,11 @@ export default function CommunityPortal() {
                      body: broadcastMsg,
                      id: new Date().getTime(),
                      schedule: { at: new Date(Date.now() + 1000) },
-                     sound: null,
-                     attachments: null,
+                     sound: undefined,
+                     image_path: undefined,
+                     attachments: undefined,
                      actionTypeId: "",
-                     extra: null
+                     extra: undefined
                    }
                  ]
                });
@@ -430,7 +431,7 @@ export default function CommunityPortal() {
     try {
       const response = await axiosInstance.post("/incidents", payload);
       if (response.data && response.data.id) {
-        const userKey = "my_report_ids_" + (activeUser.id || activeUser.email || 'guest');
+        const userKey = "my_report_ids_" + (((activeUser as any)?.id) || (activeUser?.email) || 'guest');
         const existingIds = JSON.parse(localStorage.getItem(userKey) || "[]");
         if (!existingIds.includes(response.data.id)) {
           existingIds.push(response.data.id);
@@ -671,13 +672,13 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
             setUserStatus("Safe"); 
             try {
               // Send status to the central family tracking database!
-              await axiosInstance.post('/family/status', { name: activeUser?.name || 'Citizen', status: 'Safe' });
+              await axiosInstance.post('/family/status', { name: (getActiveUser()?.name) || 'Citizen', status: 'Safe' });
               
               // Try to get geolocation to put on GIS map
               if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(async (position) => {
                   await axiosInstance.post('/responder/ping', { 
-                    unit_name: (activeUser?.name || 'Citizen') + " (Marked Safe)",
+                    unit_name: ((getActiveUser()?.name) || 'Citizen') + " (Marked Safe)",
                     lat: position.coords.latitude,
                     lng: position.coords.longitude,
                     status: 'Safe'

@@ -240,7 +240,7 @@ export default function ResponderMobile() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordData.new !== passwordData.confirm) {
-      showToast("New passwords do not match", "error");
+      showToast("New passwords do not match", "alert");
       return;
     }
     setPasswordLoading(true);
@@ -254,7 +254,7 @@ export default function ResponderMobile() {
       setShowPasswordModal(false);
       setPasswordData({ current: '', new: '', confirm: '' });
     } catch (e: any) {
-      showToast(e.response?.data?.message || "Failed to update password", "error");
+      showToast(e.response?.data?.message || "Failed to update password", "alert");
     } finally {
       setPasswordLoading(false);
     }
@@ -311,7 +311,7 @@ export default function ResponderMobile() {
             onClick={() => setShowProfile(!showProfile)} 
             className="h-8 w-8 rounded-full bg-zinc-800 border-2 border-white/20 flex items-center justify-center overflow-hidden hover:opacity-80 transition-opacity focus:ring-2 focus:ring-white/50"
           >
-            <div className="text-xs font-bold text-white uppercase">{user.name ? user.name.substring(0, 2) : 'R1'}</div>
+            <div className="text-xs font-bold text-white uppercase">{user?.name ? user?.name.substring(0, 2) : 'R1'}</div>
           </button>
 
           {/* PROFILE DROPDOWN */}
@@ -324,8 +324,8 @@ export default function ResponderMobile() {
                 className="absolute top-12 right-0 w-64 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-[100] transform origin-top-right"
               >
                 <div className="p-4 border-b border-zinc-800 bg-zinc-950/50">
-                  <div className="text-sm font-bold text-white">{user.name || "Responder Unit"}</div>
-                  <div className="text-xs text-zinc-400 font-mono mt-1">{user.department || "Disaster Response"}</div>
+                  <div className="text-sm font-bold text-white">{user?.name || "Responder Unit"}</div>
+                  <div className="text-xs text-zinc-400 font-mono mt-1">{(user as any)?.department || "Disaster Response"}</div>
                   <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-2 flex items-center gap-1">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span> SYSTEM CONNECTED
                   </div>

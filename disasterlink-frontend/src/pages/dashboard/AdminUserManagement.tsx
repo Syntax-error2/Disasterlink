@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import axiosInstance from "../../lib/axios";
 import { Plus, ShieldCheck, Trash2, Edit2, Loader2, Copy, CheckCircle2 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function AdminUserManagement() {
   const { user } = useAuth();

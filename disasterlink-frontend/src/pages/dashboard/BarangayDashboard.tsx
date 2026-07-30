@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Home, Users, AlertTriangle, ShieldCheck, MapPin, Send, Loader2, CheckCircle, AlertCircle, RefreshCw, Building, Tent, Plus, Search, Radio, Key, EyeOff, Eye } from "lucide-react";
-import axiosInstance from "../../lib/axios";
+import { Home, Users, AlertTriangle, ShieldCheck, MapPin, Send, Loader2, CheckCircle, AlertCircle, RefreshCw, Building, Tent, Plus, Search, Radio, Key, EyeOff, Eye, Lock } from "lucide-react";
+import axiosInstance from '../../lib/axios';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -69,7 +70,7 @@ export default function BarangayDashboard() {
   const [showAddCenter, setShowAddCenter] = useState(false);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const provider = new OpenStreetMapProvider();
   
   const [centerForm, setCenterForm] = useState({ name: "", location: "", capacity: 100, current_occupants: 0, status: "Active", lat: 10.203, lng: 122.862 });

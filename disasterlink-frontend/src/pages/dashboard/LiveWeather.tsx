@@ -532,7 +532,7 @@ export default function LiveWeather() {
       setIncludeSms(false);
       showToast(`Emergency alert successfully broadcasted to ${broadcastTarget === 'all' ? 'All Barangays' : broadcastTarget}.`, 'success');
     } catch (error) {
-      showToast("Failed to broadcast message.", "error");
+      showToast("Failed to broadcast message.", "info");
     } finally {
       setIsBroadcasting(false);
     }

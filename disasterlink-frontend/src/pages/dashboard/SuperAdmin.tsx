@@ -119,7 +119,7 @@ export default function SuperAdmin() {
                       {lgu.subscription_status.toUpperCase()}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-zinc-400">{lgu.next_payment_date || 'N/A'}</td>
+                  <td className="px-6 py-4 text-zinc-400">{(lgu as any).next_payment_date || 'N/A'}</td>
                   <td className="px-6 py-4 text-zinc-400">{lgu.users_count}</td>
                   <td className="px-6 py-4 text-zinc-400">{lgu.incident_reports_count}</td>
                 </tr>
