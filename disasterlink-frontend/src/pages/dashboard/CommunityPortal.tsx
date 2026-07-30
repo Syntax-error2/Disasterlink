@@ -1266,7 +1266,6 @@ function FeedView({ showToast, posts, setPosts, user, isOffline, fetchMoreFeedPo
   const [newPost, setNewPost] = useState("");
   const [activeReplyId, setActiveReplyId] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
-  const isOffline = !navigator.onLine;
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
