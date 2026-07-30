@@ -265,7 +265,6 @@ export default function CommunityPortal() {
                      id: new Date().getTime(),
                      schedule: { at: new Date(Date.now() + 1000) },
                      sound: undefined,
-                     image_path: undefined,
                      attachments: undefined,
                      actionTypeId: "",
                      extra: undefined

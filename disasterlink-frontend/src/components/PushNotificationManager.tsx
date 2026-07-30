@@ -72,14 +72,43 @@ export function PushNotificationManager() {
       } catch (e) {
         // Fallback for devices without advanced haptics
       }
+      
+      // FIRE NATIVE TEXT TO SPEECH
+      try {
+        const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
+        await TextToSpeech.speak({
+          text: `EMERGENCY ALERT. ${notification.body || notification.title || "New emergency broadcast."}`,
+          lang: 'en-US',
+          rate: 0.9,
+          pitch: 1.1,
+          volume: 1.0,
+          category: 'ambient',
+        });
+      } catch (e) {
+        console.warn('Native TTS Failed for Push', e);
+      }
     });
 
     // Method called when tapping on a notification
-    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+    PushNotifications.addListener('pushNotificationActionPerformed', async (action) => {
       console.log('Push action performed: ', action);
       // Store in session storage so cold-booting CommunityPortal can catch it
       sessionStorage.setItem("pending_mass_alert_body", action.notification.body || "");
       window.dispatchEvent(new CustomEvent('mass_alert_tapped', { detail: action.notification.body }));
+      
+      // Vibrate & TTS when tapped
+      try {
+        await Haptics.vibrate({ duration: 1000 });
+        const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
+        await TextToSpeech.speak({
+          text: `EMERGENCY ALERT OPENED. ${action.notification.body || action.notification.title || "Review broadcast details."}`,
+          lang: 'en-US',
+          rate: 0.9,
+          pitch: 1.1,
+          volume: 1.0,
+          category: 'ambient',
+        });
+      } catch (e) {}
     });
 
     return () => {
