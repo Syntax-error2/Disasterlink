@@ -389,12 +389,11 @@ export default function LiveWeather() {
            const diffDays = (new Date().getTime() - eventDate.getTime()) / (1000 * 3600 * 24);
            if (diffDays > 7) return false;
 
-           const country = f.properties.country?.toLowerCase() || "";
-           if (country.includes("philippines")) return true;
-
            const lng = f.geometry?.coordinates?.[0];
            const lat = f.geometry?.coordinates?.[1];
            if (lat === undefined || lng === undefined) return false;
+           
+           // Strictly enforce Philippine Area of Responsibility (PAR) bounding box
            return (lat >= 5 && lat <= 25 && lng >= 115 && lng <= 135);
         }) || [];
         if (cyclones.length > 0) {
