@@ -101,6 +101,8 @@ export default function Overview() {
 
   // BROADCAST STATE
   const [activeBroadcast, setActiveBroadcast] = useState<string | null>(null);
+  const [activeBroadcastId, setActiveBroadcastId] = useState<string | null>(null);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
 
   // ==========================================
   // DATA PROCESSING ENGINE
@@ -189,7 +191,19 @@ export default function Overview() {
         setEvacCentersData(evacRes.data);
 
         const broadcastRes = await axiosInstance.get("/broadcast");
-        setActiveBroadcast(broadcastRes.data.broadcast);
+        if (broadcastRes.data.broadcast) {
+            setActiveBroadcast(broadcastRes.data.broadcast);
+            setActiveBroadcastId(broadcastRes.data.broadcast_id);
+            const dismissed = sessionStorage.getItem(`dismissed_dashboard_broadcast_${broadcastRes.data.broadcast_id}`);
+            if (dismissed === "true") {
+                setIsBannerDismissed(true);
+            } else {
+                setIsBannerDismissed(false);
+            }
+        } else {
+            setActiveBroadcast(null);
+            setActiveBroadcastId(null);
+        }
       } catch (err) {
         console.warn("Could not fetch new analytics (Endpoints may not exist yet)", err);
       }
@@ -254,26 +268,37 @@ export default function Overview() {
       
       {/* ACTIVE BROADCAST BANNER */}
       <AnimatePresence>
-        {activeBroadcast && (
+        {activeBroadcast && !isBannerDismissed && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`w-full p-4 rounded-xl flex items-center gap-3 border shadow-lg ${
+            className={`w-full p-4 rounded-xl flex items-center gap-3 border shadow-sm backdrop-blur-md ${
               activeBroadcast.includes('RED') 
-                ? 'bg-red-500/10 border-red-500 text-red-500 dark:text-red-400' 
+                ? 'bg-red-500/10 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400' 
                 : activeBroadcast.includes('ORANGE')
-                  ? 'bg-orange-500/10 border-orange-500 text-orange-500 dark:text-orange-400'
+                  ? 'bg-orange-500/10 border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400'
                   : activeBroadcast.includes('YELLOW')
-                    ? 'bg-yellow-500/10 border-yellow-500 text-yellow-600 dark:text-yellow-400'
-                    : 'bg-blue-500/10 border-blue-500 text-blue-500 dark:text-blue-400'
+                    ? 'bg-yellow-500/10 border-yellow-200 dark:border-yellow-900/50 text-yellow-700 dark:text-yellow-400'
+                    : 'bg-blue-500/10 border-blue-200 dark:border-blue-900/50 text-blue-600 dark:text-blue-400'
             }`}
           >
             <ShieldAlert className="h-6 w-6 shrink-0 animate-pulse" />
-            <div className="flex-1 font-bold">
+            <div className="flex-1 font-semibold text-sm">
               {activeBroadcast}
             </div>
-            <Badge variant="outline" className="bg-transparent uppercase tracking-wider text-[10px]">Automated Warning</Badge>
+            <Badge variant="outline" className="bg-transparent uppercase tracking-wider text-[10px] border-current opacity-70">Automated Warning</Badge>
+            <button 
+              onClick={() => {
+                setIsBannerDismissed(true);
+                if (activeBroadcastId) {
+                   sessionStorage.setItem(`dismissed_dashboard_broadcast_${activeBroadcastId}`, "true");
+                }
+              }}
+              className="ml-2 p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -382,69 +407,55 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* TOP METRICS: High-Density Data Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+      {/* KEY METRICS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm bg-zinc-50 dark:bg-zinc-900/40 backdrop-blur">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-2">
+              <div className="bg-red-500/10 p-2 rounded-md"><AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-500" /></div>
+              {activeIncidentCount > 0 && <span className="flex h-3 w-3 rounded-full bg-red-500 animate-ping"></span>}
+            </div>
+            <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-1">{activeIncidentCount}</h3>
+            <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">Active Incidents</p>
+          </CardContent>
+        </Card>
         
-        <Card className="border-red-200 dark:border-red-900/40 shadow-md shadow-red-900/5 bg-white dark:bg-[#151111] hover:-translate-y-1 transition-transform lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Active Emergencies</CardTitle>
-            <div className="p-1.5 bg-red-500/10 rounded-lg"><ShieldAlert className="h-4 w-4 text-red-600 dark:text-red-500 animate-pulse" /></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-zinc-900 dark:text-zinc-50">
-              {isRefreshing && rawIncidents.length === 0 ? <Loader2 className="h-6 w-6 animate-spin text-zinc-400 mt-1" /> : activeIncidentCount}
+        <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm bg-zinc-50 dark:bg-zinc-900/40 backdrop-blur">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-2">
+              <div className="bg-blue-500/10 p-2 rounded-md"><Users className="h-5 w-5 text-blue-600 dark:text-blue-500" /></div>
             </div>
-            <div className="flex items-center mt-1 text-xs">
-              <TrendingUp className="h-3 w-3 text-red-500 mr-1" />
-              <span className="text-zinc-500 dark:text-zinc-400 ml-1">Requiring immediate attention</span>
+            <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-1">{totalUsers.toLocaleString()}</h3>
+            <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">Registered Citizens</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm bg-zinc-50 dark:bg-zinc-900/40 backdrop-blur">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex items-center gap-2">
+                  <div className="bg-emerald-500/10 p-2 rounded-md"><Home className="h-5 w-5 text-emerald-600 dark:text-emerald-500" /></div>
+                  <button onClick={() => setShowEvacModal(true)} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded p-1.5 transition-colors"><Plus className="h-4 w-4" /></button>
+              </div>
             </div>
+            <div className="flex items-end gap-2 mb-1">
+              <h3 className="text-3xl font-black text-zinc-900 dark:text-white">{evacOccupancyRate}%</h3>
+              <span className="text-sm font-semibold text-zinc-400 pb-1 flex items-center"><TrendingUp className="h-3 w-3 mr-1" /> Cap</span>
+            </div>
+            <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">Evacuation Centers</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-md border-emerald-200 dark:border-emerald-900/30 bg-white dark:bg-[#111511] hover:-translate-y-1 transition-transform lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-2">
-              Evacuation Network 
-              <button onClick={() => setShowEvacModal(true)} className="ml-2 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-600 dark:text-emerald-400 rounded-full p-1 transition-colors"><Plus className="h-3 w-3" /></button>
-            </CardTitle>
-            <div className="p-1.5 bg-emerald-500/10 rounded-lg"><Home className="h-4 w-4 text-emerald-600 dark:text-emerald-500" /></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-zinc-900 dark:text-zinc-50">
-              {evacCentersData.length > 0 ? evacCentersData.length : "0"} <span className="text-lg text-zinc-400 font-normal">Centers</span>
+        <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm bg-zinc-50 dark:bg-zinc-900/40 backdrop-blur">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-2">
+              <div className="bg-amber-500/10 p-2 rounded-md"><ThermometerSun className="h-5 w-5 text-amber-600 dark:text-amber-500" /></div>
             </div>
-            <div className="flex items-center mt-1 text-xs">
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{evacOccupancyRate}% Occupied</span>
-              <span className="text-zinc-500 dark:text-zinc-400 ml-1">system wide</span>
+            <div className="flex items-end gap-2 mb-1">
+              <h3 className="text-3xl font-black text-zinc-900 dark:text-white">{weatherTemp}°c</h3>
+              <span className="text-sm font-semibold text-zinc-400 pb-1">/ {weatherWind}km/h</span>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* COMPRESSED LIVE WEATHER CARD */}
-        <Card className="shadow-md border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10 hover:-translate-y-1 transition-transform lg:col-span-1 flex flex-col justify-center">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider">Live Weather</CardTitle>
-            <div className="p-1.5 bg-blue-500/10 rounded-lg"><ThermometerSun className="h-4 w-4 text-blue-600 dark:text-blue-400" /></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-blue-700 dark:text-blue-400">{weatherTemp}°C</div>
-            <div className="flex items-center mt-1 text-xs">
-              <span className="text-blue-600 dark:text-blue-400 font-medium">{weatherWind} km/h wind</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* NEW TOTAL REPORTS CARD */}
-        <Card className="shadow-md border-orange-200 dark:border-orange-900/30 bg-orange-50/50 dark:bg-orange-900/10 hover:-translate-y-1 transition-transform lg:col-span-1 flex flex-col justify-center">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold text-orange-800 dark:text-orange-300 uppercase tracking-wider">Total Reports</CardTitle>
-            <div className="p-1.5 bg-orange-500/10 rounded-lg"><Activity className="h-4 w-4 text-orange-600 dark:text-orange-400" /></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-orange-700 dark:text-orange-400">{rawIncidents.length}</div>
-            <div className="flex items-center mt-1 text-xs">
-              <span className="text-orange-600 dark:text-orange-400 font-medium">All time incidents</span>
-            </div>
+            <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">Current Weather</p>
           </CardContent>
         </Card>
       </div>
