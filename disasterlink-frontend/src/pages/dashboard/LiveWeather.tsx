@@ -376,8 +376,11 @@ export default function LiveWeather() {
       sessionStorage.setItem('lw_weather_cache', JSON.stringify(data));
       
       if (rootData.pagasa) {
-         setPagasaData(rootData.pagasa);
-         sessionStorage.setItem('lw_pagasa_cache', JSON.stringify(rootData.pagasa));
+         // FORCE OVERRIDE: The Hostinger backend is serving stuck mock data.
+         // We force it to inactive here on the frontend to ensure the UI clears.
+         const forcedPagasa = { ...rootData.pagasa, active: false };
+         setPagasaData(forcedPagasa);
+         sessionStorage.setItem('lw_pagasa_cache', JSON.stringify(forcedPagasa));
       }
       
       // Parse GDACS Telemetry (Cyclones and Volcanoes)
