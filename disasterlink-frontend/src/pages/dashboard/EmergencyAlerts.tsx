@@ -19,21 +19,19 @@ export default function EmergencyAlerts() {
     setTimeout(() => setToast(null), 5000);
   };
 
-  useEffect(() => {
+  const fetchHistory = async () => {
     try {
-      const saved = localStorage.getItem("broadcast_history");
-      if (saved) {
-        setHistory(JSON.parse(saved));
-      } else {
-        const defaultHistory = [
-          { id: 1, title: "Heavy Rain Advisory", message: "Please be advised of expected heavy rainfall tonight. Ensure all emergency kits are prepared.", targetArea: "All Barangays (Municipality Wide)", time: new Date().toISOString() }
-        ];
-        setHistory(defaultHistory);
-        localStorage.setItem("broadcast_history", JSON.stringify(defaultHistory));
+      const res = await axiosInstance.get('/broadcast');
+      if (Array.isArray(res.data)) {
+        setHistory(res.data);
       }
     } catch (e) {
-      console.warn("Error parsing broadcast history", e);
+      console.warn("Error fetching broadcast history", e);
     }
+  };
+
+  useEffect(() => {
+    fetchHistory();
   }, []);
 
   const handleDispatch = async () => {
@@ -46,21 +44,12 @@ export default function EmergencyAlerts() {
         message: title + " - " + message,
         target_area: targetArea 
       });
-      const newAlert = {
-        id: Date.now(),
-        title,
-        message,
-        targetArea,
-        time: new Date().toISOString()
-      };
-      
-      const newHistory = [newAlert, ...history];
-      setHistory(newHistory);
-      localStorage.setItem("broadcast_history", JSON.stringify(newHistory));
       
       setTitle("");
       setMessage("");
       showToast("Alert broadcast successfully deployed to all citizen devices.", 'success');
+      
+      fetchHistory(); // Refresh ledger from database
     } catch (e: any) {
       showToast(e.response?.data?.message || "Failed to dispatch broadcast. Check server.", 'error');
     } finally {
@@ -181,18 +170,20 @@ export default function EmergencyAlerts() {
                       <div className="flex-1">
                         <div className="flex justify-between items-start mb-2">
                           <h4 className="text-base font-black text-zinc-900 dark:text-zinc-50 tracking-tight">{alert.title}</h4>
-                          <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-200 dark:border-emerald-500/20"><CheckCircle2 className="h-3 w-3" /> Delivered</span>
+                          <span className={`text-[10px] font-bold uppercase flex items-center gap-1 px-2 py-1 rounded-md border ${alert.status && alert.status.includes('FAILED') ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' : 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'}`}>
+                            {alert.status && alert.status.includes('FAILED') ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />} {alert.status || 'Delivered'}
+                          </span>
                         </div>
                         <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-zinc-100 dark:border-zinc-800/50 shadow-inner italic font-serif">"{alert.message}"</p>
                         <div className="flex flex-wrap items-center gap-3 mt-4">
                           <div className="text-[10px] font-black uppercase text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">
-                            {new Date(alert.time).toLocaleDateString([], {month: 'short', day: 'numeric', year: 'numeric'})}
+                            {alert.created_at ? new Date(alert.created_at).toLocaleDateString([], {month: 'short', day: 'numeric', year: 'numeric'}) : 'Just Now'}
                           </div>
                           <div className="text-[10px] font-black uppercase text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">
-                            {new Date(alert.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            {alert.created_at ? new Date(alert.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
                           </div>
                           <div className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-1 rounded border border-blue-100 dark:border-blue-500/20 truncate max-w-[200px]">
-                            TARGET: {alert.targetArea}
+                            TARGET: {alert.target_area || alert.targetArea}
                           </div>
                         </div>
                       </div>

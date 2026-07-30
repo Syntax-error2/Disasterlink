@@ -65,6 +65,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 import { PushNotificationManager } from "./components/PushNotificationManager";
 import { IncidentsProvider } from "./context/IncidentsContext";
 import TermsPrivacyModal from "./components/TermsPrivacyModal";
+import GlobalEmergencySiren from "./components/GlobalEmergencySiren";
 
 export default function App() {
   return (
@@ -73,6 +74,7 @@ export default function App() {
         <IncidentsProvider>
           <PushNotificationManager />
           <TermsPrivacyModal />
+          <GlobalEmergencySiren />
           <ErrorBoundary>
             <BrowserRouter>
               <Suspense fallback={<PageLoader />}>
