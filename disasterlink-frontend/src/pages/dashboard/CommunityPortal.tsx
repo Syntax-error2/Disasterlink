@@ -328,7 +328,7 @@ export default function CommunityPortal() {
       // 1. Start continuous vibration
       const runVibration = async () => {
         try {
-          await Haptics.vibrate({ duration: 1000 });
+          await Haptics.vibrate();
           setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1100);
           setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1300);
         } catch (e) {}
@@ -345,8 +345,7 @@ export default function CommunityPortal() {
             lang: 'en-US',
             rate: 0.9,
             pitch: 1.1,
-            volume: 1.0,
-            category: 'ambient',
+            volume: 1.0
           });
         } catch (e) {
           console.warn("Native TTS Failed", e);

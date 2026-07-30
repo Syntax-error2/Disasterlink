@@ -67,7 +67,7 @@ export function PushNotificationManager() {
       
       // FORCE HAPTIC VIBRATION FEEDBACK WHEN ALERT APPEARS!
       try {
-        await Haptics.vibrate({ duration: 1500 }); // Strong long vibration
+        await Haptics.vibrate(); // Strong long vibration
         setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1600);
         setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1800);
       } catch (e) {
@@ -81,8 +81,7 @@ export function PushNotificationManager() {
           lang: 'en-US',
           rate: 0.9,
           pitch: 1.1,
-          volume: 1.0,
-          category: 'ambient',
+          volume: 1.0
         });
       } catch (e) {
         console.warn('Native TTS Failed for Push', e);
@@ -98,14 +97,13 @@ export function PushNotificationManager() {
       
       // Vibrate & TTS when tapped
       try {
-        await Haptics.vibrate({ duration: 1000 });
+        await Haptics.vibrate();
         await TextToSpeech.speak({
           text: `EMERGENCY ALERT OPENED. ${action.notification.body || action.notification.title || "Review broadcast details."}`,
           lang: 'en-US',
           rate: 0.9,
           pitch: 1.1,
-          volume: 1.0,
-          category: 'ambient',
+          volume: 1.0
         });
       } catch (e) {}
     });
