@@ -949,33 +949,58 @@ function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTarge
         </h2>
         
         {weather ? (
-          <div className="grid grid-cols-5 gap-2">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
-              <Thermometer className="h-4 w-4 text-orange-400 mb-1" />
-              <span className="text-white font-bold text-sm">{weather.temperature_2m}°C</span>
-              <span className="text-[9px] text-zinc-500 uppercase font-bold">Temp</span>
+          <>
+            <div className="grid grid-cols-5 gap-2 mb-3">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
+                <Thermometer className="h-4 w-4 text-orange-400 mb-1" />
+                <span className="text-white font-bold text-sm">{weather.temperature_2m}°C</span>
+                <span className="text-[9px] text-zinc-500 uppercase font-bold">Temp</span>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
+                <CloudRain className="h-4 w-4 text-indigo-400 mb-1" />
+                <span className="text-white font-bold text-sm">{weather.precipitation_probability ?? 0}%</span>
+                <span className="text-[9px] text-zinc-500 uppercase font-bold">Rain</span>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
+                <Droplets className="h-4 w-4 text-blue-400 mb-1" />
+                <span className="text-white font-bold text-sm">{weather.relative_humidity_2m}%</span>
+                <span className="text-[9px] text-zinc-500 uppercase font-bold">Humid</span>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
+                <Wind className="h-4 w-4 text-zinc-300 mb-1" />
+                <span className="text-white font-bold text-sm">{weather.wind_speed_10m}</span>
+                <span className="text-[9px] text-zinc-500 uppercase font-bold">km/h</span>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
+                <Gauge className="h-4 w-4 text-amber-500 mb-1" />
+                <span className="text-white font-bold text-sm">{weather.surface_pressure}</span>
+                <span className="text-[9px] text-zinc-500 uppercase font-bold">hPa</span>
+              </div>
             </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
-              <CloudRain className="h-4 w-4 text-indigo-400 mb-1" />
-              <span className="text-white font-bold text-sm">{weather.precipitation_probability ?? 0}%</span>
-              <span className="text-[9px] text-zinc-500 uppercase font-bold">Rain</span>
-            </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
-              <Droplets className="h-4 w-4 text-blue-400 mb-1" />
-              <span className="text-white font-bold text-sm">{weather.relative_humidity_2m}%</span>
-              <span className="text-[9px] text-zinc-500 uppercase font-bold">Humid</span>
-            </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
-              <Wind className="h-4 w-4 text-zinc-300 mb-1" />
-              <span className="text-white font-bold text-sm">{weather.wind_speed_10m}</span>
-              <span className="text-[9px] text-zinc-500 uppercase font-bold">km/h</span>
-            </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex flex-col items-center justify-center">
-              <Gauge className="h-4 w-4 text-amber-500 mb-1" />
-              <span className="text-white font-bold text-sm">{weather.surface_pressure}</span>
-              <span className="text-[9px] text-zinc-500 uppercase font-bold">hPa</span>
-            </div>
-          </div>
+
+            {(() => {
+              const rainProb = weather.precipitation_probability ?? 0;
+              let threat = { title: "Low Threat", desc: "Clear skies and stable weather conditions.", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
+              if (rainProb > 80) threat = { title: "High Alert", desc: "Heavy rain and severe weather expected.", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20" };
+              else if (rainProb > 50) threat = { title: "Moderate to High", desc: "Scattered rain and potential thunderstorms.", color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" };
+              else if (rainProb > 20) threat = { title: "Low to Moderate", desc: "Light scattered rain showers expected.", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" };
+
+              return (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg overflow-hidden">
+                  <div className="p-4 flex items-center gap-4">
+                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border ${threat.bg} ${threat.border}`}>
+                      <CloudRain className={`h-6 w-6 ${threat.color}`} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5">Local Threat Level</div>
+                      <div className="text-base font-bold text-zinc-100">{threat.title}</div>
+                      <div className="text-[11px] text-zinc-400 leading-tight mt-0.5">{threat.desc}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </>
         ) : (
           <div className="text-zinc-500 text-xs flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin mr-2" /> Syncing Telemetry...</div>
         )}

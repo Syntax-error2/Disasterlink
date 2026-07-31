@@ -49,9 +49,9 @@ export default function RepresentativeMobile() {
       const response = await axiosInstance.get("/incidents");
       const dbIncidents = response.data.data ? response.data.data : response.data;
         
-        // Ensure incident hasn't been resolved locally and is dispatched to reps
+        // Ensure incident hasn't been resolved locally, belongs to this barangay, and is in an interceptable state
         const incomingDispatch = dbIncidents.find((inc: any) => 
-          inc.status?.startsWith("Dispatched:") && 
+          ['Pending Review', 'Active'].includes(inc.status) && 
           inc.reporting_barangay === user?.assigned_barangay && 
           !resolvedIds.includes(inc.id)
         );
@@ -170,7 +170,7 @@ export default function RepresentativeMobile() {
                       <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
                       On Duty
                     </div>
-                    <h1 className="text-2xl font-black text-white tracking-tight leading-tight">Brgy. {user?.assigned_barangay}</h1>
+                    <h1 className="text-xl md:text-2xl font-black text-white tracking-tight leading-tight line-clamp-2">{user?.assigned_barangay}</h1>
                     <p className="text-indigo-200 text-sm font-medium mt-1">{user?.name} &bull; Representative</p>
                   </div>
                   <button onClick={handleLogout} className="h-10 w-10 rounded-full bg-indigo-800/50 flex items-center justify-center hover:bg-indigo-700 transition-colors">
