@@ -10,6 +10,10 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { useIncidents } from "../../context/IncidentsContext";
+import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import L from "leaflet";
+
+const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6 w-6 bg-red-600 rounded-full border-2 border-white flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.8)] animate-pulse"></div>`, iconSize: [24, 24] });
 
 export default function RepresentativeMobile() {
   const { logout, user } = useAuth();
@@ -50,12 +54,20 @@ export default function RepresentativeMobile() {
       const response = await axiosInstance.get("/incidents");
       const dbIncidents = response.data.data ? response.data.data : response.data;
         
+        // Normalize string helper
+        const normalize = (str: string) => {
+          if (!str) return "";
+          return str.toLowerCase().replace(/brgy\.?/g, '').replace(/barangay/g, '').replace(/sta\.?/g, 'santa').replace(/sto\.?/g, 'santo').replace(/[^a-z0-9]/g, '');
+        };
+
         // Ensure incident hasn't been resolved locally, belongs to this barangay, and is in an interceptable state
-        const incomingDispatch = dbIncidents.find((inc: any) => 
-          ['Pending Review', 'Active'].includes(inc.status) && 
-          inc.reporting_barangay === user?.assigned_barangay && 
-          !resolvedIds.includes(inc.id)
-        );
+        const incomingDispatch = dbIncidents.find((inc: any) => {
+          const isInterceptable = ['Pending Review', 'Active'].includes(inc.status);
+          const s1 = normalize(inc.reporting_barangay);
+          const s2 = normalize(user?.assigned_barangay);
+          const isMatch = s1 && s2 && (s1.includes(s2) || s2.includes(s1));
+          return isInterceptable && isMatch && !resolvedIds.includes(inc.id);
+        });
 
         if (incomingDispatch) {
           setIncident(incomingDispatch);
@@ -267,6 +279,41 @@ export default function RepresentativeMobile() {
                   </div>
                   <Navigation className="h-4 w-4 text-zinc-600 group-hover:text-zinc-300 transition-colors" />
                 </button>
+
+                {/* Local Area Map */}
+                <div className="mt-8 mb-8">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MapPin className="h-5 w-5 text-indigo-500" />
+                    <h3 className="text-zinc-300 font-bold tracking-tight">Your Jurisdiction</h3>
+                  </div>
+                  <div className="h-64 w-full rounded-3xl overflow-hidden border border-zinc-800 shadow-lg relative z-0">
+                    <MapContainer 
+                      center={[user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866, user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587]} 
+                      zoom={14} 
+                      zoomControl={false} 
+                      className="h-full w-full bg-zinc-950"
+                    >
+                      <TileLayer
+                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                      />
+                      <Circle center={[user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866, user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587]} radius={800} pathOptions={{ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.1 }} />
+                      
+                      {activeLocalIncidents.map((inc: any) => (
+                        <Marker 
+                          key={inc.id} 
+                          position={[Number(inc.latitude), Number(inc.longitude)]} 
+                          icon={evacIcon}
+                        >
+                          <Popup className="custom-popup">
+                            <div className="font-bold text-red-600 mb-1">{inc.incident_type}</div>
+                            <div className="text-xs text-zinc-600">{inc.exact_location}</div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MapContainer>
+                  </div>
+                </div>
 
               </div>
             </motion.div>
