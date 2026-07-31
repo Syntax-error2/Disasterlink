@@ -52,24 +52,47 @@ class TelemetryController extends Controller
 
     public function aiPredictions()
     {
-        // Mock AI prediction based on historical data + current telemetry
-        // We'll return a "High Risk" polygon array for the GIS map.
-        $predictions = [
-            [
-                'id' => 'PRED-1',
-                'type' => 'Flood',
-                'risk_level' => 'Critical (85% Probability)',
-                'time_to_impact' => '2 Hours',
-                'barangay' => 'Sto. Rosario (Low Elevation Zone)',
-                'polygon' => [
-                    [10.1915, 122.8610],
-                    [10.1915, 122.8645],
-                    [10.1885, 122.8645],
-                    [10.1885, 122.8610],
-                ]
-            ]
-        ];
+        $predictions = [];
+        
+        try {
+            // Check weather telemetry for dynamic risk modeling
+            $weather = \Illuminate\Support\Facades\Cache::get('telemetry_weather');
+            $prob = $weather['current']['precipitation_probability'] ?? 0;
+            $wind = $weather['current']['wind_speed_10m'] ?? 0;
 
+            if ($prob > 70 || $wind > 40) {
+                $predictions[] = [
+                    'id' => 'PRED-ML-1',
+                    'type' => 'Flood & Landslide Risk',
+                    'risk_level' => 'Critical (' . $prob . '% Probability)',
+                    'time_to_impact' => 'Immediate / Ongoing',
+                    'barangay' => 'Low Elevation Zones (Enclaro, Sto. Rosario)',
+                    'polygon' => [
+                        [10.1915, 122.8610],
+                        [10.1915, 122.8645],
+                        [10.1885, 122.8645],
+                        [10.1885, 122.8610],
+                    ]
+                ];
+            } else if ($prob > 30) {
+                $predictions[] = [
+                    'id' => 'PRED-ML-2',
+                    'type' => 'Moderate Rain Accumulation',
+                    'risk_level' => 'Elevated (' . $prob . '% Probability)',
+                    'time_to_impact' => 'Next 4 Hours',
+                    'barangay' => 'General Binalbagan Area',
+                    'polygon' => [
+                        [10.2015, 122.8510],
+                        [10.2015, 122.8745],
+                        [10.1785, 122.8745],
+                        [10.1785, 122.8510],
+                    ]
+                ];
+            }
+        } catch (\Exception $e) {}
+
+        // If no weather risks, we fallback to an empty array so map stays clean, 
+        // OR we can return a systemic "No Threats Detected" marker. Let's return empty array if safe.
         return response()->json($predictions, 200);
     }
 

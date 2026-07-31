@@ -33,6 +33,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CommunityPostController;
 use App\Http\Controllers\FamilyMemberController;
 use App\Http\Controllers\ResponderTelemetryController;
+use App\Http\Controllers\UserController;
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -80,4 +81,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // ==========================================
     Route::get('/responder/locations', [ResponderTelemetryController::class, 'index']);
     Route::post('/responder/ping', [ResponderTelemetryController::class, 'ping'])->middleware('role:responder,admin');
+
+    // ==========================================
+    // PERSONNEL MANAGEMENT API
+    // ==========================================
+    Route::get('/personnel/representatives', [UserController::class, 'getRepresentatives'])->middleware('role:barangay_captain,admin');
+    Route::post('/personnel/representatives', [UserController::class, 'createRepresentative'])->middleware('role:barangay_captain,admin');
+    Route::delete('/personnel/representatives/{id}', [UserController::class, 'deleteRepresentative'])->middleware('role:barangay_captain,admin');
 });

@@ -119,18 +119,32 @@ class IncidentReportController extends Controller
         return response()->json($incident, 200);
     }
 
-    public function verify($id)
+    public function verify(Request $request, $id)
     {
         try {
             $incident = IncidentReport::findOrFail($id);
+            $user = auth()->user();
+            
             $incident->increment('verifications');
             
-            // If it hits 3 verifications, upgrade severity/status
-            if ($incident->verifications >= 3 && $incident->status !== 'Resolved' && !str_starts_with($incident->status, 'Dispatched:')) {
+            // Check if user is a representative/responder
+            if ($user && in_array($user->role, ['responder', 'admin', 'barangay_captain'])) {
+                $escalation = $request->input('escalation_target', 'mdrrmo');
+                
+                $statusStr = $escalation === 'kap' ? 'Verified / Escalated to Kap' : 'Verified / Critical';
+                
                 $incident->update([
                     'severity_level' => 'Critical',
-                    'status' => 'Verified / Critical'
+                    'status' => $statusStr
                 ]);
+            } else {
+                // Standard Citizen Verification Rule
+                if ($incident->verifications >= 3 && $incident->status !== 'Resolved' && !str_starts_with($incident->status, 'Dispatched:')) {
+                    $incident->update([
+                        'severity_level' => 'Critical',
+                        'status' => 'Verified / Critical'
+                    ]);
+                }
             }
             
             event(new IncidentEvent('updated', $incident));
