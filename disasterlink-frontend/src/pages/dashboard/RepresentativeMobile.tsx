@@ -384,9 +384,9 @@ export default function RepresentativeMobile() {
               )}
 
               {activeTab === "map" && (
-                <div className="h-full w-full flex flex-col relative">
-                  <div className="bg-zinc-950/90 backdrop-blur-md px-6 py-4 border-b border-zinc-800 z-10">
-                    <h2 className="text-white font-bold tracking-wide flex items-center gap-2">
+                <div className="fixed inset-0 pb-20 flex flex-col z-0 bg-zinc-950">
+                  <div className="bg-zinc-950/90 backdrop-blur-md px-6 py-4 border-b border-zinc-800 z-10 safe-top">
+                    <h2 className="text-white font-bold tracking-wide flex items-center gap-2 mt-4">
                       <MapIcon className="h-5 w-5 text-indigo-500" /> Jurisdictional Radar
                     </h2>
                   </div>
@@ -466,30 +466,49 @@ export default function RepresentativeMobile() {
               )}
             </motion.div>
           ) : (
-            <motion.div key="dispatch" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="min-h-full bg-red-950 p-6 pt-12 pb-32">
+            <motion.div key="dispatch" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[100] bg-red-950 p-6 pt-12 pb-safe flex flex-col overflow-hidden">
               <div className="absolute inset-0 bg-red-600/5 mix-blend-overlay pointer-events-none"></div>
               
-              <div className="flex justify-center mb-6 relative">
+              <div className="flex justify-center mb-4 relative shrink-0">
                 <div className="absolute inset-0 bg-red-600 blur-2xl opacity-20 rounded-full animate-pulse"></div>
-                <div className="h-20 w-20 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(220,38,38,0.6)] border-4 border-red-500/30 relative z-10">
-                  <AlertTriangle className="h-10 w-10 text-white animate-pulse" />
+                <div className="h-16 w-16 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(220,38,38,0.6)] border-4 border-red-500/30 relative z-10">
+                  <AlertTriangle className="h-8 w-8 text-white animate-pulse" />
                 </div>
               </div>
               
-              <div className="text-center mb-8 relative z-10">
-                <h1 className="text-3xl font-black text-white tracking-tight uppercase mb-2">SOS ALERT</h1>
-                <p className="text-red-300 font-medium">Verify emergency immediately.</p>
+              <div className="text-center mb-6 relative z-10 shrink-0">
+                <h1 className="text-2xl font-black text-white tracking-tight uppercase mb-1">SOS ALERT</h1>
+                <p className="text-red-300 font-medium text-sm">Verify emergency immediately.</p>
               </div>
 
-              <div className="bg-zinc-900/90 backdrop-blur-xl border border-red-500/30 overflow-hidden shadow-2xl relative z-10 mb-6 rounded-3xl">
-                <div className="bg-red-600/20 p-4 border-b border-red-500/20">
+              <div className="flex-1 flex flex-col min-h-0 bg-zinc-900/90 backdrop-blur-xl border border-red-500/30 shadow-2xl relative z-10 mb-6 rounded-3xl overflow-hidden">
+                <div className="bg-red-600/20 p-4 border-b border-red-500/20 shrink-0">
                   <div className="flex items-center justify-between">
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-widest uppercase bg-red-600 text-white">{incident?.incident_type}</span>
                     <span className="text-xs font-bold text-red-400">HIGH PRIORITY</span>
                   </div>
                 </div>
                 
-                <div className="p-5 space-y-4">
+                {/* Incident Map Pin */}
+                {incident?.latitude && incident?.longitude && (
+                  <div className="h-40 w-full relative shrink-0 border-b border-zinc-800">
+                    <MapContainer 
+                      center={[Number(incident.latitude), Number(incident.longitude)]} 
+                      zoom={16} 
+                      zoomControl={false} 
+                      className="h-full w-full bg-zinc-950"
+                      key={`alert-map-${incident.id}`}
+                    >
+                      <TileLayer
+                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                      />
+                      <Marker position={[Number(incident.latitude), Number(incident.longitude)]} icon={evacIcon} />
+                    </MapContainer>
+                  </div>
+                )}
+                
+                <div className="p-5 flex-1 overflow-y-auto space-y-4">
                   <div className="flex items-start gap-4 bg-zinc-950/80 p-4 rounded-2xl border border-zinc-800/80 shadow-inner">
                     <div className="h-10 w-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30">
                       <MapPin className="h-5 w-5 text-red-400" />
@@ -502,7 +521,7 @@ export default function RepresentativeMobile() {
                   </div>
 
                   {incident?.details && (
-                    <div className="mt-2 p-4 rounded-2xl bg-zinc-950/50 border border-zinc-800/50 italic text-sm text-zinc-300 leading-relaxed shadow-inner">
+                    <div className="p-4 rounded-2xl bg-zinc-950/50 border border-zinc-800/50 italic text-sm text-zinc-300 leading-relaxed shadow-inner">
                       "{incident.details}"
                     </div>
                   )}
@@ -510,7 +529,7 @@ export default function RepresentativeMobile() {
               </div>
 
               {/* Action Controls */}
-              <div className="space-y-3 relative z-10">
+              <div className="space-y-3 relative z-10 shrink-0">
                 <button onClick={() => escalateIncident('kap')} disabled={isSubmitting} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 active:scale-95 disabled:opacity-70 text-white font-black tracking-wide py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg border border-blue-400/30">
                   {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
                   VERIFY & ESCALATE (KAP)
