@@ -545,7 +545,7 @@ export default function CommunityPortal() {
       <main className="flex-1 overflow-y-auto no-scrollbar relative min-h-0">
         <ErrorBoundary>
           <AnimatePresence mode="wait">
-            {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} isOffline={isOffline} activeBroadcast={activeBroadcast} />}
+            {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} isOffline={isOffline} activeBroadcast={activeBroadcast} weather={weather} />}
             {activeTab === "map" && <MapView key="map" showToast={showToast} evacCenters={evacCenters} liveResponders={liveResponders} targetRoute={targetRoute} setTargetRoute={setTargetRoute} />}
             {activeTab === "report" && <ReportView key="report" showToast={showToast} user={activeUser} refreshMyReports={fetchMyReports} setActiveTab={setActiveTab} isOffline={isOffline} />}
             {activeTab === "feed" && <FeedView key="feed" showToast={showToast} posts={feedPosts} setPosts={setFeedPosts} user={activeUser} isOffline={isOffline} fetchMoreFeedPosts={fetchMoreFeedPosts} isLoadingMoreFeed={isLoadingMoreFeed} nextFeedCursor={nextFeedCursor} />}
@@ -608,7 +608,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, isPrimary }: any) {
 // ==========================================
 // 3. HOME VIEW
 // ==========================================
-function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, user, myReports, activeBroadcast, proximityAlerts }: any) {
+function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, user, myReports, activeBroadcast, proximityAlerts, weather }: any) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { logout } = useAuth();
 
@@ -668,6 +668,30 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
           </AnimatePresence>
         </div>
       </div>
+
+      {/* THREAT LEVEL */}
+      {weather && (() => {
+        const rainProb = weather.precipitation_probability ?? 0;
+        let threat = { title: "Low Threat", desc: "Clear skies and stable weather conditions.", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
+        if (rainProb > 80) threat = { title: "High Alert", desc: "Heavy rain and severe weather expected.", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20" };
+        else if (rainProb > 50) threat = { title: "Moderate to High", desc: "Scattered rain and potential thunderstorms.", color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" };
+        else if (rainProb > 20) threat = { title: "Low to Moderate", desc: "Light scattered rain showers expected.", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" };
+
+        return (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg overflow-hidden mt-2 mb-4">
+            <div className="p-4 flex items-center gap-4">
+              <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border ${threat.bg} ${threat.border}`}>
+                <CloudRain className={`h-6 w-6 ${threat.color}`} />
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5">Local Threat Level</div>
+                <div className="text-base font-bold text-zinc-100">{threat.title}</div>
+                <div className="text-[11px] text-zinc-400 leading-tight mt-0.5">{threat.desc}</div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {alerts && alerts.length > 0 && (
         <div className="bg-gradient-to-br from-amber-500/20 to-orange-600/20 border border-amber-500/30 rounded-3xl p-5 backdrop-blur-md relative overflow-hidden shadow-lg">
@@ -977,29 +1001,6 @@ function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTarge
                 <span className="text-[9px] text-zinc-500 uppercase font-bold">hPa</span>
               </div>
             </div>
-
-            {(() => {
-              const rainProb = weather.precipitation_probability ?? 0;
-              let threat = { title: "Low Threat", desc: "Clear skies and stable weather conditions.", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
-              if (rainProb > 80) threat = { title: "High Alert", desc: "Heavy rain and severe weather expected.", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20" };
-              else if (rainProb > 50) threat = { title: "Moderate to High", desc: "Scattered rain and potential thunderstorms.", color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" };
-              else if (rainProb > 20) threat = { title: "Low to Moderate", desc: "Light scattered rain showers expected.", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" };
-
-              return (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg overflow-hidden">
-                  <div className="p-4 flex items-center gap-4">
-                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border ${threat.bg} ${threat.border}`}>
-                      <CloudRain className={`h-6 w-6 ${threat.color}`} />
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5">Local Threat Level</div>
-                      <div className="text-base font-bold text-zinc-100">{threat.title}</div>
-                      <div className="text-[11px] text-zinc-400 leading-tight mt-0.5">{threat.desc}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
           </>
         ) : (
           <div className="text-zinc-500 text-xs flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin mr-2" /> Syncing Telemetry...</div>

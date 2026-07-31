@@ -17,10 +17,11 @@ export default function RepresentativeMobile() {
   const { incidents } = useIncidents();
   
   // Real-time states
-  const [incident, setIncident] = useState<any>(null);
-  const [status, setStatus] = useState("Available"); // Available, Dispatched
+  const [incident, setIncident] = useState<any | null>(null);
+  const [status, setStatus] = useState<"Available" | "Dispatched">("Available");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [resolvedIds, setResolvedIds] = useState<number[]>([]);
+  const [resolvedIds, setResolvedIds] = useState<string[]>([]);
+  const [weather, setWeather] = useState<any>(null);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'info' | 'warning' | 'alert' } | null>(null);
 
   // Local Alerts
@@ -111,6 +112,27 @@ export default function RepresentativeMobile() {
   };
 
   // ==========================================
+  // FETCH WEATHER DATA
+  // ==========================================
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
+        const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila`;
+        const response = await fetch(url);
+        const data = await response.json();
+        setWeather(data.current);
+      } catch (e) {
+        console.warn("Weather fetch failed");
+      }
+    };
+    fetchWeather();
+    const weatherInterval = setInterval(fetchWeather, 15000);
+    return () => clearInterval(weatherInterval);
+  }, [user]);
+
+  // ==========================================
   // RESPONDER ACTION CONTROLS
   // ==========================================
   const escalateIncident = async (target: 'kap' | 'mdrrmo') => {
@@ -159,41 +181,48 @@ export default function RepresentativeMobile() {
         <AnimatePresence mode="wait">
           {status === "Available" ? (
             <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-h-full pb-20">
-              {/* Premium Dashboard Header */}
-              <div className="bg-gradient-to-br from-indigo-900 to-indigo-950 px-6 pt-12 pb-8 rounded-b-[2rem] shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                  <ShieldAlert className="h-32 w-32" />
-                </div>
+              {/* Premium Dashboard Header - Dark Minimalist */}
+              <div className="bg-zinc-950/90 backdrop-blur-md px-6 pt-12 pb-6 border-b border-zinc-800 relative overflow-hidden">
                 <div className="relative z-10 flex items-center justify-between">
                   <div>
-                    <div className="text-indigo-300 font-bold text-xs uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <div className="text-zinc-400 font-bold text-xs uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
                       On Duty
                     </div>
                     <h1 className="text-xl md:text-2xl font-black text-white tracking-tight leading-tight line-clamp-2">{user?.assigned_barangay}</h1>
-                    <p className="text-indigo-200 text-sm font-medium mt-1">{user?.name} &bull; Representative</p>
+                    <p className="text-zinc-500 text-sm font-medium mt-1">{user?.name} &bull; Representative</p>
                   </div>
-                  <button onClick={handleLogout} className="h-10 w-10 rounded-full bg-indigo-800/50 flex items-center justify-center hover:bg-indigo-700 transition-colors">
-                    <LogOut className="h-5 w-5 text-indigo-200" />
+                  <button onClick={handleLogout} className="h-10 w-10 shrink-0 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:bg-zinc-800 transition-colors">
+                    <LogOut className="h-5 w-5 text-red-500" />
                   </button>
                 </div>
               </div>
 
               {/* Action Grid */}
-              <div className="p-6 space-y-6 -mt-4 relative z-20">
+              <div className="p-6 space-y-6 relative z-20">
                 {/* Threat Status Card */}
-                <Card className="bg-zinc-900 border border-zinc-800 rounded-3xl shadow-lg overflow-hidden">
-                  <CardContent className="p-5 flex items-center gap-4">
-                    <div className="h-14 w-14 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/20">
-                      <CloudRain className="h-7 w-7 text-amber-500" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Local Threat Level</div>
-                      <div className="text-lg font-bold text-zinc-100">Low to Moderate</div>
-                      <div className="text-xs text-zinc-400">Light scattered rain showers expected.</div>
-                    </div>
-                  </CardContent>
-                </Card>
+                {weather && (() => {
+                  const rainProb = weather.precipitation_probability ?? 0;
+                  let threat = { title: "Low Threat", desc: "Clear skies and stable weather conditions.", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
+                  if (rainProb > 80) threat = { title: "High Alert", desc: "Heavy rain and severe weather expected.", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20" };
+                  else if (rainProb > 50) threat = { title: "Moderate to High", desc: "Scattered rain and potential thunderstorms.", color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" };
+                  else if (rainProb > 20) threat = { title: "Low to Moderate", desc: "Light scattered rain showers expected.", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" };
+
+                  return (
+                    <Card className="bg-zinc-900 border border-zinc-800 rounded-3xl shadow-lg overflow-hidden">
+                      <CardContent className="p-5 flex items-center gap-4">
+                        <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 border ${threat.bg} ${threat.border}`}>
+                          <CloudRain className={`h-7 w-7 ${threat.color}`} />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Local Threat Level</div>
+                          <div className="text-lg font-bold text-zinc-100">{threat.title}</div>
+                          <div className="text-xs text-zinc-400">{threat.desc}</div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Local Alerts */}
