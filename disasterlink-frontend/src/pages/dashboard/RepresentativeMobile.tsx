@@ -104,7 +104,7 @@ export default function RepresentativeMobile() {
     if (!incident) return;
     setIsSubmitting(true);
     try {
-      await axiosInstance.put(`/incidents/${incident.id}/verify`, { escalation_target: target });
+      await axiosInstance.post(`/incidents/${incident.id}/verify`, { escalation_target: target });
       setResolvedIds(prev => [...prev, incident.id]);
       showToast(target === 'kap' ? "Escalated to Barangay Captain." : "Escalated to MDRRMO.", "success");
       setIncident(null);

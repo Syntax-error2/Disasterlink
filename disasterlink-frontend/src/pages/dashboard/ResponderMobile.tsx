@@ -212,7 +212,7 @@ export default function ResponderMobile() {
     if (!incident) return;
     setIsSubmitting(true);
     try {
-      await axiosInstance.put(`/incidents/${incident.id}/verify`, { escalation_target: target });
+      await axiosInstance.post(`/incidents/${incident.id}/verify`, { escalation_target: target });
       
       // Blacklist it locally so it doesn't reappear
       setResolvedIds(prev => [...prev, incident.id]);
