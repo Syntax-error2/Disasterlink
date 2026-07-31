@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Navigation, CheckCircle, AlertTriangle, CloudRain, Send, Loader2, Activity, ShieldAlert, LogOut, Radio, Home, Map as MapIcon } from "lucide-react";
+import { MapPin, Navigation, CheckCircle, AlertTriangle, CloudRain, Send, Loader2, Activity, ShieldAlert, LogOut, Radio, Home, Map as MapIcon, Thermometer, Wind, Droplets } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axiosInstance from "../../lib/axios";
 import { KeepAwake } from '@capacitor-community/keep-awake';
@@ -35,11 +35,51 @@ export default function RepresentativeMobile() {
   const [status, setStatus] = useState<"Available" | "Dispatched">("Available");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resolvedIds, setResolvedIds] = useState<string[]>([]);
-  const [weather, setWeather] = useState<any>(null);
+  const [weather, setWeather] = useState<any>(() => {
+    try {
+      const cached = sessionStorage.getItem('cp_weather_cache');
+      return cached && cached !== "undefined" ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'info' | 'warning' | 'alert' } | null>(null);
 
+  // Helper functions
+  const normalize = (str: string) => {
+    if (!str) return "";
+    return str.toLowerCase().replace(/brgy\.?/g, '').replace(/barangay/g, '').replace(/sta\.?/g, 'santa').replace(/sto\.?/g, 'santo').replace(/[^a-z0-9]/g, '');
+  };
+
+  const getDistanceInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3;
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
   // Local Alerts
-  const activeLocalIncidents = incidents.filter(i => i.reporting_barangay === user?.assigned_barangay && !['Resolved', 'False Alarm'].includes(i.status));
+  const activeLocalIncidents = incidents.filter(i => {
+    if (['Resolved', 'False Alarm', 'Dismissed'].includes(i.status)) return false;
+    
+    // Check Name Match
+    const s1 = normalize(i.reporting_barangay);
+    const s2 = normalize(user?.assigned_barangay);
+    const isNameMatch = s1 && s2 && (s1.includes(s2) || s2.includes(s1));
+    
+    // Check Distance Match
+    let isDistanceMatch = false;
+    if (i.latitude && i.longitude) {
+      const dist = getDistanceInMeters(userLoc[0], userLoc[1], Number(i.latitude), Number(i.longitude));
+      isDistanceMatch = dist <= 200; // Within 200 meters
+    }
+    
+    return isNameMatch || isDistanceMatch;
+  });
 
   // ==========================================
   // KEEP AWAKE
@@ -54,6 +94,25 @@ export default function RepresentativeMobile() {
     return () => { KeepAwake.allowSleep().catch(() => {}); };
   }, []);
 
+  // Fetch Weather globally
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${userLoc[0]}&longitude=${userLoc[1]}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila`;
+        const response = await fetch(url);
+        const data = await response.json();
+        setWeather(data.current);
+        sessionStorage.setItem('cp_weather_cache', JSON.stringify(data.current));
+      } catch (e) {
+        console.warn("Weather fetch failed");
+        setWeather({ temperature_2m: 31.5, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010, precipitation_probability: 25 });
+      }
+    };
+    fetchWeather();
+    const weatherInterval = setInterval(fetchWeather, 15000);
+    return () => clearInterval(weatherInterval);
+  }, [userLoc[0], userLoc[1]]);
+
   // ==========================================
   // WEBSOCKETS: LISTENING FOR DISPATCHES
   // ==========================================
@@ -64,18 +123,22 @@ export default function RepresentativeMobile() {
       const response = await axiosInstance.get("/incidents");
       const dbIncidents = response.data.data ? response.data.data : response.data;
         
-        // Normalize string helper
-        const normalize = (str: string) => {
-          if (!str) return "";
-          return str.toLowerCase().replace(/brgy\.?/g, '').replace(/barangay/g, '').replace(/sta\.?/g, 'santa').replace(/sto\.?/g, 'santo').replace(/[^a-z0-9]/g, '');
-        };
-
         // Ensure incident hasn't been resolved locally, belongs to this barangay, and is in an interceptable state
         const incomingDispatch = dbIncidents.find((inc: any) => {
           const isInterceptable = ['Pending Review', 'Active'].includes(inc.status);
+          
           const s1 = normalize(inc.reporting_barangay);
           const s2 = normalize(user?.assigned_barangay);
-          const isMatch = s1 && s2 && (s1.includes(s2) || s2.includes(s1));
+          const isNameMatch = s1 && s2 && (s1.includes(s2) || s2.includes(s1));
+          
+          let isDistanceMatch = false;
+          if (inc.latitude && inc.longitude) {
+            const dist = getDistanceInMeters(userLoc[0], userLoc[1], Number(inc.latitude), Number(inc.longitude));
+            isDistanceMatch = dist <= 200;
+          }
+          
+          const isMatch = isNameMatch || isDistanceMatch;
+          
           return isInterceptable && isMatch && !resolvedIds.includes(inc.id);
         });
 
@@ -385,11 +448,26 @@ export default function RepresentativeMobile() {
 
               {activeTab === "map" && (
                 <div className="fixed inset-0 pb-20 flex flex-col z-0 bg-zinc-950">
-                  <div className="bg-zinc-950/90 backdrop-blur-md px-6 py-4 border-b border-zinc-800 z-10 safe-top">
-                    <h2 className="text-white font-bold tracking-wide flex items-center gap-2 mt-4">
-                      <MapIcon className="h-5 w-5 text-indigo-500" /> Jurisdictional Radar
-                    </h2>
-                  </div>
+                  {weather && (
+                    <div className="absolute top-0 left-0 w-full z-10 p-4 safe-top pointer-events-none mt-4">
+                      <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/80 rounded-3xl p-4 shadow-2xl pointer-events-auto flex flex-col gap-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <MapIcon className="h-5 w-5 text-indigo-500" />
+                          <h2 className="text-white font-bold tracking-wide">Jurisdictional Radar</h2>
+                        </div>
+                        <div className="flex items-center justify-between text-zinc-300">
+                          <div className="flex items-center gap-2">
+                            <Thermometer className="h-5 w-5 text-orange-400" />
+                            <span className="text-xl font-bold">{Math.round(weather.temperature_2m)}°C</span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm font-medium">
+                            <div className="flex items-center gap-1.5"><Wind className="h-4 w-4 text-sky-400"/> {Math.round(weather.wind_speed_10m)}</div>
+                            <div className="flex items-center gap-1.5"><Droplets className="h-4 w-4 text-blue-400"/> {Math.round(weather.relative_humidity_2m)}%</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex-1 w-full relative z-0">
                     <MapContainer 
                       center={userLoc} 
