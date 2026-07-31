@@ -84,6 +84,16 @@ export default function CommunityPortal() {
   const [targetRoute, setTargetRoute] = useState<[number, number] | null>(null);
   const [myReports, setMyReports] = useState<any[]>([]);
 
+  // Weather State (Lifted up for HomeView and MapView)
+  const [weather, setWeather] = useState<any>(() => {
+    try {
+      const cached = sessionStorage.getItem('cp_weather_cache');
+      return cached && cached !== "undefined" ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   const { incidents: globalIncidents, fetchIncidents } = useIncidents();
 
   useEffect(() => {
@@ -149,6 +159,25 @@ export default function CommunityPortal() {
       setProximityAlerts(newProximityAlerts);
     }
   }, [globalIncidents, activeUser, lat, lng]);
+
+  // Fetch Weather globally
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila`;
+        const response = await fetch(url);
+        const data = await response.json();
+        setWeather(data.current);
+        sessionStorage.setItem('cp_weather_cache', JSON.stringify(data.current));
+      } catch (e) {
+        console.warn("Weather fetch failed");
+        setWeather({ temperature_2m: 31.5, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010, precipitation_probability: 25 });
+      }
+    };
+    fetchWeather();
+    const weatherInterval = setInterval(fetchWeather, 15000);
+    return () => clearInterval(weatherInterval);
+  }, [lat, lng]);
 
   const fetchMyReports = async () => {
     // Just refresh the global context
@@ -546,7 +575,7 @@ export default function CommunityPortal() {
         <ErrorBoundary>
           <AnimatePresence mode="wait">
             {activeTab === "home" && <HomeView key="home" showToast={showToast} userStatus={userStatus} setUserStatus={setUserStatus} alerts={alerts} evacCenters={evacCenters} user={activeUser} myReports={myReports} isOffline={isOffline} activeBroadcast={activeBroadcast} weather={weather} />}
-            {activeTab === "map" && <MapView key="map" showToast={showToast} evacCenters={evacCenters} liveResponders={liveResponders} targetRoute={targetRoute} setTargetRoute={setTargetRoute} />}
+            {activeTab === "map" && <MapView key="map" showToast={showToast} evacCenters={evacCenters} liveResponders={liveResponders} targetRoute={targetRoute} setTargetRoute={setTargetRoute} weather={weather} />}
             {activeTab === "report" && <ReportView key="report" showToast={showToast} user={activeUser} refreshMyReports={fetchMyReports} setActiveTab={setActiveTab} isOffline={isOffline} />}
             {activeTab === "feed" && <FeedView key="feed" showToast={showToast} posts={feedPosts} setPosts={setFeedPosts} user={activeUser} isOffline={isOffline} fetchMoreFeedPosts={fetchMoreFeedPosts} isLoadingMoreFeed={isLoadingMoreFeed} nextFeedCursor={nextFeedCursor} />}
             {activeTab === "family" && <FamilyView key="family" showToast={showToast} members={familyMembers} setMembers={setFamilyMembers} userStatus={userStatus} setUserStatus={setUserStatus} />}
@@ -911,7 +940,7 @@ function MapFlyTo({ center }: { center: [number, number] }) {
   return null;
 }
 
-function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTargetRoute }: any) {
+function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTargetRoute, weather }: any) {
   const { user } = useAuth();
   const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
   const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
@@ -919,14 +948,6 @@ function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTarge
 
   const [center, setCenter] = useState<[number, number]>(MAP_CENTER);
   const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
-  const [weather, setWeather] = useState<any>(() => {
-    try {
-      const cached = sessionStorage.getItem('cp_weather_cache');
-      return cached && cached !== "undefined" ? JSON.parse(cached) : null;
-    } catch (e) {
-      return null;
-    }
-  });
   const [showWindy, setShowWindy] = useState(false);
 
   useEffect(() => {
@@ -944,23 +965,6 @@ function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTarge
       }
     };
     fetchLocation();
-
-    // 2. Fetch Live Weather Data (Open-Meteo)
-    const fetchWeather = async () => {
-      try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${center[0]}&longitude=${center[1]}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila`;
-        const response = await fetch(url);
-        const data = await response.json();
-        setWeather(data.current);
-        sessionStorage.setItem('cp_weather_cache', JSON.stringify(data.current));
-      } catch (e) {
-        console.warn("Weather fetch failed");
-        setWeather({ temperature_2m: 31.5, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010, precipitation_probability: 25 });
-      }
-    };
-    fetchWeather();
-    const weatherInterval = setInterval(fetchWeather, 15000);
-    return () => clearInterval(weatherInterval);
   }, []);
 
   return (
