@@ -40,7 +40,7 @@ export default function RepresentativeMobile() {
   }, []);
 
   // ==========================================
-  // LIVE POLLING: LISTENING FOR DISPATCHES
+  // WEBSOCKETS: LISTENING FOR DISPATCHES
   // ==========================================
   const checkForDispatches = async () => {
     if (status !== "Available") return; 
@@ -87,9 +87,22 @@ export default function RepresentativeMobile() {
   };
 
   useEffect(() => {
-    checkForDispatches(); 
-    const pollInterval = setInterval(checkForDispatches, 10000);
-    return () => clearInterval(pollInterval);
+    import('../../lib/echo').then(({ default: echo }) => {
+      echo.channel('incidents')
+        .listen('.incident.event', (e: any) => {
+          if (e.type === 'created' || e.type === 'updated') {
+            checkForDispatches();
+          }
+        });
+    });
+
+    checkForDispatches(); // Initial check
+
+    return () => {
+      import('../../lib/echo').then(({ default: echo }) => {
+        echo.leaveChannel('incidents');
+      });
+    };
   }, [status, resolvedIds, user]); 
 
   const showToast = (msg: string, type: 'success' | 'info' | 'warning' | 'alert' = 'info') => {

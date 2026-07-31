@@ -125,7 +125,7 @@ export default function ResponderMobile() {
   }, [responderLocation, status, incident]);
 
   // ==========================================
-  // LIVE POLLING: LISTENING FOR DISPATCHES
+  // WEBSOCKETS: LISTENING FOR DISPATCHES
   // ==========================================
   const checkForDispatches = async () => {
     // If the responder is already busy handling an incident, stop pulling new ones
@@ -174,11 +174,23 @@ export default function ResponderMobile() {
     }
   };
 
-  // Poll the database every 3 seconds
   useEffect(() => {
-    checkForDispatches(); // Check immediately on load
-    const pollInterval = setInterval(checkForDispatches, 10000);
-    return () => clearInterval(pollInterval);
+    import('../../lib/echo').then(({ default: echo }) => {
+      echo.channel('incidents')
+        .listen('.incident.event', (e: any) => {
+          if (e.type === 'created' || e.type === 'updated') {
+            checkForDispatches();
+          }
+        });
+    });
+
+    checkForDispatches(); // Initial check
+
+    return () => {
+      import('../../lib/echo').then(({ default: echo }) => {
+        echo.leaveChannel('incidents');
+      });
+    };
   }, [status, resolvedIds]); 
 
   // Live dispatch timer
