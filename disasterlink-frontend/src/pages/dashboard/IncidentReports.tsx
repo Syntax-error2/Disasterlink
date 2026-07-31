@@ -397,15 +397,7 @@ export default function IncidentReports() {
                     <TableCell className="text-right px-6">
                       {!r.status.includes("Dispatched") && !r.status.includes("Resolved") ? (
                         <div className="flex justify-end gap-2">
-                          <Button 
-                            onClick={(e) => { e.stopPropagation(); handleVerify(r.id); }} 
-                            size="sm" 
-                            variant="outline" 
-                            disabled={(r.verifications?.length ?? r.verifications ?? 0) >= 3}
-                            className={`h-8 text-xs font-bold border-blue-200 text-blue-600 ${(r.verifications?.length ?? r.verifications ?? 0) >= 3 ? 'opacity-50' : 'hover:bg-blue-50'}`}
-                          >
-                            {(r.verifications?.length ?? r.verifications ?? 0) >= 3 ? 'Verified' : 'Verify'} ({Math.min((r.verifications?.length ?? r.verifications ?? 0), 3)}/3)
-                          </Button>
+
                           <Button onClick={() => handleOpenDispatch(r)} size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs font-bold shadow-md flex items-center gap-1.5">
                             <ShieldAlert className="h-3.5 w-3.5" /> Deploy Responder
                           </Button>
