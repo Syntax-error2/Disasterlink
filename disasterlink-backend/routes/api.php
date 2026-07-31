@@ -20,6 +20,12 @@ Route::middleware('throttle:auth')->group(function () {
     Route::post('/register/send-otp', [AuthController::class, 'sendOtp']);
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    
+    // TEMPORARY HIDDEN ROUTE TO SEED TEST ACCOUNTS
+    Route::get('/setup-test-accounts', function () {
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'TestAccountsSeeder']);
+        return response()->json(['message' => 'Test Accounts Created: kap.villasta@gmail.com and rep.villasta@gmail.com (Password: password123)']);
+    });
 });
 Route::get('/tenant-config/{subdomain}', [AuthController::class, 'tenantConfig'])->middleware('throttle:api');
 
@@ -44,7 +50,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // ==========================================
     Route::get('/incidents', [IncidentReportController::class, 'index']);
     Route::get('/incidents/sync', [IncidentReportController::class, 'sync']);
-    Route::post('/incidents', [IncidentReportController::class, 'store']);
+    Route::post('/incidents', [IncidentReportController::class, 'store'])->middleware('throttle:sos');
     Route::put('/incidents/{id}', [IncidentReportController::class, 'update'])->middleware('role:admin,responder');
     Route::delete('/incidents/{id}', [IncidentReportController::class, 'destroy'])->middleware('role:admin');
     Route::post('/incidents/{id}/verify', [IncidentReportController::class, 'verify'])->middleware('role:admin,responder');
