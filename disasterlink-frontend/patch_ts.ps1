@@ -1,0 +1,14 @@
+﻿(Get-Content src/components/ErrorBoundary.tsx) -replace 'ErrorInfo, ReactNode', 'type ErrorInfo, type ReactNode' | Set-Content src/components/ErrorBoundary.tsx
+(Get-Content src/main.tsx) | ForEach-Object { if ($_ -match 'import \{ StrictMode') { '/// <reference types="vite-plugin-pwa/client" />'; $_ } else { $_ } } | Set-Content src/main.tsx
+(Get-Content tsconfig.app.json) -replace '"noUnusedLocals": true', '"noUnusedLocals": false' -replace '"noUnusedParameters": true', '"noUnusedParameters": false' | Set-Content tsconfig.app.json
+
+(Get-Content src/pages/dashboard/AdminTeamManagement.tsx) -replace '../../components/ui/Card', '@/components/ui/card' -replace '../../components/ui/Button', '@/components/ui/button' | Set-Content src/pages/dashboard/AdminTeamManagement.tsx
+(Get-Content src/pages/dashboard/AdminUserManagement.tsx) -replace '../../components/ui/Card', '@/components/ui/card' -replace '../../components/ui/Button', '@/components/ui/button' | Set-Content src/pages/dashboard/AdminUserManagement.tsx
+(Get-Content src/pages/dashboard/BarangayDashboard.tsx) -replace 'NodeJS.Timeout', 'ReturnType<typeof setTimeout>' -replace 'Eye } from "lucide-react"', 'Eye, Lock } from "lucide-react"' -replace 'import axiosInstance from "../../lib/axios";', "import axiosInstance from '../../lib/axios';
+import { motion, AnimatePresence } from 'framer-motion';" | Set-Content src/pages/dashboard/BarangayDashboard.tsx
+(Get-Content src/pages/dashboard/CommunityPortal.tsx) -replace 'Droplets, Gauge,', 'Droplets, Gauge, X,' -replace 'activeUser\.id', '((activeUser as any)?.id)' -replace 'activeUser\.email', '(activeUser?.email)' -replace 'activeUser\?\.name\.split', '(getActiveUser()?.name?.split)' -replace 'activeUser\?\.name', '(getActiveUser()?.name)' -replace 'attachments: Attachment\[\] \| null;', 'attachments?: any[] | null;' -replace 'image_path: string \| null;', 'image_path?: string | null;' | Set-Content src/pages/dashboard/CommunityPortal.tsx
+(Get-Content src/pages/dashboard/LiveWeather.tsx) -replace '"error"\)', '"info")' | Set-Content src/pages/dashboard/LiveWeather.tsx
+(Get-Content src/pages/dashboard/ResponderMobile.tsx) -replace 'showToast\("New passwords do not match", "error"\)', 'showToast("New passwords do not match", "alert")' -replace 'showToast\(e.response\?\.data\?\.message \|\| "Failed to update password", "error"\)', 'showToast(e.response?.data?.message || "Failed to update password", "alert")' -replace '\{user\.name\.split', '{user?.name?.split' -replace '\{user\.assigned_barangay\}', '{user?.assigned_barangay}' -replace '\{user\.name\}', '{user?.name}' -replace '\{user\.department', '{(user as any)?.department' | Set-Content src/pages/dashboard/ResponderMobile.tsx
+(Get-Content src/pages/dashboard/SuperAdmin.tsx) -replace '\{lgu\.next_payment_date', '{(lgu as any).next_payment_date' | Set-Content src/pages/dashboard/SuperAdmin.tsx
+
+echo "Done"

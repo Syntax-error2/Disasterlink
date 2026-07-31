@@ -38,9 +38,15 @@ export default function BarangayDashboard() {
   const [isLoadingReports, setIsLoadingReports] = useState(true);
 
   // Evacuation Centers State
-  const [activeTab, setActiveTab] = useState<'reports' | 'evacuation' | 'broadcast'>('reports');
+  const [activeTab, setActiveTab] = useState<'reports' | 'evacuation' | 'broadcast' | 'personnel'>('reports');
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  // Personnel State
+  const [representatives, setRepresentatives] = useState<any[]>([]);
+  const [isLoadingPersonnel, setIsLoadingPersonnel] = useState(false);
+  const [showAddPersonnel, setShowAddPersonnel] = useState(false);
+  const [personnelForm, setPersonnelForm] = useState({ name: '', email: '', phone: '', purok: '', password: '' });
 
   // Password State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -90,6 +96,7 @@ export default function BarangayDashboard() {
         setUser(storedUser);
         fetchLocalIncidents(storedUser.assigned_barangay);
         fetchEvacuationCenters(storedUser.assigned_barangay);
+        fetchPersonnel();
       }
     } catch (e) {
       console.warn("Failed to parse user from local storage", e);
@@ -109,6 +116,44 @@ export default function BarangayDashboard() {
       console.warn("API Offline, skipping fetch.");
     } finally {
       setIsLoadingReports(false);
+    }
+  };
+
+  const fetchPersonnel = async () => {
+    setIsLoadingPersonnel(true);
+    try {
+      const response = await axiosInstance.get("/personnel/representatives");
+      setRepresentatives(response.data);
+    } catch (error) {
+      console.warn("Failed to fetch personnel");
+    } finally {
+      setIsLoadingPersonnel(false);
+    }
+  };
+
+  const handleAddPersonnel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await axiosInstance.post("/personnel/representatives", personnelForm);
+      setPersonnelForm({ name: '', email: '', phone: '', purok: '', password: '' });
+      setShowAddPersonnel(false);
+      fetchPersonnel();
+      alert("Representative created successfully!");
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Failed to create representative.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRemovePersonnel = async (id: number) => {
+    if(!confirm("Are you sure you want to remove this representative?")) return;
+    try {
+      await axiosInstance.delete(`/personnel/representatives/${id}`);
+      fetchPersonnel();
+    } catch (error) {
+      alert("Failed to remove representative.");
     }
   };
 
@@ -332,6 +377,12 @@ export default function BarangayDashboard() {
           className={`pb-2 font-semibold text-sm flex items-center gap-1.5 ${activeTab === 'broadcast' ? 'border-b-2 border-amber-500 text-amber-500' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
         >
           <Radio className="h-3 w-3" /> Local Broadcast
+        </button>
+        <button 
+          onClick={() => setActiveTab('personnel')} 
+          className={`pb-2 font-semibold text-sm flex items-center gap-1.5 ${activeTab === 'personnel' ? 'border-b-2 border-indigo-500 text-indigo-500' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
+        >
+          <Users className="h-3 w-3" /> Personnel
         </button>
       </div>
 
@@ -668,6 +719,95 @@ export default function BarangayDashboard() {
               )}
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {activeTab === 'personnel' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
+            <div>
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2"><Users className="h-5 w-5 text-indigo-500"/> Barangay Representatives</h2>
+              <p className="text-sm text-zinc-500">Manage responders assigned to specific puroks/sitios.</p>
+            </div>
+            <button onClick={() => setShowAddPersonnel(!showAddPersonnel)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2">
+              <Plus className="h-4 w-4" /> Add Representative
+            </button>
+          </div>
+
+          {showAddPersonnel && (
+            <Card className="shadow-sm border-indigo-200 dark:border-indigo-900/50">
+              <CardHeader className="bg-indigo-50 dark:bg-indigo-900/10 border-b border-indigo-100 dark:border-indigo-900/30">
+                <CardTitle className="text-base text-indigo-700 dark:text-indigo-400">Create Representative Account</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <form onSubmit={handleAddPersonnel} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-zinc-500 uppercase">Full Name</label>
+                      <input type="text" required value={personnelForm.name} onChange={e => setPersonnelForm({...personnelForm, name: e.target.value})} className="w-full h-10 px-3 mt-1 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-md" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-zinc-500 uppercase">Email (For Login)</label>
+                      <input type="email" required value={personnelForm.email} onChange={e => setPersonnelForm({...personnelForm, email: e.target.value})} className="w-full h-10 px-3 mt-1 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-md" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-zinc-500 uppercase">Assigned Purok / Sitio</label>
+                      <input type="text" required value={personnelForm.purok} onChange={e => setPersonnelForm({...personnelForm, purok: e.target.value})} className="w-full h-10 px-3 mt-1 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-md" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-zinc-500 uppercase">Phone Number</label>
+                      <input type="text" value={personnelForm.phone} onChange={e => setPersonnelForm({...personnelForm, phone: e.target.value})} className="w-full h-10 px-3 mt-1 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-md" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-zinc-500 uppercase">Initial Password</label>
+                      <input type="text" required value={personnelForm.password} onChange={e => setPersonnelForm({...personnelForm, password: e.target.value})} className="w-full h-10 px-3 mt-1 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-md" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button type="button" onClick={() => setShowAddPersonnel(false)} className="px-4 py-2 text-sm font-semibold text-zinc-500">Cancel</button>
+                    <button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md text-sm font-bold flex items-center gap-2">
+                      {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}
+                    </button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          {isLoadingPersonnel ? (
+            <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin text-indigo-500 mx-auto" /></div>
+          ) : representatives.length === 0 ? (
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-8 text-center text-zinc-500">No representatives assigned yet.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {representatives.map(rep => (
+                <div key={rep.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm relative">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-full"><Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" /></div>
+                      <div>
+                        <h3 className="font-bold text-zinc-900 dark:text-white line-clamp-1">{rep.name}</h3>
+                        <p className="text-xs text-zinc-500">{rep.email}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-zinc-50 dark:bg-zinc-950 rounded-lg p-3 mt-4 space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-zinc-500">Assignment:</span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100">{rep.purok}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-zinc-500">Contact:</span>
+                      <span className="font-medium text-zinc-700 dark:text-zinc-300">{rep.phone || 'N/A'}</span>
+                    </div>
+                  </div>
+                  <button onClick={() => handleRemovePersonnel(rep.id)} className="w-full mt-4 bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 text-xs font-bold py-2 rounded transition-colors">
+                    Remove Representative
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

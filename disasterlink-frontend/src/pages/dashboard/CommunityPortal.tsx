@@ -19,6 +19,7 @@ import echo from "../../lib/echo";
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import RoutingMachine from "../../components/RoutingMachine";
 import ErrorBoundary from "../../components/ErrorBoundary";
 
@@ -101,12 +102,53 @@ export default function CommunityPortal() {
     };
   }, []);
 
+  const [proximityAlerts, setProximityAlerts] = useState<any[]>([]);
+
+  // Haversine distance formula (returns meters)
+  const getDistanceInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
   useEffect(() => {
     const userKey = "my_report_ids_" + (((activeUser as any)?.id) || (activeUser?.email) || 'guest');
     const myIds = JSON.parse(localStorage.getItem(userKey) || "[]");
+    
+    // My Reports
     const myActiveReports = (globalIncidents || []).filter((inc: any) => myIds.includes(inc.id));
     setMyReports(myActiveReports);
-  }, [globalIncidents, activeUser]);
+
+    // Proximity 50m SOS Alerts
+    if (globalIncidents) {
+      const activeSOS = globalIncidents.filter((inc: any) => inc.status !== 'Resolved' && inc.status !== 'Dismissed' && !myIds.includes(inc.id));
+      
+      const newProximityAlerts: any[] = [];
+      activeSOS.forEach((sos: any) => {
+        if (sos.latitude && sos.longitude) {
+          const dist = getDistanceInMeters(lat, lng, Number(sos.latitude), Number(sos.longitude));
+          if (dist <= 50) {
+            newProximityAlerts.push({ ...sos, distance: Math.round(dist) });
+          }
+        }
+      });
+
+      // If we detect new proximity alerts that weren't there before, trigger haptics
+      if (newProximityAlerts.length > proximityAlerts.length) {
+        try {
+          Haptics.vibrate();
+          setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1000);
+        } catch(e) {}
+      }
+
+      setProximityAlerts(newProximityAlerts);
+    }
+  }, [globalIncidents, activeUser, lat, lng]);
 
   const fetchMyReports = async () => {
     // Just refresh the global context
@@ -529,7 +571,7 @@ export default function CommunityPortal() {
         </button>
       </div>
 
-      <nav className="h-20 bg-[#111115]/90 backdrop-blur-lg border-t border-white/5 flex items-center justify-around px-2 pb-safe shrink-0 z-40">
+      <nav className="h-20 bg-[#0c0c0e]/95 backdrop-blur-xl border-t border-zinc-800/50 flex items-center justify-around px-2 pb-safe shrink-0 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
         <NavItem icon={Home} label="Home" isActive={activeTab === "home"} onClick={() => setActiveTab("home")} />
         <NavItem icon={MapIcon} label="Map" isActive={activeTab === "map"} onClick={() => setActiveTab("map")} />
         <NavItem icon={PlusCircle} label="Report" isActive={activeTab === "report"} onClick={() => setActiveTab("report")} isPrimary />
@@ -544,7 +586,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, isPrimary }: any) {
   if (isPrimary) {
     return (
       <div className="relative -top-4 flex flex-col items-center z-50">
-        <button onClick={onClick} className={`flex items-center justify-center w-16 h-16 rounded-full border-[5px] border-[#111115] text-white transition-all shadow-2xl hover:scale-105 active:scale-95 ${isActive ? 'bg-red-500 shadow-red-500/50' : 'bg-red-600 shadow-red-600/30'}`}>
+        <button onClick={onClick} className={`flex items-center justify-center w-16 h-16 rounded-full border-[4px] border-[#0c0c0e] text-white transition-all hover:scale-105 active:scale-95 ${isActive ? 'bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.3)]' : 'bg-red-600/80'}`}>
           <Icon className="h-8 w-8" strokeWidth={2.5} />
         </button>
         <span className={`text-[10px] font-bold mt-1 transition-colors ${isActive ? 'text-red-500' : 'text-zinc-400'}`}>{label}</span>
@@ -566,7 +608,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, isPrimary }: any) {
 // ==========================================
 // 3. HOME VIEW
 // ==========================================
-function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, user, myReports, activeBroadcast }: any) {
+function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, user, myReports, activeBroadcast, proximityAlerts }: any) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { logout } = useAuth();
 
@@ -641,6 +683,25 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
         </div>
       )}
 
+      {proximityAlerts && proximityAlerts.length > 0 && (
+        <div className="space-y-3">
+          {proximityAlerts.map((alert: any) => (
+            <div key={alert.id} className="bg-red-600 border border-red-500 rounded-3xl p-5 shadow-lg relative overflow-hidden animate-pulse">
+              <div className="flex items-center gap-2 text-white mb-2">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="font-bold text-sm tracking-widest uppercase">Nearby Emergency SOS</span>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-1">{alert.incident_type}</h3>
+              <p className="text-red-100 text-sm leading-relaxed mb-2">{alert.details}</p>
+              <div className="bg-black/20 rounded-lg p-2 flex items-center justify-between text-white text-xs font-bold">
+                <span>{alert.distance} meters away</span>
+                <span className="flex items-center gap-1"><MapPin className="h-3 w-3"/> {alert.exact_location}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <button 
           onClick={() => {
@@ -660,9 +721,9 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
               window.location.href = `tel:${numberToDial}`;
             }, 800);
           }} 
-          className="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 hover:border-blue-500/50 active:scale-95 p-5 rounded-[24px] flex flex-col items-center justify-center gap-3 transition-all shadow-lg relative overflow-hidden group">
+          className="bg-zinc-900 border border-zinc-800 hover:border-blue-500/30 active:scale-95 p-5 rounded-[24px] flex flex-col items-center justify-center gap-3 transition-all shadow-sm relative overflow-hidden group">
           <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <div className="bg-blue-500/10 p-4 rounded-full text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"><PhoneCall className="h-7 w-7" /></div>
+          <div className="bg-blue-500/10 p-4 rounded-full text-blue-500"><PhoneCall className="h-7 w-7" /></div>
           <span className="text-[13px] font-bold tracking-wide text-zinc-100">Brgy Hotline</span>
         </button>
         <button 
@@ -690,9 +751,9 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
               showToast("Status saved locally (Offline Mode)", "info");
             }
           }} 
-          className={`active:scale-95 border p-5 rounded-[24px] flex flex-col items-center justify-center gap-3 transition-all shadow-lg relative overflow-hidden group ${userStatus === "Safe" ? "bg-gradient-to-br from-emerald-900/40 to-emerald-900/10 border-emerald-500/50" : "bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700/50 hover:border-emerald-500/50"}`}>
+          className={`active:scale-95 border p-5 rounded-[24px] flex flex-col items-center justify-center gap-3 transition-all shadow-sm relative overflow-hidden group ${userStatus === "Safe" ? "bg-emerald-900/10 border-emerald-500/30" : "bg-zinc-900 border-zinc-800 hover:border-emerald-500/30"}`}>
           <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <div className={`${userStatus === "Safe" ? "bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]" : "bg-emerald-500/10 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]"} p-4 rounded-full transition-all`}><ShieldCheck className="h-7 w-7" /></div>
+          <div className={`${userStatus === "Safe" ? "bg-emerald-600 text-white" : "bg-emerald-500/10 text-emerald-500"} p-4 rounded-full transition-all`}><ShieldCheck className="h-7 w-7" /></div>
           <span className="text-[13px] font-bold tracking-wide text-zinc-100">{userStatus === "Safe" ? "Marked Safe" : "I Am Safe"}</span>
         </button>
       </div>
@@ -756,11 +817,11 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 pt-2">
           
           {/* DYNAMIC THREAT CARD */}
-          <div className={`border rounded-3xl p-6 relative overflow-hidden shadow-xl transition-colors duration-500 ${
-            !activeBroadcast ? "bg-gradient-to-br from-zinc-800/80 to-zinc-900 border-zinc-700/50" :
-            activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') ? "bg-gradient-to-br from-red-950/80 to-red-900 border-red-500/50 shadow-red-900/20" :
-            activeBroadcast.includes('ORANGE') ? "bg-gradient-to-br from-orange-950/80 to-orange-900 border-orange-500/50 shadow-orange-900/20" :
-            "bg-gradient-to-br from-yellow-950/80 to-yellow-900 border-yellow-500/50 shadow-yellow-900/20"
+          <div className={`border rounded-3xl p-6 relative overflow-hidden shadow-sm transition-colors duration-500 ${
+            !activeBroadcast ? "bg-zinc-900 border-zinc-800" :
+            activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') ? "bg-red-500/10 border-red-500/30" :
+            activeBroadcast.includes('ORANGE') ? "bg-orange-500/10 border-orange-500/30" :
+            "bg-yellow-500/10 border-yellow-500/30"
           }`}>
              <div className="absolute -top-4 -right-4 p-4 opacity-5">
                {!activeBroadcast ? <ShieldCheck className="h-40 w-40" /> : <AlertTriangle className="h-40 w-40" />}
@@ -768,10 +829,10 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
              
              <div className="relative z-10 flex items-center gap-3 mb-3">
                 <div className={`h-2.5 w-2.5 rounded-full animate-[pulse_2s_ease-in-out_infinite] ${
-                  !activeBroadcast ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" :
-                  activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" :
-                  activeBroadcast.includes('ORANGE') ? "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]" :
-                  "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"
+                  !activeBroadcast ? "bg-emerald-500" :
+                  activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') ? "bg-red-500" :
+                  activeBroadcast.includes('ORANGE') ? "bg-orange-500" :
+                  "bg-yellow-500"
                 }`}></div>
                 <span className={`text-xs font-black tracking-widest uppercase ${
                   !activeBroadcast ? "text-emerald-500" :
@@ -1018,28 +1079,20 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
   
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const simulateAI = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAnalyzing(true);
-      let compressedFile = file;
-      try {
-        const options = {
-          maxSizeMB: 0.3,
-          maxWidthOrHeight: 1280,
-          useWebWorker: true
-        };
-        compressedFile = await imageCompression(file, options);
-      } catch (error) {
-        console.error("Compression error:", error);
-      }
-      setSelectedFile(compressedFile);
-      
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setImagePreview(event.target?.result as string);
+  const takePhotoAndAnalyze = async () => {
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 80,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Prompt
+      });
+
+      if (image.dataUrl) {
+        setAnalyzing(true);
+        setImagePreview(image.dataUrl);
+        
         const img = new Image();
         img.onload = () => {
           const runAI = async () => {
@@ -1055,8 +1108,6 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
 
               const predictionText = predictions.map((p: any) => p.className.toLowerCase()).join(" ");
               
-              console.log("AI Predictions:", predictions);
-
               if (predictionText.includes("flood") || predictionText.includes("water") || predictionText.includes("lake") || predictionText.includes("river") || predictionText.includes("sea") || predictionText.includes("fountain")) {
                 detectedType = "Flood/Water Saturation"; detectedCat = "Flood"; severity = "High";
               } else if (predictionText.includes("fire") || predictionText.includes("smoke") || predictionText.includes("volcano") || predictionText.includes("flame") || predictionText.includes("match")) {
@@ -1089,20 +1140,21 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
 
           runAI();
         };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(compressedFile);
+        img.src = image.dataUrl;
 
-      const fetchReportLoc = async () => {
-        try {
-          const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-          setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-        } catch (e) {
-          console.warn("Location error:", e);
-          setLocation({ lat: 10.1866, lng: 122.8587 });
-        }
-      };
-      fetchReportLoc();
+        const fetchReportLoc = async () => {
+          try {
+            const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+            setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+          } catch (e) {
+            console.warn("Location error:", e);
+            setLocation({ lat: 10.1866, lng: 122.8587 });
+          }
+        };
+        fetchReportLoc();
+      }
+    } catch (error) {
+      console.warn("Camera dismissed or failed", error);
     }
   };
 
@@ -1111,8 +1163,8 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
     setAiResult(null);
     setSelectedCat(null);
     setImagePreview(null);
+    setImagePreview(null);
     setSelectedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSubmit = async () => {
@@ -1153,7 +1205,6 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
       showToast("Report officially submitted to the Command Center!", "success");
       
       setSelectedCat(null); setDesc(""); setAiResult(null); setImagePreview(null); setSelectedFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
       refreshMyReports(); 
       setActiveTab("home");
       
@@ -1172,10 +1223,8 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
         <p className="text-sm text-zinc-400 mt-1">Your report goes directly to the {user.brgy} Captain and MDRRMO.</p>
       </div>
 
-      <input type="file" accept="image/*" capture="environment" className="hidden" ref={fileInputRef} onChange={simulateAI} />
-
       <div 
-        onClick={() => !analyzing && !aiResult && fileInputRef.current?.click()}
+        onClick={() => !analyzing && !aiResult && takePhotoAndAnalyze()}
         className={`relative border-2 border-dashed rounded-3xl overflow-hidden flex flex-col items-center justify-center text-center transition-all min-h-[220px] ${
           aiResult ? 'border-emerald-500/50 bg-emerald-500/10' : 
           analyzing ? 'border-blue-500/50 bg-zinc-900' : 

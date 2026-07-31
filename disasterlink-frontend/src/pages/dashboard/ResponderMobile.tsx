@@ -9,6 +9,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";
 import axiosInstance from "../../lib/axios";
 import { KeepAwake } from '@capacitor-community/keep-awake';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
 // Map Icons
 const responderIcon = L.divIcon({
@@ -142,6 +145,29 @@ export default function ResponderMobile() {
           setStatus("Dispatched");
           setElapsedTime(0);
           showToast("URGENT: New Incident Dispatched to your unit!", "alert");
+          
+          // Trigger Haptics & Notification for Representatives
+          try {
+            Haptics.vibrate();
+            setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1000);
+            
+            TextToSpeech.speak({
+              text: `URGENT. New SOS Incident Dispatched. ${incomingDispatch.incident_type}`,
+              lang: 'en-US',
+              rate: 0.9,
+            }).catch(() => {});
+            
+            LocalNotifications.schedule({
+              notifications: [
+                {
+                  title: "🚨 URGENT DISPATCH",
+                  body: `New SOS assigned to your unit: ${incomingDispatch.incident_type}`,
+                  id: new Date().getTime(),
+                  schedule: { at: new Date(Date.now() + 500) }
+                }
+              ]
+            }).catch(() => {});
+          } catch(e) {}
         }
     } catch (error) {
       console.warn("Silent poll failed - server might be offline.");
@@ -179,7 +205,27 @@ export default function ResponderMobile() {
 
   const handleArrived = () => {
     setStatus("On Scene");
-    showToast("Status updated: Arrived On Scene. Please provide SITREP.", "warning");
+    showToast("Status updated: Arrived On Scene. Please provide SITREP or verify.", "warning");
+  };
+
+  const escalateIncident = async (target: 'kap' | 'mdrrmo') => {
+    if (!incident) return;
+    setIsSubmitting(true);
+    try {
+      await axiosInstance.put(`/incidents/${incident.id}/verify`, { escalation_target: target });
+      
+      // Blacklist it locally so it doesn't reappear
+      setResolvedIds(prev => [...prev, incident.id]);
+      
+      showToast(target === 'kap' ? "Escalated to Barangay Captain." : "Escalated to MDRRMO.", "success");
+      setIncident(null);
+      setStatus("Available");
+      setElapsedTime(0);
+    } catch (e) {
+      showToast("Failed to escalate incident.", "alert");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -557,10 +603,20 @@ export default function ResponderMobile() {
                       <MapPin className="h-5 w-5 group-hover:scale-110 transition-transform" /> UNIT ARRIVED ON SCENE
                     </button>
                   ) : (
-                    <button onClick={handleResolve} disabled={isSubmitting} className="w-full bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 active:scale-95 disabled:opacity-70 disabled:scale-100 text-zinc-950 font-black tracking-wide py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_0_25px_rgba(16,185,129,0.4)] border border-emerald-300/50 group">
-                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
-                      {isSubmitting ? "TRANSMITTING SITREP..." : "SUBMIT REPORT & RESOLVE"}
-                    </button>
+                    <>
+                      <div className="flex gap-2">
+                        <button onClick={() => escalateIncident('kap')} disabled={isSubmitting} className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 active:scale-95 disabled:opacity-70 text-white font-black text-xs tracking-wide py-3 rounded-xl flex items-center justify-center gap-1 transition-all shadow-lg border border-blue-400/30">
+                          <CheckCircle className="h-4 w-4" /> VERIFY (KAP)
+                        </button>
+                        <button onClick={() => escalateIncident('mdrrmo')} disabled={isSubmitting} className="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 active:scale-95 disabled:opacity-70 text-white font-black text-xs tracking-wide py-3 rounded-xl flex items-center justify-center gap-1 transition-all shadow-lg border border-red-400/30">
+                          <AlertTriangle className="h-4 w-4" /> ESCALATE MDRRMO
+                        </button>
+                      </div>
+                      <button onClick={handleResolve} disabled={isSubmitting} className="w-full bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 active:scale-95 disabled:opacity-70 disabled:scale-100 text-zinc-950 font-black tracking-wide py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_0_25px_rgba(16,185,129,0.4)] border border-emerald-300/50 group">
+                        {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
+                        {isSubmitting ? "TRANSMITTING SITREP..." : "SUBMIT REPORT & RESOLVE"}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
