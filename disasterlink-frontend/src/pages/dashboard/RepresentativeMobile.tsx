@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Navigation, CheckCircle, AlertTriangle, CloudRain, Send, Loader2, Activity, ShieldAlert, LogOut, Radio } from "lucide-react";
+import { MapPin, Navigation, CheckCircle, AlertTriangle, CloudRain, Send, Loader2, Activity, ShieldAlert, LogOut, Radio, Home, Map as MapIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axiosInstance from "../../lib/axios";
 import { KeepAwake } from '@capacitor-community/keep-awake';
@@ -21,6 +21,7 @@ export default function RepresentativeMobile() {
   const { incidents } = useIncidents();
   
   // Real-time states
+  const [activeTab, setActiveTab] = useState("home");
   const [incident, setIncident] = useState<any | null>(null);
   const [status, setStatus] = useState<"Available" | "Dispatched">("Available");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,7 +194,9 @@ export default function RepresentativeMobile() {
         <AnimatePresence mode="wait">
           {status === "Available" ? (
             <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-h-full pb-20">
-              {/* Premium Dashboard Header - Dark Minimalist */}
+              {activeTab === "home" && (
+                <>
+                  {/* Premium Dashboard Header - Dark Minimalist */}
               <div className="bg-zinc-950/90 backdrop-blur-md px-6 pt-12 pb-6 border-b border-zinc-800 relative overflow-hidden">
                 <div className="relative z-10 flex items-center justify-between">
                   <div>
@@ -316,6 +319,45 @@ export default function RepresentativeMobile() {
                 </div>
 
               </div>
+                </>
+              )}
+
+              {activeTab === "map" && (
+                <div className="h-full w-full flex flex-col relative">
+                  <div className="bg-zinc-950/90 backdrop-blur-md px-6 py-4 border-b border-zinc-800 z-10">
+                    <h2 className="text-white font-bold tracking-wide flex items-center gap-2">
+                      <MapIcon className="h-5 w-5 text-indigo-500" /> Jurisdictional Radar
+                    </h2>
+                  </div>
+                  <div className="flex-1 w-full relative z-0">
+                    <MapContainer 
+                      center={[user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866, user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587]} 
+                      zoom={14} 
+                      zoomControl={false} 
+                      className="h-full w-full bg-zinc-950"
+                    >
+                      <TileLayer
+                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                      />
+                      <Circle center={[user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866, user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587]} radius={800} pathOptions={{ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.1 }} />
+                      
+                      {activeLocalIncidents.map((inc: any) => (
+                        <Marker 
+                          key={inc.id} 
+                          position={[Number(inc.latitude), Number(inc.longitude)]} 
+                          icon={evacIcon}
+                        >
+                          <Popup className="custom-popup">
+                            <div className="font-bold text-red-600 mb-1">{inc.incident_type}</div>
+                            <div className="text-xs text-zinc-600">{inc.exact_location}</div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MapContainer>
+                  </div>
+                </div>
+              )}
             </motion.div>
           ) : (
             <motion.div key="dispatch" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="min-h-full bg-red-950 p-6 pt-12 pb-32">
@@ -376,6 +418,17 @@ export default function RepresentativeMobile() {
           )}
         </AnimatePresence>
       </main>
+
+      <nav className="h-20 bg-[#0c0c0e]/95 backdrop-blur-xl border-t border-zinc-800/50 flex items-center justify-around px-8 pb-safe shrink-0 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+        <button onClick={() => setActiveTab("home")} className={`flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === "home" ? 'text-indigo-500' : 'text-zinc-500'}`}>
+          <Home className="h-6 w-6" strokeWidth={activeTab === "home" ? 2.5 : 2} />
+          <span className="text-[10px] font-bold">Home</span>
+        </button>
+        <button onClick={() => setActiveTab("map")} className={`flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === "map" ? 'text-indigo-500' : 'text-zinc-500'}`}>
+          <MapIcon className="h-6 w-6" strokeWidth={activeTab === "map" ? 2.5 : 2} />
+          <span className="text-[10px] font-bold">Map</span>
+        </button>
+      </nav>
     </div>
   );
 }
