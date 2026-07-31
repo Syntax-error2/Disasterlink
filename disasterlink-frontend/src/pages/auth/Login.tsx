@@ -79,7 +79,11 @@ export default function Login() {
           } else if (userRole === 'barangay_captain') {
             navigate("/barangay-command"); // Send to Localized Dashboard
           } else if (userRole === 'responder') {
-            navigate("/responder-dispatch"); // Send to Mobile Field UI
+            if (user?.barangay || user?.assigned_barangay) {
+              navigate("/representative-dashboard");
+            } else {
+              navigate("/responder-dispatch"); // Send to Mobile Field UI
+            }
           } else if (userRole === 'resident' || userRole === 'citizen') {
             navigate("/portal"); // Send to Community Portal
           } else {

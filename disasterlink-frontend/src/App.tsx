@@ -27,6 +27,7 @@ const LiveWeather = lazyWithDelay(() => import("./pages/dashboard/LiveWeather"))
 const EmergencyAlerts = lazyWithDelay(() => import("./pages/dashboard/EmergencyAlerts"));
 const Settings = lazyWithDelay(() => import("./pages/dashboard/Settings"));
 const ResponderMobile = lazyWithDelay(() => import("./pages/dashboard/ResponderMobile"), 0);
+const RepresentativeMobile = lazyWithDelay(() => import("./pages/dashboard/RepresentativeMobile"), 0);
 const BarangayDashboard = lazyWithDelay(() => import("./pages/dashboard/BarangayDashboard"), 0);
 const CommunityPortal = lazyWithDelay(() => import("./pages/dashboard/CommunityPortal"), 0);
 const SuperAdmin = lazyWithDelay(() => import("./pages/dashboard/SuperAdmin"), 0);
@@ -56,7 +57,10 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
       // Prevent privilege escalation and redirect to appropriate dashboards
       if (user.role === 'superadmin') return <Navigate to="/superadmin" replace />;
       if (user.role === 'resident' || user.role === 'citizen') return <Navigate to="/portal" replace />;
-      if (user.role === 'responder') return <Navigate to="/responder-dispatch" replace />;
+      if (user.role === 'responder') {
+        if (user.barangay || user.assigned_barangay) return <Navigate to="/representative-dashboard" replace />;
+        return <Navigate to="/responder-dispatch" replace />;
+      }
       if (user.role === 'barangay_captain') return <Navigate to="/barangay-command" replace />;
       return <Navigate to="/login" replace />;
     }
@@ -88,6 +92,7 @@ export default function App() {
               {/* Mobile-First Routes (No Sidebar) */}
               <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdmin /></ProtectedRoute>} />
               <Route path="/responder-dispatch" element={<ProtectedRoute allowedRoles={['responder']}><ResponderMobile /></ProtectedRoute>} />
+              <Route path="/representative-dashboard" element={<ProtectedRoute allowedRoles={['responder']}><RepresentativeMobile /></ProtectedRoute>} />
               <Route path="/portal" element={<ProtectedRoute allowedRoles={['resident', 'citizen']}><CommunityPortal /></ProtectedRoute>} />
 
               {/* Admin & Barangay Dashboard Routes (With Sidebar) */}
