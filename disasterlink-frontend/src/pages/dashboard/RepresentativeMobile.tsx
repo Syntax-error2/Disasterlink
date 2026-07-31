@@ -11,7 +11,10 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { useIncidents } from "../../context/IncidentsContext";
 import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { Geolocation } from '@capacitor/geolocation';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6 w-6 bg-red-600 rounded-full border-2 border-white flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.8)] animate-pulse"></div>`, iconSize: [24, 24] });
 
@@ -22,7 +25,13 @@ export default function RepresentativeMobile() {
   
   // Real-time states
   const [activeTab, setActiveTab] = useState("home");
+  const [userLoc, setUserLoc] = useState<[number, number]>([10.1866, 122.8587]);
   const [incident, setIncident] = useState<any | null>(null);
+  
+  // Report Form States
+  const [reportType, setReportType] = useState("General Hazard");
+  const [reportDesc, setReportDesc] = useState("");
+  const [reportImage, setReportImage] = useState<string | null>(null);
   const [status, setStatus] = useState<"Available" | "Dispatched">("Available");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resolvedIds, setResolvedIds] = useState<string[]>([]);
@@ -125,13 +134,24 @@ export default function RepresentativeMobile() {
   };
 
   // ==========================================
-  // FETCH WEATHER DATA
+  // FETCH WEATHER AND LOCATION DATA
   // ==========================================
   useEffect(() => {
-    const fetchWeather = async () => {
+    const fetchLocationAndWeather = async () => {
+      let lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
+      let lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
+      
       try {
-        const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
-        const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
+        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+        lat = position.coords.latitude;
+        lng = position.coords.longitude;
+        setUserLoc([lat, lng]);
+      } catch (err) {
+        console.warn("Location error, using fallback.", err);
+        setUserLoc([lat, lng]);
+      }
+
+      try {
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila`;
         const response = await fetch(url);
         const data = await response.json();
@@ -140,10 +160,50 @@ export default function RepresentativeMobile() {
         console.warn("Weather fetch failed");
       }
     };
-    fetchWeather();
-    const weatherInterval = setInterval(fetchWeather, 15000);
+    fetchLocationAndWeather();
+    const weatherInterval = setInterval(fetchLocationAndWeather, 15000);
     return () => clearInterval(weatherInterval);
   }, [user]);
+
+  const submitLocalReport = async () => {
+    if (!reportDesc) return showToast("Description is required", "alert");
+    setIsSubmitting(true);
+    try {
+      await axiosInstance.post("/incidents", {
+        incident_type: reportType,
+        severity_level: "Medium",
+        reporting_barangay: user?.assigned_barangay || "Unknown",
+        exact_location: "Representative Location",
+        details: reportDesc,
+        latitude: userLoc[0],
+        longitude: userLoc[1],
+        status: "Active", // Auto-active for Reps
+        source: "Representative"
+      });
+      showToast("Report submitted to MDRRMO successfully", "success");
+      setReportDesc("");
+      setReportImage(null);
+      setActiveTab("home");
+    } catch (e) {
+      showToast("Failed to submit report", "alert");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const capturePhoto = async () => {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 80,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Prompt
+      });
+      setReportImage(image.dataUrl || null);
+    } catch (e) {
+      console.warn("User cancelled photo");
+    }
+  };
 
   // ==========================================
   // RESPONDER ACTION CONTROLS
@@ -257,7 +317,7 @@ export default function RepresentativeMobile() {
                   </Card>
 
                   {/* Submit Report */}
-                  <Card className="bg-indigo-600 border border-indigo-500 rounded-3xl shadow-[0_0_20px_rgba(79,70,229,0.3)] overflow-hidden hover:bg-indigo-500 transition-colors cursor-pointer" onClick={() => navigate('/portal')}>
+                  <Card className="bg-indigo-600 border border-indigo-500 rounded-3xl shadow-[0_0_20px_rgba(79,70,229,0.3)] overflow-hidden hover:bg-indigo-500 transition-colors cursor-pointer" onClick={() => setActiveTab('report')}>
                     <CardContent className="p-5 flex flex-col items-center justify-center text-center gap-3 h-full">
                       <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
                         <Send className="h-6 w-6 text-white" />
@@ -284,23 +344,24 @@ export default function RepresentativeMobile() {
                 </button>
 
                 {/* Local Area Map */}
-                <div className="mt-8 mb-8">
+                <div className="mt-8 mb-4">
                   <div className="flex items-center gap-2 mb-3">
                     <MapPin className="h-5 w-5 text-indigo-500" />
                     <h3 className="text-zinc-300 font-bold tracking-tight">Your Jurisdiction</h3>
                   </div>
                   <div className="h-64 w-full rounded-3xl overflow-hidden border border-zinc-800 shadow-lg relative z-0">
                     <MapContainer 
-                      center={[user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866, user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587]} 
+                      center={userLoc} 
                       zoom={14} 
                       zoomControl={false} 
                       className="h-full w-full bg-zinc-950"
+                      key={`home-map-${userLoc[0]}-${userLoc[1]}`}
                     >
                       <TileLayer
                         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                       />
-                      <Circle center={[user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866, user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587]} radius={800} pathOptions={{ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.1 }} />
+                      <Circle center={userLoc} radius={800} pathOptions={{ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.1 }} />
                       
                       {activeLocalIncidents.map((inc: any) => (
                         <Marker 
@@ -331,16 +392,17 @@ export default function RepresentativeMobile() {
                   </div>
                   <div className="flex-1 w-full relative z-0">
                     <MapContainer 
-                      center={[user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866, user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587]} 
+                      center={userLoc} 
                       zoom={14} 
                       zoomControl={false} 
                       className="h-full w-full bg-zinc-950"
+                      key={`full-map-${userLoc[0]}-${userLoc[1]}`}
                     >
                       <TileLayer
                         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                       />
-                      <Circle center={[user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866, user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587]} radius={800} pathOptions={{ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.1 }} />
+                      <Circle center={userLoc} radius={800} pathOptions={{ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.1 }} />
                       
                       {activeLocalIncidents.map((inc: any) => (
                         <Marker 
@@ -355,6 +417,50 @@ export default function RepresentativeMobile() {
                         </Marker>
                       ))}
                     </MapContainer>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "report" && (
+                <div className="p-6">
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-black text-white">File Report</h2>
+                    <p className="text-zinc-400 text-sm">Directly report hazards to MDRRMO.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Incident Type</label>
+                      <select value={reportType} onChange={(e) => setReportType(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl p-4 appearance-none">
+                        <option>General Hazard</option>
+                        <option>Flood</option>
+                        <option>Fire</option>
+                        <option>Medical Emergency</option>
+                        <option>Landslide</option>
+                        <option>Crime / Violence</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Description</label>
+                      <textarea value={reportDesc} onChange={(e) => setReportDesc(e.target.value)} placeholder="Describe the situation..." className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl p-4 min-h-[120px]" />
+                    </div>
+
+                    {reportImage && (
+                      <div className="relative h-48 w-full rounded-2xl overflow-hidden border border-zinc-800">
+                        <img src={reportImage} alt="Preview" className="w-full h-full object-cover" />
+                        <button onClick={() => setReportImage(null)} className="absolute top-2 right-2 h-8 w-8 bg-black/50 rounded-full flex items-center justify-center text-white backdrop-blur-md">X</button>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <button onClick={capturePhoto} className="bg-zinc-900 border border-zinc-700 text-white rounded-xl p-4 font-bold flex items-center justify-center gap-2 hover:bg-zinc-800">
+                        <Camera className="h-5 w-5" /> Photo
+                      </button>
+                      <button onClick={submitLocalReport} disabled={isSubmitting} className="bg-indigo-600 text-white rounded-xl p-4 font-black flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:bg-indigo-500 disabled:opacity-50">
+                        {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />} Submit
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
