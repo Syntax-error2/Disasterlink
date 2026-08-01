@@ -32,6 +32,7 @@ export default function RepresentativeMobile() {
   const [reportType, setReportType] = useState("General Hazard");
   const [reportDesc, setReportDesc] = useState("");
   const [reportImage, setReportImage] = useState<string | null>(null);
+  const [verifyImage, setVerifyImage] = useState<string | null>(null);
   const [status, setStatus] = useState<"Available" | "Dispatched">("Available");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resolvedIds, setResolvedIds] = useState<string[]>([]);
@@ -101,8 +102,40 @@ export default function RepresentativeMobile() {
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${userLoc[0]}&longitude=${userLoc[1]}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila`;
         const response = await fetch(url);
         const data = await response.json();
-        setWeather(data.current);
-        sessionStorage.setItem('cp_weather_cache', JSON.stringify(data.current));
+        
+        const currentData = data.current;
+        setWeather(currentData);
+        sessionStorage.setItem('cp_weather_cache', JSON.stringify(currentData));
+        
+        // Push notification for Threat Level changes
+        const rainProb = currentData.precipitation_probability ?? 0;
+        let threat = "Low Threat";
+        if (rainProb > 80) threat = "High Alert";
+        else if (rainProb > 50) threat = "Moderate to High";
+        else if (rainProb > 20) threat = "Low to Moderate";
+        
+        const lastThreat = localStorage.getItem('last_threat_level');
+        if (lastThreat !== threat) {
+            localStorage.setItem('last_threat_level', threat);
+            try {
+                const permStatus = await LocalNotifications.checkPermissions();
+                if (permStatus.display === 'prompt') {
+                    await LocalNotifications.requestPermissions();
+                }
+                if (lastThreat) { // Only notify if it's a change from a previous known state, not on first load
+                  await LocalNotifications.schedule({
+                      notifications: [
+                          {
+                              title: `Threat Level Updated: ${threat}`,
+                              body: `Local conditions have changed. Open app to verify.`,
+                              id: new Date().getTime(),
+                              schedule: { at: new Date(Date.now() + 1000) }
+                          }
+                      ]
+                  });
+                }
+            } catch (e) {}
+        }
       } catch (e) {
         console.warn("Weather fetch failed");
         setWeather({ temperature_2m: 31.5, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010, precipitation_probability: 25 });
@@ -275,15 +308,25 @@ export default function RepresentativeMobile() {
     if (!incident) return;
     setIsSubmitting(true);
     try {
-      await axiosInstance.post(`/incidents/${incident.id}/verify`, { escalation_target: target });
+      await axiosInstance.post(`/incidents/${incident.id}/verify`, { escalation_target: target, image: verifyImage });
       setResolvedIds(prev => [...prev, incident.id]);
       showToast(target === 'kap' ? "Escalated to Barangay Captain." : "Escalated to MDRRMO.", "success");
       setIncident(null);
+      setVerifyImage(null);
       setStatus("Available");
     } catch (e) {
       showToast("Failed to escalate incident.", "alert");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const captureVerifyPhoto = async () => {
+    try {
+      const image = await Camera.getPhoto({ quality: 80, allowEditing: false, resultType: CameraResultType.DataUrl, source: CameraSource.Prompt });
+      setVerifyImage(image.dataUrl || null);
+    } catch (e) {
+      console.warn("User cancelled photo");
     }
   };
 
@@ -313,7 +356,7 @@ export default function RepresentativeMobile() {
       </AnimatePresence>
 
       {/* DYNAMIC DASHBOARD OR SOS ALERT VIEW */}
-      <main className="flex-1 overflow-y-auto relative custom-scrollbar">
+      <main className={`flex-1 relative ${activeTab === 'home' ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
         <AnimatePresence mode="wait">
           {status === "Available" ? (
             <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-h-full pb-20">
@@ -364,7 +407,7 @@ export default function RepresentativeMobile() {
 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Local Alerts */}
-                  <Card className="bg-zinc-900 border border-zinc-800 rounded-3xl shadow-lg overflow-hidden hover:bg-zinc-800/80 transition-colors cursor-pointer" onClick={() => navigate('/portal')}>
+                  <Card className="bg-zinc-900 border border-zinc-800 rounded-3xl shadow-lg overflow-hidden hover:bg-zinc-800/80 transition-colors cursor-pointer" onClick={() => setActiveTab('map')}>
                     <CardContent className="p-5 flex flex-col items-center justify-center text-center gap-3">
                       <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20 relative">
                         {activeLocalIncidents.length > 0 && (
@@ -451,9 +494,13 @@ export default function RepresentativeMobile() {
                           position={[Number(inc.latitude), Number(inc.longitude)]} 
                           icon={evacIcon}
                         >
-                          <Popup className="custom-popup">
+                          <Popup className="custom-popup min-w-[200px]">
                             <div className="font-bold text-red-600 mb-1">{inc.incident_type}</div>
-                            <div className="text-xs text-zinc-600">{inc.exact_location}</div>
+                            <div className="text-xs text-zinc-600 mb-3">{inc.exact_location}</div>
+                            <div className="flex gap-2">
+                              <a href={`https://www.google.com/maps/dir/?api=1&destination=${inc.latitude},${inc.longitude}`} target="_blank" rel="noreferrer" className="flex-1 bg-zinc-100 text-zinc-700 text-[10px] font-bold py-1.5 rounded text-center border border-zinc-200">Directions</a>
+                              <button onClick={() => { setIncident(inc); setStatus("Dispatched"); }} className="flex-1 bg-red-600 text-white text-[10px] font-bold py-1.5 rounded text-center shadow">Verify</button>
+                            </div>
                           </Popup>
                         </Marker>
                       ) : null)}
@@ -566,6 +613,24 @@ export default function RepresentativeMobile() {
                       "{incident.details}"
                     </div>
                   )}
+
+                  {/* Photo Verification Block */}
+                  <div className="bg-zinc-950/80 p-4 rounded-2xl border border-zinc-800/80 shadow-inner">
+                    <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Field Verification Photo</div>
+                    {verifyImage ? (
+                      <div className="relative rounded-xl overflow-hidden border border-zinc-700">
+                        <img src={verifyImage} alt="Verification" className="w-full h-40 object-cover" />
+                        <button onClick={() => setVerifyImage(null)} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg">
+                          <AlertTriangle className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={captureVerifyPhoto} className="w-full h-24 border-2 border-dashed border-zinc-700 rounded-xl flex flex-col items-center justify-center text-zinc-500 hover:text-zinc-300 hover:border-zinc-500 transition-colors">
+                        <CameraIcon className="h-6 w-6 mb-2" />
+                        <span className="text-xs font-bold">Capture Photo</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
