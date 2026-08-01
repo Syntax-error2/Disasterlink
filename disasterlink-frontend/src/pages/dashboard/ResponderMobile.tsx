@@ -120,7 +120,7 @@ export default function ResponderMobile() {
           status: status
         });
       } catch (e) {}
-    }, 10000);
+    }, 30000); // 30 seconds (reduced from 10s to save battery in the field)
     return () => clearInterval(pingInterval);
   }, [responderLocation, status, incident]);
 

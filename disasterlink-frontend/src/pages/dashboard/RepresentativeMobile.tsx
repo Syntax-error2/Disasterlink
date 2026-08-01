@@ -99,14 +99,17 @@ export default function RepresentativeMobile() {
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${userLoc[0]}&longitude=${userLoc[1]}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila`;
-        const response = await fetch(url);
-        const data = await response.json();
+        // [PHASE 2 - FCM PUSH NOTIFICATIONS]
+        // Note: For true background reliability when the app is completely closed, 
+        // migrate this local threat logic to the Laravel backend using Firebase Cloud Messaging (FCM).
+        const response = await axiosInstance.get('/telemetry');
+        const currentData = response.data.weather?.current;
         
-        const currentData = data.current;
+        if (!currentData) throw new Error("Missing weather data from backend cache");
+        
         setWeather(currentData);
         sessionStorage.setItem('cp_weather_cache', JSON.stringify(currentData));
-        
+
         // Push notification for Threat Level changes
         const rainProb = currentData.precipitation_probability ?? 0;
         let threat = "Low Threat";
@@ -144,12 +147,13 @@ export default function RepresentativeMobile() {
             } catch (e) {}
         }
       } catch (e) {
-        console.warn("Weather fetch failed");
+        console.warn("Weather fetch failed. Falling back to default data.", e);
         setWeather({ temperature_2m: 31.5, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010, precipitation_probability: 25 });
       }
     };
     fetchWeather();
-    const weatherInterval = setInterval(fetchWeather, 15000);
+    // Poll every 5 minutes (300,000 ms) instead of 15 seconds to save battery and reduce backend load
+    const weatherInterval = setInterval(fetchWeather, 5 * 60 * 1000);
     return () => clearInterval(weatherInterval);
   }, [userLoc[0], userLoc[1]]);
 
