@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { PushNotifications } from '@capacitor/push-notifications';
+import axiosInstance from '../lib/axios';
 
 interface User {
     id: number;
@@ -32,11 +34,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     const [token, setToken] = useState<string | null>(() => localStorage.getItem('auth_token'));
 
-    const login = (newToken: string, newUser: User) => {
+    const login = async (newToken: string, newUser: User) => {
         setToken(newToken);
         setUser(newUser);
         localStorage.setItem('auth_token', newToken);
         localStorage.setItem('user', JSON.stringify(newUser));
+
+        // Register for FCM Push Notifications
+        try {
+            let permStatus = await PushNotifications.checkPermissions();
+            if (permStatus.receive === 'prompt') {
+                permStatus = await PushNotifications.requestPermissions();
+            }
+            if (permStatus.receive === 'granted') {
+                await PushNotifications.register();
+                PushNotifications.addListener('registration', async (token: any) => {
+                    try {
+                        await axiosInstance.post('/fcm-token', { token: token.value }, {
+                            headers: { Authorization: `Bearer ${newToken}` }
+                        });
+                    } catch (e) {
+                        console.error('Failed to update FCM token', e);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Push notification registration failed', e);
+        }
     };
 
     const logout = () => {
