@@ -181,6 +181,12 @@ export default function CommunityPortal() {
         const userKey = activeUser?.id || 'guest';
         const lastThreat = localStorage.getItem(`last_threat_level_${userKey}`);
         
+        let displayThreat = threat;
+        if (threat === "Moderate to High" || threat === "Low to Moderate") {
+            displayThreat += " Rain";
+        }
+        const lguName = activeUser?.lgu?.name || "your area";
+        
         if (lastThreat !== threat) {
             localStorage.setItem(`last_threat_level_${userKey}`, threat);
             try {
@@ -192,7 +198,7 @@ export default function CommunityPortal() {
                 await LocalNotifications.schedule({
                     notifications: [
                         {
-                            title: `🚨 THREAT LEVEL: ${threat}`,
+                            title: `🚨 ${displayThreat} in ${lguName}`,
                             body: `Local weather conditions are currently ${threat}. Stay safe!`,
                             id: Math.floor(Math.random() * 1000000),
                             schedule: { at: new Date(Date.now() + 1000) }
