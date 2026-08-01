@@ -162,7 +162,7 @@ export default function ResponderMobile() {
                 {
                   title: "🚨 URGENT DISPATCH",
                   body: `New SOS assigned to your unit: ${incomingDispatch.incident_type}`,
-                  id: new Date().getTime(),
+                  id: Math.floor(Math.random() * 1000000),
                   schedule: { at: new Date(Date.now() + 500) }
                 }
               ]
