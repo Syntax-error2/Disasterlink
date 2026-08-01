@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Navigation, CheckCircle, AlertTriangle, CloudRain, Send, Loader2, Activity, ShieldAlert, LogOut, Radio, Home, Map as MapIcon, Thermometer, Wind, Droplets } from "lucide-react";
+import { MapPin, Navigation, CheckCircle, AlertTriangle, CloudRain, Send, Loader2, Activity, ShieldAlert, LogOut, Radio, Home, Map as MapIcon, Thermometer, Wind, Droplets, Camera as CameraIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axiosInstance from "../../lib/axios";
 import { KeepAwake } from '@capacitor-community/keep-awake';
@@ -406,44 +406,7 @@ export default function RepresentativeMobile() {
                   <Navigation className="h-4 w-4 text-zinc-600 group-hover:text-zinc-300 transition-colors" />
                 </button>
 
-                {/* Local Area Map */}
-                <div className="mt-8 mb-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <MapPin className="h-5 w-5 text-indigo-500" />
-                    <h3 className="text-zinc-300 font-bold tracking-tight">Your Jurisdiction</h3>
-                  </div>
-                  <div className="h-64 w-full rounded-3xl overflow-hidden border border-zinc-800 shadow-lg relative z-0">
-                    <MapContainer 
-                      center={userLoc} 
-                      zoom={14} 
-                      zoomControl={false} 
-                      className="h-full w-full bg-zinc-950"
-                      key={`home-map-${userLoc[0]}-${userLoc[1]}`}
-                    >
-                      <TileLayer
-                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                      />
-                      <Circle center={userLoc} radius={800} pathOptions={{ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.1 }} />
-                      
-                      {activeLocalIncidents.map((inc: any) => (
-                        <Marker 
-                          key={inc.id} 
-                          position={[Number(inc.latitude), Number(inc.longitude)]} 
-                          icon={evacIcon}
-                        >
-                          <Popup className="custom-popup">
-                            <div className="font-bold text-red-600 mb-1">{inc.incident_type}</div>
-                            <div className="text-xs text-zinc-600">{inc.exact_location}</div>
-                          </Popup>
-                        </Marker>
-                      ))}
-                    </MapContainer>
-                  </div>
-                </div>
-
-              </div>
-                </>
+                </button>
               )}
 
               {activeTab === "map" && (
@@ -471,7 +434,7 @@ export default function RepresentativeMobile() {
                   <div className="flex-1 w-full relative z-0">
                     <MapContainer 
                       center={userLoc} 
-                      zoom={14} 
+                      zoom={16} 
                       zoomControl={false} 
                       className="h-full w-full bg-zinc-950"
                       key={`full-map-${userLoc[0]}-${userLoc[1]}`}
@@ -482,7 +445,7 @@ export default function RepresentativeMobile() {
                       />
                       <Circle center={userLoc} radius={800} pathOptions={{ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.1 }} />
                       
-                      {activeLocalIncidents.map((inc: any) => (
+                      {activeLocalIncidents.map((inc: any) => inc.latitude && inc.longitude ? (
                         <Marker 
                           key={inc.id} 
                           position={[Number(inc.latitude), Number(inc.longitude)]} 
@@ -493,7 +456,7 @@ export default function RepresentativeMobile() {
                             <div className="text-xs text-zinc-600">{inc.exact_location}</div>
                           </Popup>
                         </Marker>
-                      ))}
+                      ) : null)}
                     </MapContainer>
                   </div>
                 </div>
@@ -533,7 +496,7 @@ export default function RepresentativeMobile() {
 
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button onClick={capturePhoto} className="bg-zinc-900 border border-zinc-700 text-white rounded-xl p-4 font-bold flex items-center justify-center gap-2 hover:bg-zinc-800">
-                        <Camera className="h-5 w-5" /> Photo
+                        <CameraIcon className="h-5 w-5" /> Photo
                       </button>
                       <button onClick={submitLocalReport} disabled={isSubmitting} className="bg-indigo-600 text-white rounded-xl p-4 font-black flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:bg-indigo-500 disabled:opacity-50">
                         {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />} Submit
