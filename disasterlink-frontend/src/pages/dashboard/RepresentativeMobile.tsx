@@ -405,9 +405,9 @@ export default function RepresentativeMobile() {
                   </div>
                   <Navigation className="h-4 w-4 text-zinc-600 group-hover:text-zinc-300 transition-colors" />
                 </button>
-
-                </button>
-              )}
+              </div>
+            </>
+          )}
 
               {activeTab === "map" && (
                 <div className="fixed inset-0 pb-20 flex flex-col z-0 bg-zinc-950">
