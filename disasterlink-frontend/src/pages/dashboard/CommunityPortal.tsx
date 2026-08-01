@@ -192,9 +192,9 @@ export default function CommunityPortal() {
                 await LocalNotifications.schedule({
                     notifications: [
                         {
-                            title: `Threat Level Updated: ${threat}`,
-                            body: `Local conditions have changed. Stay safe!`,
-                            id: new Date().getTime(),
+                            title: `🚨 THREAT LEVEL: ${threat}`,
+                            body: `Local weather conditions are currently ${threat}. Stay safe!`,
+                            id: Math.floor(Math.random() * 1000000),
                             schedule: { at: new Date(Date.now() + 1000) }
                         }
                     ]

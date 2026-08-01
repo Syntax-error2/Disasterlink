@@ -128,9 +128,9 @@ export default function RepresentativeMobile() {
                 await LocalNotifications.schedule({
                     notifications: [
                         {
-                            title: `Threat Level Updated: ${threat}`,
-                            body: `Local conditions have changed. Open app to verify.`,
-                            id: new Date().getTime(),
+                            title: `🚨 THREAT LEVEL: ${threat}`,
+                            body: `Local weather conditions are currently ${threat}. Please open the app to verify your area.`,
+                            id: Math.floor(Math.random() * 1000000),
                             schedule: { at: new Date(Date.now() + 1000) }
                         }
                     ]
@@ -196,7 +196,7 @@ export default function RepresentativeMobile() {
                 {
                   title: "🚨 URGENT SOS ALERT",
                   body: `Emergency in your jurisdiction: ${incomingDispatch.incident_type}`,
-                  id: new Date().getTime(),
+                  id: Math.floor(Math.random() * 1000000),
                   schedule: { at: new Date(Date.now() + 500) }
                 }
               ]
