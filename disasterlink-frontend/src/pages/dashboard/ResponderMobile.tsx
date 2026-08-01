@@ -160,7 +160,7 @@ export default function ResponderMobile() {
             LocalNotifications.schedule({
               notifications: [
                 {
-                  title: "🚨 URGENT DISPATCH",
+                  title: `🚨 URGENT DISPATCH @ ${incomingDispatch.exact_location}, Brgy. ${incomingDispatch.reporting_barangay}`,
                   body: `New SOS assigned to your unit: ${incomingDispatch.incident_type}`,
                   id: Math.floor(Math.random() * 1000000),
                   schedule: { at: new Date(Date.now() + 500) }
