@@ -167,8 +167,40 @@ export default function CommunityPortal() {
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila`;
         const response = await fetch(url);
         const data = await response.json();
-        setWeather(data.current);
-        sessionStorage.setItem('cp_weather_cache', JSON.stringify(data.current));
+        const currentData = data.current;
+        setWeather(currentData);
+        sessionStorage.setItem('cp_weather_cache', JSON.stringify(currentData));
+
+        // Push notification for Threat Level changes
+        const rainProb = currentData.precipitation_probability ?? 0;
+        let threat = "Low Threat";
+        if (rainProb > 80) threat = "High Alert";
+        else if (rainProb > 50) threat = "Moderate to High";
+        else if (rainProb > 20) threat = "Low to Moderate";
+        
+        const userKey = activeUser?.id || 'guest';
+        const lastThreat = localStorage.getItem(`last_threat_level_${userKey}`);
+        
+        if (lastThreat !== threat) {
+            localStorage.setItem(`last_threat_level_${userKey}`, threat);
+            try {
+                const permStatus = await LocalNotifications.checkPermissions();
+                if (permStatus.display === 'prompt') {
+                    await LocalNotifications.requestPermissions();
+                }
+                
+                await LocalNotifications.schedule({
+                    notifications: [
+                        {
+                            title: `Threat Level Updated: ${threat}`,
+                            body: `Local conditions have changed. Stay safe!`,
+                            id: new Date().getTime(),
+                            schedule: { at: new Date(Date.now() + 1000) }
+                        }
+                    ]
+                });
+            } catch (e) {}
+        }
       } catch (e) {
         console.warn("Weather fetch failed");
         setWeather({ temperature_2m: 31.5, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010, precipitation_probability: 25 });

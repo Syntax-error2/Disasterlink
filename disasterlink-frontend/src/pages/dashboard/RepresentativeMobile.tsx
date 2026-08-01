@@ -114,26 +114,27 @@ export default function RepresentativeMobile() {
         else if (rainProb > 50) threat = "Moderate to High";
         else if (rainProb > 20) threat = "Low to Moderate";
         
-        const lastThreat = localStorage.getItem('last_threat_level');
+        const userKey = user?.id || 'guest';
+        const lastThreat = localStorage.getItem(`last_threat_level_${userKey}`);
+        
         if (lastThreat !== threat) {
-            localStorage.setItem('last_threat_level', threat);
+            localStorage.setItem(`last_threat_level_${userKey}`, threat);
             try {
                 const permStatus = await LocalNotifications.checkPermissions();
                 if (permStatus.display === 'prompt') {
                     await LocalNotifications.requestPermissions();
                 }
-                if (lastThreat) { // Only notify if it's a change from a previous known state, not on first load
-                  await LocalNotifications.schedule({
-                      notifications: [
-                          {
-                              title: `Threat Level Updated: ${threat}`,
-                              body: `Local conditions have changed. Open app to verify.`,
-                              id: new Date().getTime(),
-                              schedule: { at: new Date(Date.now() + 1000) }
-                          }
-                      ]
-                  });
-                }
+                
+                await LocalNotifications.schedule({
+                    notifications: [
+                        {
+                            title: `Threat Level Updated: ${threat}`,
+                            body: `Local conditions have changed. Open app to verify.`,
+                            id: new Date().getTime(),
+                            schedule: { at: new Date(Date.now() + 1000) }
+                        }
+                    ]
+                });
             } catch (e) {}
         }
       } catch (e) {
