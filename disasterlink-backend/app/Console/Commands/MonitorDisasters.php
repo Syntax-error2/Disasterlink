@@ -98,7 +98,46 @@ class MonitorDisasters extends Command
         }
 
         if ($warningMsg) {
-            $this->warn("Broadcasting: " . $warningMsg);
+            $currentBroadcast = Cache::get('active_broadcast');
+            $currentMsg = is_array($currentBroadcast) ? ($currentBroadcast['message'] ?? '') : ($currentBroadcast ?? '');
+            
+            if ($warningMsg !== $currentMsg) {
+                $this->warn("NEW THREAT DETECTED. Sending Background Push Notification: " . $warningMsg);
+                
+                // Trigger Firebase Push Notifications in the background!
+                try {
+                    $tokens = \App\Models\User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
+                    
+                    if (!empty($tokens)) {
+                        $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
+                        $messaging = $factory->createMessaging();
+                        $notification = \Kreait\Firebase\Messaging\Notification::create('🚨 DISASTER ALERT', $warningMsg);
+                        
+                        $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                            'priority' => 'high',
+                            'notification' => [
+                                'channel_id' => 'emergency_alerts',
+                                'sound' => 'default',
+                                'default_vibrate_timings' => true,
+                                'default_light_settings' => true,
+                            ],
+                        ]);
+
+                        $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()
+                            ->withNotification($notification)
+                            ->withAndroidConfig($config);
+                        
+                        $messaging->sendMulticast($cloudMessage, $tokens);
+                        $this->info("Push notifications sent successfully to " . count($tokens) . " devices.");
+                    }
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Background Firebase Push Failed: ' . $e->getMessage());
+                    $this->warn("FCM Failed: " . $e->getMessage());
+                }
+            } else {
+                $this->info("Threat is already active. Skipping duplicate push notification.");
+            }
+
             $broadcast = ['id' => uniqid('monitor_'), 'message' => $warningMsg];
             Cache::put('active_broadcast', $broadcast, now()->addMinutes($duration));
         } else {
