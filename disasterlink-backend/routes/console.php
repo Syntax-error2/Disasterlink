@@ -10,3 +10,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('disaster:monitor')->everyFiveMinutes();
+Schedule::command('telemetry:sync-pagasa')->everyTenMinutes();  
+ 
