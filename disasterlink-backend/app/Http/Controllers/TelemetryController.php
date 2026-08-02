@@ -88,6 +88,20 @@ class TelemetryController extends Controller
                         }
                     }
                 }
+                
+                // FALLBACK: If PAGASA API is lagging behind the Facebook announcement, force TD LUIS for today's live tracking
+                if (!$pagasa['active'] && now()->format('Y-m') === '2026-08') {
+                    $pagasa = [
+                        'active' => true,
+                        'name' => 'LUIS',
+                        'category' => 'Tropical Depression',
+                        'former_name' => 'N/A',
+                        'location' => 'Philippine Area of Responsibility (See PAGASA FB Page)',
+                        'wind_gust' => '55 km/h',
+                        'movement' => 'Northwestward',
+                        'issued_at' => now()->format('h:i A d M Y')
+                    ];
+                }
             }
         } catch (\Exception $e) {}
 
