@@ -1,10 +1,10 @@
 {
-    "active": false,
-    "name": "KIYAPO",
+    "active": true,
+    "name": "LUIS",
     "category": "Tropical Depression",
-    "former_name": "LPA 07d",
-    "location": "1,100 km East of Southeastern Luzon (14.8\u00b0 N, 131.9\u00b0 E)",
-    "wind_gust": "45 km\/h \/ 55 km\/h",
-    "movement": "Northwestward at 25 km\/h",
-    "issued_at": "10:00 PM 22 July 2026"
+    "former_name": "LPA",
+    "location": "East of Luzon (Fujiwhara interaction w/ Typhoon Dolphin)",
+    "wind_gust": "55 km/h / 70 km/h",
+    "movement": "Curving northward (U-turn)",
+    "issued_at": "11:00 PM 01 Aug 2026"
 }
