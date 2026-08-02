@@ -30,16 +30,69 @@ class TelemetryController extends Controller
             });
         } catch (\Exception $e) {}
 
-        // Real-Time PAGASA Local Telemetry Scraper
+        // Real-Time PAGASA API Fetch (Cached for 5 minutes)
         $pagasa = ['active' => false];
         try {
-            // In a production environment, this would be a cron job hitting the PAGASA website.
-            // For local demonstration and real-time accuracy, we read from the telemetry feed file 
-            // which can be dynamically updated by external meteorology scripts.
-            $telemetryPath = public_path('telemetry/pagasa.json');
-            if (file_exists($telemetryPath)) {
-                $pagasa = json_decode(file_get_contents($telemetryPath), true);
-            }
+            $pagasa = \Illuminate\Support\Facades\Cache::remember('telemetry_pagasa', 300, function () {
+                $defaultData = ['active' => false];
+                $rssUrl = 'http://publicalert.pagasa.dost.gov.ph/feeds/';
+                
+                $response = Http::timeout(10)->get($rssUrl);
+                if (!$response->successful()) return $defaultData;
+
+                $xml = simplexml_load_string($response->body());
+                if (!$xml || !isset($xml->entry)) return $defaultData;
+
+                $capUrl = null;
+                foreach ($xml->entry as $entry) {
+                    $title = (string)$entry->title;
+                    if (stripos($title, 'TCB') !== false || stripos($title, 'Tropical Cyclone') !== false) {
+                        foreach ($entry->link as $link) {
+                            if ((string)$link['type'] === 'application/cap+xml') {
+                                $capUrl = (string)$link['href'];
+                                break 2;
+                            }
+                        }
+                    }
+                }
+
+                if ($capUrl) {
+                    $capResponse = Http::timeout(8)->get($capUrl);
+                    if ($capResponse->successful()) {
+                        $capXml = simplexml_load_string($capResponse->body());
+                        if ($capXml && isset($capXml->info)) {
+                            $info = $capXml->info;
+                            $headline = (string)$info->headline;
+                            $description = (string)$info->description;
+                            $effective = (string)$info->effective;
+                            
+                            $name = "Active Cyclone";
+                            $category = "Tropical Cyclone";
+                            
+                            if (preg_match('/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+([A-Z]+)/i', $headline, $matches)) {
+                                $category = $matches[1];
+                                $name = strtoupper($matches[2]);
+                            } else if (preg_match('/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+([A-Z]+)/i', $description, $matches)) {
+                                $category = $matches[1];
+                                $name = strtoupper($matches[2]);
+                            }
+
+                            return [
+                                'active' => true,
+                                'name' => $name,
+                                'category' => $category,
+                                'former_name' => 'N/A',
+                                'location' => 'Philippine Area of Responsibility (See PAGASA)',
+                                'wind_gust' => 'See Official Bulletin',
+                                'movement' => 'See Official Bulletin',
+                                'issued_at' => !empty($effective) ? date('h:i A d M Y', strtotime($effective)) : now()->format('h:i A d M Y')
+                            ];
+                        }
+                    }
+                }
+                
+                return $defaultData;
+            });
         } catch (\Exception $e) {}
 
         return response()->json([
