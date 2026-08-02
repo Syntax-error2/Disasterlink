@@ -143,6 +143,16 @@ const CycloneTracker = ({ cycloneData, pagasaData }: { cycloneData: any, pagasaD
       </CardContent>
     </Card>
   );
+  }
+
+  // NO CYCLONES FALLBACK
+  return (
+    <Card className="shadow-lg border-zinc-200 dark:border-zinc-800 bg-gradient-to-br from-white to-zinc-50 dark:from-[#111115] dark:to-zinc-900 relative overflow-hidden h-[500px] col-span-1 flex flex-col items-center justify-center">
+      <ShieldAlert className="h-16 w-16 text-emerald-500 mb-4 opacity-50" />
+      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 uppercase tracking-widest text-center">No Active Cyclones</h3>
+      <p className="text-sm text-zinc-500 mt-2 text-center px-6">PAGASA and GDACS report clear skies for tropical cyclones.</p>
+    </Card>
+  );
 };
 
 const EarthquakeTracker = ({ earthquakeData }: { earthquakeData: any }) => {
