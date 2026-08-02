@@ -52,92 +52,85 @@ const WeatherMap = () => (
 );
 
 const CycloneTracker = ({ cycloneData, pagasaData }: { cycloneData: any, pagasaData: any }) => {
-  if (!cycloneData) {
-    if (pagasaData && pagasaData.active) {
-       return (
-        <Card className="shadow-lg border-orange-500/30 dark:border-orange-500/30 bg-gradient-to-br from-white to-orange-50 dark:from-[#111115] dark:to-orange-950/20 relative overflow-hidden h-[500px] col-span-1">
-          <div className="absolute -right-12 -top-12 opacity-5 animate-[spin_20s_linear_infinite]">
-            <CloudLightning className="w-64 h-64 text-orange-500" />
-          </div>
-          <CardHeader>
-            <CardTitle className="text-orange-600 dark:text-orange-400 flex items-center gap-2 uppercase tracking-wider text-sm">
-              <Activity className="h-4 w-4 animate-pulse" /> PAGASA Local Telemetry
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative z-10 space-y-6">
-            <div>
-              <h2 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tighter">{pagasaData.category} {pagasaData.name}</h2>
-              <span className="inline-block mt-2 bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">PAGASA LOCAL MONITORING</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
-                <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Status</div>
-                <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{pagasaData.category}</div>
-              </div>
-              <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
-                <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Former Name</div>
-                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 h-8">{pagasaData.former_name}</div>
-              </div>
-              <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm col-span-2">
-                <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Location</div>
-                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{pagasaData.location}</div>
-              </div>
-              <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
-                <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Wind Gust</div>
-                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 h-8">{pagasaData.wind_gust}</div>
-              </div>
-              <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
-                <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Movement</div>
-                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 h-8">{pagasaData.movement}</div>
-              </div>
-            </div>
-            
-            <div className="text-sm font-semibold mb-3 flex justify-between"><span className="text-orange-500">PAGASA Bulletin</span> <span className="text-xs text-zinc-500">{pagasaData.issued_at}</span></div>
-          </CardContent>
-        </Card>
-       );
-    }
-    
+  // PAGASA PRIORITY (Philippine Area of Responsibility)
+  if (pagasaData && pagasaData.active) {
     return (
-      <Card className="shadow-lg border-zinc-200 dark:border-zinc-800 bg-gradient-to-br from-white to-zinc-50 dark:from-[#111115] dark:to-zinc-900 relative overflow-hidden h-[500px] col-span-1 flex flex-col items-center justify-center">
-        <ShieldAlert className="h-16 w-16 text-emerald-500 mb-4 opacity-50" />
-        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 uppercase tracking-widest text-center">No Active Cyclones</h3>
-        <p className="text-sm text-zinc-500 mt-2 text-center px-6">Global Disaster Alert System (GDACS) reports clear skies for tropical cyclones.</p>
+      <Card className="shadow-lg border-orange-500/30 dark:border-orange-500/30 bg-gradient-to-br from-white to-orange-50 dark:from-[#111115] dark:to-orange-950/20 relative overflow-hidden h-[500px] col-span-1">
+        <div className="absolute -right-12 -top-12 opacity-5 animate-[spin_20s_linear_infinite]">
+          <CloudLightning className="w-64 h-64 text-orange-500" />
+        </div>
+        <CardHeader>
+          <CardTitle className="text-orange-600 dark:text-orange-400 flex items-center gap-2 uppercase tracking-wider text-sm">
+            <Activity className="h-4 w-4 animate-pulse" /> PAGASA Local Telemetry
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="relative z-10 space-y-6">
+          <div>
+            <h2 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tighter">{pagasaData.category} {pagasaData.name}</h2>
+            <span className="inline-block mt-2 bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">PAGASA LOCAL MONITORING</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Status</div>
+              <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{pagasaData.category}</div>
+            </div>
+            <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Former Name</div>
+              <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 h-8">{pagasaData.former_name}</div>
+            </div>
+            <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm col-span-2">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Location</div>
+              <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{pagasaData.location}</div>
+            </div>
+            <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Wind Gust</div>
+              <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 h-8">{pagasaData.wind_gust}</div>
+            </div>
+            <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Movement</div>
+              <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 h-8">{pagasaData.movement}</div>
+            </div>
+          </div>
+          
+          <div className="text-sm font-semibold mb-3 flex justify-between"><span className="text-orange-500">PAGASA Bulletin</span> <span className="text-xs text-zinc-500">{pagasaData.issued_at}</span></div>
+        </CardContent>
       </Card>
     );
   }
-
-  return (
-    <Card className="shadow-lg border-red-500/30 dark:border-red-500/30 bg-gradient-to-br from-white to-red-50 dark:from-[#111115] dark:to-red-950/20 relative overflow-hidden h-[500px] col-span-1">
-      <div className="absolute -right-12 -top-12 opacity-5 animate-[spin_20s_linear_infinite]">
-        <AlertTriangle className="w-64 h-64 text-red-500" />
-      </div>
-      <CardHeader>
-        <CardTitle className="text-red-600 dark:text-red-400 flex items-center gap-2 uppercase tracking-wider text-sm">
-          <Activity className="h-4 w-4 animate-pulse" /> Live Cyclone Telemetry
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="relative z-10 space-y-6">
-        <div>
-          <h2 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tighter">{cycloneData.name}</h2>
-          <span className="inline-block mt-2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">GDACS ALERT LEVEL: {cycloneData.alertlevel}</span>
+  
+  // GDACS FALLBACK (If no active PAGASA cyclone in PAR)
+  if (cycloneData) {
+    return (
+      <Card className="shadow-lg border-red-500/30 dark:border-red-500/30 bg-gradient-to-br from-white to-red-50 dark:from-[#111115] dark:to-red-950/20 relative overflow-hidden h-[500px] col-span-1">
+        <div className="absolute -right-12 -top-12 opacity-5 animate-[spin_20s_linear_infinite]">
+          <AlertTriangle className="w-64 h-64 text-red-500" />
         </div>
+        <CardHeader>
+          <CardTitle className="text-red-600 dark:text-red-400 flex items-center gap-2 uppercase tracking-wider text-sm">
+            <Activity className="h-4 w-4 animate-pulse" /> GDACS Global Telemetry
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="relative z-10 space-y-6">
+          <div>
+            <h2 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tighter">{cycloneData.name}</h2>
+            <span className="inline-block mt-2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">GDACS ALERT LEVEL: {cycloneData.alertlevel}</span>
+          </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Severity</div>
-            <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{cycloneData.severitydata?.severity} <span className="text-sm">{cycloneData.severitydata?.severityunit}</span></div>
-          </div>
-          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Details</div>
-            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-50 h-8 overflow-hidden">{cycloneData.severitydata?.severitytext}</div>
-          </div>
-          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm">
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Country</div>
-            <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50 truncate">{cycloneData.country}</div>
-          </div>
-          <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-red-500/30 backdrop-blur-sm transition-all">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Severity</div>
+              <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{cycloneData.severitydata?.severity} <span className="text-sm">{cycloneData.severitydata?.severityunit}</span></div>
+            </div>
+            <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-all">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Details</div>
+              <div className="text-xs font-bold text-zinc-900 dark:text-zinc-50 h-8 overflow-hidden">{cycloneData.severitydata?.severitytext}</div>
+            </div>
+            <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Country</div>
+              <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50 truncate">{cycloneData.country}</div>
+            </div>
+            <div className="bg-white/50 dark:bg-black/50 p-3 rounded-lg border border-red-500/30 backdrop-blur-sm transition-all">
             <div className="text-xs text-red-500 dark:text-red-400 mb-1">Coordinates</div>
             <div className="text-sm font-bold text-red-600 dark:text-red-400">{cycloneData.geometry?.coordinates?.[1]?.toFixed(2)}°N, {cycloneData.geometry?.coordinates?.[0]?.toFixed(2)}°E</div>
           </div>
