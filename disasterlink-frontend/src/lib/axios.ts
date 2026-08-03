@@ -23,6 +23,7 @@ if (typeof window !== 'undefined') {
 const axiosInstance = axios.create({
     baseURL: apiBase,
     withCredentials: true,
+    adapter: 'fetch', // Force Fetch API instead of XHR to bypass Capacitor network bugs
     headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
