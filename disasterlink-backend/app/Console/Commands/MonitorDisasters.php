@@ -151,6 +151,8 @@ class MonitorDisasters extends Command
                             $warningMsg = "🟠 PAGASA ORANGE RAINFALL WARNING: {$precipitation} mm/hr detected. Flooding is threatening Binalbagan.";
                         } elseif ($precipitation > 7.5) {
                             $warningMsg = "🟡 PAGASA YELLOW RAINFALL WARNING: {$precipitation} mm/hr detected. Flooding is possible in Binalbagan.";
+                        } elseif ($precipitation >= 2.5) {
+                            $warningMsg = "🌧️ LIGHT TO MODERATE RAIN: {$precipitation} mm/hr detected in Binalbagan. Please drive safely.";
                         }
                     }
                 } catch (\Exception $e) {
