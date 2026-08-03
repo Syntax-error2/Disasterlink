@@ -28,7 +28,22 @@ export default function Signup() {
     const data = Object.fromEntries(fd);
     
     try {
-      await axiosInstance.post("/register/send-otp", data);
+      const registerUrl = (axiosInstance.defaults.baseURL || '') + "/register/send-otp";
+      const fetchResponse = await fetch(registerUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+      
+      const responseData = await fetchResponse.json();
+      
+      if (!fetchResponse.ok) {
+        throw { response: { data: responseData, status: fetchResponse.status } };
+      }
+      
       setFormData(data);
       setStep(2); // Proceed to OTP step
     } catch (error: any) {
@@ -50,7 +65,22 @@ export default function Signup() {
 
     try {
       const payload = { ...formData, otp };
-      await axiosInstance.post("/register", payload);
+      const registerUrl = (axiosInstance.defaults.baseURL || '') + "/register";
+      const fetchResponse = await fetch(registerUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      const responseData = await fetchResponse.json();
+      
+      if (!fetchResponse.ok) {
+        throw { response: { data: responseData, status: fetchResponse.status } };
+      }
+      
       navigate("/login");
     } catch (error: any) {
       setErrorMsg(error.response?.data?.message || error.message || "Registration failed");
