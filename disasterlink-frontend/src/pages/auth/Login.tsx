@@ -96,7 +96,19 @@ export default function Login() {
       }, 1500);
 
     } catch (error: any) {
-      setErrorMsg(error.response?.data?.message || error.message || "Login failed");
+      console.error("Login Error Details:", error);
+      
+      let errMsg = "Login failed";
+      if (error.response?.data?.message) {
+        errMsg = error.response.data.message;
+      } else if (error.message) {
+        // Include full debug info for mobile
+        errMsg = `${error.message} | Code: ${error.code} | Status: ${error.response?.status}`;
+      } else {
+        errMsg = JSON.stringify(error);
+      }
+      
+      setErrorMsg(errMsg);
       setLoginState('idle');
     }
   };
