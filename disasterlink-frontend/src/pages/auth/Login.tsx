@@ -30,12 +30,17 @@ export default function Login() {
     : hostname.split('.')[0];
 
   useEffect(() => {
-    axiosInstance.get(`/tenant-config/${currentSubdomain}`)
+    const tenantUrl = (axiosInstance.defaults.baseURL || '') + `/tenant-config/${currentSubdomain}`;
+    fetch(tenantUrl)
       .then(res => {
-        const tenantData = res.data.data || res.data;
+        if (!res.ok) throw new Error("Tenant not found");
+        return res.json();
+      })
+      .then(data => {
+        const tenantData = data.data || data;
         setTenant(tenantData);
       })
-      .catch(err => console.log("Generic SaaS Mode Active"));
+      .catch(err => console.log("Generic SaaS Mode Active", err));
   }, [currentSubdomain]);
 
   // Real Laravel API Network Request
@@ -49,12 +54,27 @@ export default function Login() {
     data.subdomain = currentSubdomain; // Pass the subdomain to enforce security
     
     try {
-      // Send data to Laravel Backend
-      const response = await axiosInstance.post("/login", data);
-      const result = response.data.data || response.data;
+      // Send data to Laravel Backend using Native Fetch to bypass Axios XHR bugs on Capacitor
+      const loginUrl = (axiosInstance.defaults.baseURL || '') + "/login";
+      const fetchResponse = await fetch(loginUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
       
-      const token = result.token || response.data.token;
-      const user = result.user || response.data.user;
+      const responseData = await fetchResponse.json();
+      
+      if (!fetchResponse.ok) {
+        throw { response: { data: responseData, status: fetchResponse.status } };
+      }
+      
+      const result = responseData.data || responseData;
+      
+      const token = result.token || responseData.token;
+      const user = result.user || responseData.user;
 
       // 1. Save Token
       // Note: We don't call login() here anymore, because it instantly flips isAuthenticated and triggers the app router.
