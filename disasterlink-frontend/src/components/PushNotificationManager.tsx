@@ -45,15 +45,23 @@ export function PushNotificationManager() {
 
     // On success, we should be able to receive notifications
     PushNotifications.addListener('registration', async (token) => {
-      console.log('Push registration success, token: ' + token.value);
-      try {
-        // Send the FCM token to Laravel Backend
-        await axiosInstance.post('/fcm-token', {
-          token: token.value
-        });
-      } catch (error: any) {
-        console.error('Failed to sync FCM token with backend', error);
-      }
+      console.log('✅ FCM Push registration success, token: ' + token.value);
+      
+      // Retry up to 3 times in case the auth token isn't ready yet
+      let attempts = 0;
+      const sync = async () => {
+        try {
+          await axiosInstance.post('/fcm-token', { token: token.value });
+          console.log('✅ FCM token synced to backend successfully');
+        } catch (error: any) {
+          attempts++;
+          console.error(`FCM token sync attempt ${attempts} failed:`, error?.response?.status);
+          if (attempts < 3) {
+            setTimeout(sync, 2000 * attempts); // retry with backoff
+          }
+        }
+      };
+      sync();
     });
 
     // Some issue with our setup and push will not work

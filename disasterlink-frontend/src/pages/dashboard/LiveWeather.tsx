@@ -362,6 +362,9 @@ export default function LiveWeather() {
   const fetchWeather = async () => {
     setLoading(true);
     try {
+      // Clear stale session cache so we never show old/simulated data
+      sessionStorage.removeItem('lw_weather_cache');
+      sessionStorage.removeItem('lw_pagasa_cache');
       const response = await axiosInstance.get("/telemetry");
       const rootData = response.data;
       
