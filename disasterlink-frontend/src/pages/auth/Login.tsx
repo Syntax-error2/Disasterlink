@@ -200,7 +200,7 @@ export default function Login() {
                 {tenant ? `${tenant.name} Command` : 'DisasterLink'}
               </h1>
               <p className="text-zinc-500 dark:text-zinc-400">
-                {tenant ? 'Authorized personnel access only.' : 'Multi-Tenant Disaster Management System'}
+                {tenant ? 'Authorized personnel access only.' : 'Multi-Tenant Disaster Management System'} <span className="text-red-500 font-bold">v2.0</span>
               </p>
             </div>
 

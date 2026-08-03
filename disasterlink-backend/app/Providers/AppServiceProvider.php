@@ -26,5 +26,10 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\RateLimiter::for('auth', function (\Illuminate\Http\Request $request) {
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(5)->by($request->ip());
         });
+
+        // Strict rate limiting for SOS emergency requests to prevent spam
+        \Illuminate\Support\Facades\RateLimiter::for('sos', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(3)->by($request->user()?->id ?: $request->ip());
+        });
     }
 }
