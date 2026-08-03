@@ -43,12 +43,35 @@ class IncidentReportController extends Controller
             $imageData = $request->input('image_data');
             if ($imageData && strpos($imageData, 'data:image') === 0) {
                 // Decode base64 and save to storage/incidents/ to bypass MySQL max_allowed_packet
-                $base64Data = substr($imageData, strpos($imageData, ',') + 1);
-                $decodedData = base64_decode($base64Data);
-                $filename = 'incidents/' . uniqid() . '.jpg';
-                \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decodedData);
-                $imagePath = url('storage/' . $filename);
-                $imageData = null; // Do not insert the massive string into the DB!
+                $base64Parts = explode(',', $imageData);
+                if (count($base64Parts) === 2) {
+                    $mimePart = explode(';', $base64Parts[0])[0];
+                    $mime = str_replace('data:', '', $mimePart);
+                    
+                    // Validate basic MIME type
+                    if (in_array($mime, ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'])) {
+                        $decodedData = base64_decode($base64Parts[1]);
+                        
+                        // Strict validation using finfo
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $actualMime = finfo_buffer($finfo, $decodedData);
+                        finfo_close($finfo);
+                        
+                        if (in_array($actualMime, ['image/jpeg', 'image/png', 'image/webp'])) {
+                            $extension = explode('/', $actualMime)[1];
+                            if ($extension === 'jpeg') $extension = 'jpg';
+                            
+                            $filename = 'incidents/' . uniqid() . '.' . $extension;
+                            \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decodedData);
+                            $imagePath = url('storage/' . $filename);
+                            $imageData = null; // Do not insert the massive string into the DB!
+                        } else {
+                            return response()->json(['error' => 'Invalid image file signature'], 400);
+                        }
+                    } else {
+                        return response()->json(['error' => 'Unsupported image format'], 400);
+                    }
+                }
             }
 
             $barangay = $request->input('reporting_barangay', 'Unknown');
@@ -110,7 +133,18 @@ class IncidentReportController extends Controller
     public function update(Request $request, $id)
     {
         $incident = IncidentReport::findOrFail($id);
-        $incident->update($request->all());
+        
+        $validatedData = $request->only([
+            'incident_type', 
+            'severity_level', 
+            'exact_location', 
+            'latitude', 
+            'longitude', 
+            'details', 
+            'status'
+        ]);
+        
+        $incident->update($validatedData);
         event(new IncidentEvent('updated', $incident));
         \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
         if (auth()->check()) {
