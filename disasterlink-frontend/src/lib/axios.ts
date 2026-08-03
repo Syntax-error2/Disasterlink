@@ -1,23 +1,21 @@
 import axios from 'axios';
 import { Capacitor } from '@capacitor/core';
 
-let apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+let apiBase = import.meta.env.VITE_API_BASE_URL || 'https://darkgoldenrod-anteater-579870.hostingersite.com/api';
 
 if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    
-    // Allow user to manually override the API URL for testing changing Cloudflare tunnels
     const customApiUrl = localStorage.getItem('custom_api_url');
     
     if (customApiUrl) {
         apiBase = customApiUrl + '/api';
     }
-    // Use the official Capacitor module to detect native environments
+    // Capacitor's native runtime (Android/iOS)
     else if (Capacitor.isNativePlatform()) {
         apiBase = 'https://darkgoldenrod-anteater-579870.hostingersite.com/api';
-    } 
-    else if (hostname.includes('.devtunnels.ms') || hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
-        // Use relative path to let Vite Proxy handle the routing securely, bypassing ALL CORS and Microsoft Proxy issues!
+    }
+    // Only use Vite proxy if it's explicitly a local dev server (checking port is a good indicator, Vite uses 5173 usually)
+    else if (window.location.port === '5173' || hostname.includes('.devtunnels.ms') || (hostname === 'localhost' && window.location.port !== '')) {
         apiBase = '/api';
     }
 }
