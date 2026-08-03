@@ -69,7 +69,69 @@ class MonitorDisasters extends Command
                 }
             }
 
-            // 3. Check Open-Meteo Rain if no higher priority warning
+            // 3. Check PAGASA Tropical Cyclone (Hourly)
+            if (!$warningMsg) {
+                $this->info("Checking PAGASA Tropical Cyclones...");
+                try {
+                    $rssUrl = 'http://publicalert.pagasa.dost.gov.ph/feeds/';
+                    $response = Http::timeout(5)->get($rssUrl);
+                    if ($response->successful()) {
+                        $xml = @simplexml_load_string($response->body());
+                        if ($xml) {
+                            $capUrl = null;
+                            foreach ($xml->entry ?? [] as $entry) {
+                                $title = (string) $entry->title;
+                                if (stripos($title, 'TCB') !== false || stripos($title, 'Tropical Cyclone') !== false) {
+                                    foreach ($entry->link ?? [] as $link) {
+                                        if ((string) $link['type'] === 'application/cap+xml') {
+                                            $capUrl = (string) $link['href'];
+                                            break 2;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if ($capUrl) {
+                                $capRes = Http::timeout(5)->get($capUrl);
+                                if ($capRes->successful()) {
+                                    $cap = @simplexml_load_string($capRes->body());
+                                    if ($cap && isset($cap->info)) {
+                                        $desc = (string) $cap->info->description;
+                                        $headline = (string) $cap->info->headline;
+                                        
+                                        $name = 'CYCLONE';
+                                        if (preg_match('/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+([A-Z]+)/i', $headline, $m) || preg_match('/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+([A-Z]+)/i', $desc, $m)) {
+                                            $name = strtoupper($m[2]);
+                                        }
+                                        
+                                        $location = 'PAR';
+                                        if (preg_match('/was estimated based on all available data at ([^.]+)/i', $desc, $m) || preg_match('/located at ([^.]+)/i', $desc, $m)) {
+                                            $location = trim($m[1]);
+                                        }
+                                        
+                                        $wind = 'Unknown';
+                                        if (preg_match('/winds of ([0-9]+\s*km\/h)/i', $desc, $m)) {
+                                            $wind = $m[1];
+                                        }
+                                        
+                                        $gust = 'Unknown';
+                                        if (preg_match('/gustiness of up to ([0-9]+\s*km\/h)/i', $desc, $m)) {
+                                            $gust = $m[1];
+                                        }
+
+                                        $warningMsg = "🌀 TROPICAL CYCLONE UPDATE: {$name} is located at {$location}. Winds: {$wind}, Gusts: up to {$gust}.";
+                                        $duration = 60; // Hourly notifications for cyclones
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $this->warn("PAGASA Cyclone check failed: " . $e->getMessage());
+                }
+            }
+
+            // 4. Check Open-Meteo Rain if no higher priority warning
             if (!$warningMsg) {
                 $this->info("Checking Open-Meteo Weather...");
                 try {
@@ -84,11 +146,11 @@ class MonitorDisasters extends Command
                         $this->info("Current precipitation rate: {$precipitation} mm/hr");
                         
                         if ($precipitation > 30.0) {
-                            $warningMsg = "🔴 PAGASA RED RAINFALL WARNING: Severe flooding expected in low-lying areas of Binalbagan.";
+                            $warningMsg = "🔴 PAGASA RED RAINFALL WARNING: {$precipitation} mm/hr detected. Severe flooding expected in low-lying areas of Binalbagan.";
                         } elseif ($precipitation > 15.0) {
-                            $warningMsg = "🟠 PAGASA ORANGE RAINFALL WARNING: Flooding is threatening Binalbagan.";
+                            $warningMsg = "🟠 PAGASA ORANGE RAINFALL WARNING: {$precipitation} mm/hr detected. Flooding is threatening Binalbagan.";
                         } elseif ($precipitation > 7.5) {
-                            $warningMsg = "🟡 PAGASA YELLOW RAINFALL WARNING: Flooding is possible in Binalbagan.";
+                            $warningMsg = "🟡 PAGASA YELLOW RAINFALL WARNING: {$precipitation} mm/hr detected. Flooding is possible in Binalbagan.";
                         }
                     }
                 } catch (\Exception $e) {

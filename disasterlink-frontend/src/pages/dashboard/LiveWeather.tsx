@@ -13,7 +13,7 @@ import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../context/AuthContext";
 // --- TYPES & CONSTANTS ---
 interface WeatherData {
-  current: { temperature_2m: number; apparent_temperature: number; relative_humidity_2m: number; wind_speed_10m: number; surface_pressure: number; precipitation_probability?: number; };
+  current: { temperature_2m: number; apparent_temperature: number; relative_humidity_2m: number; wind_speed_10m: number; surface_pressure: number; precipitation_probability?: number; precipitation?: number; };
   hourly: { time: string[]; precipitation: number[]; };
 }
 
@@ -665,9 +665,13 @@ export default function LiveWeather() {
           <Card className="h-full bg-zinc-900 dark:bg-black text-white border-none shadow-md overflow-hidden relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <CardContent className="p-5">
-              <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2"><CloudRain className="h-4 w-4 text-indigo-400"/> Chance of Rain</div>
-              <div className="text-4xl font-black tracking-tighter">{weather?.current.precipitation_probability ?? 0}%</div>
-              <div className="text-sm text-indigo-400 mt-1 font-medium flex items-center gap-1">Next hour forecast</div>
+              <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2"><CloudRain className="h-4 w-4 text-indigo-400"/> Precipitation</div>
+              <div className="text-4xl font-black tracking-tighter">
+                {weather?.current.precipitation !== undefined ? weather.current.precipitation.toFixed(1) : 0} <span className="text-lg font-normal text-zinc-500">mm/h</span>
+              </div>
+              <div className="text-sm text-indigo-400 mt-1 font-medium flex items-center gap-1">
+                {weather?.current.precipitation_probability ?? 0}% Probability
+              </div>
             </CardContent>
           </Card>
         </motion.div>

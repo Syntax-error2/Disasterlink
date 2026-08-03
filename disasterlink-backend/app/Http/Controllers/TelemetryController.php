@@ -16,7 +16,7 @@ class TelemetryController extends Controller
                 $res = Http::timeout(8)->get(
                     "https://api.open-meteo.com/v1/forecast"
                     . "?latitude=10.1866&longitude=122.8587"
-                    . "&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability"
+                    . "&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability,precipitation"
                     . "&hourly=precipitation,precipitation_probability"
                     . "&timezone=Asia%2FManila&forecast_days=2"
                 );
@@ -74,11 +74,34 @@ class TelemetryController extends Controller
 
                                 $name     = 'Active Cyclone';
                                 $category = 'Tropical Cyclone';
+                                $location = 'Philippine Area of Responsibility';
+                                $wind_gust = 'See Official Bulletin';
+                                $movement = 'See Official Bulletin';
 
+                                // Extract Category and Name
                                 $pattern = '/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+([A-Z]+)/i';
                                 if (preg_match($pattern, $headline, $m) || preg_match($pattern, $desc, $m)) {
                                     $category = $m[1];
                                     $name     = strtoupper($m[2]);
+                                }
+                                
+                                // Extract Location
+                                if (preg_match('/was estimated based on all available data at ([^.]+)/i', $desc, $m) || preg_match('/located at ([^.]+)/i', $desc, $m)) {
+                                    $location = trim($m[1]);
+                                }
+                                
+                                // Extract Wind Gustiness
+                                if (preg_match('/gustiness of up to ([0-9]+\s*km\/h)/i', $desc, $m)) {
+                                    $wind_gust = "Up to " . $m[1];
+                                } elseif (preg_match('/winds of ([0-9]+\s*km\/h)/i', $desc, $m)) {
+                                    $wind_gust = $m[1];
+                                }
+                                
+                                // Extract Movement
+                                if (preg_match('/moving ([A-Za-z]+)\s*at\s*([0-9]+\s*km\/h)/i', $desc, $m)) {
+                                    $movement = ucfirst($m[1]) . ' at ' . $m[2];
+                                } elseif (preg_match('/moving ([A-Za-z]+)/i', $desc, $m)) {
+                                    $movement = ucfirst($m[1]);
                                 }
 
                                 $pagasa = [
@@ -86,9 +109,9 @@ class TelemetryController extends Controller
                                     'name'        => $name,
                                     'category'    => $category,
                                     'former_name' => 'N/A',
-                                    'location'    => 'Philippine Area of Responsibility',
-                                    'wind_gust'   => 'See Official Bulletin',
-                                    'movement'    => 'See Official Bulletin',
+                                    'location'    => $location,
+                                    'wind_gust'   => $wind_gust,
+                                    'movement'    => $movement,
                                     'issued_at'   => $effective ? date('h:i A d M Y', strtotime($effective)) : now()->format('h:i A d M Y'),
                                 ];
                             }
