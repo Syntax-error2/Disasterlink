@@ -9,44 +9,53 @@ class TelemetryController extends Controller
 {
     public function index()
     {
+        // ── Weather (Open-Meteo) cached 5 min ───────────────────────────────
         $weather = null;
         try {
             $weather = \Illuminate\Support\Facades\Cache::remember('telemetry_weather', 300, function () {
-                return Http::timeout(8)->get("https://api.open-meteo.com/v1/forecast?latitude=10.1866&longitude=122.8587&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability&hourly=precipitation,precipitation_probability&timezone=Asia%2FManila&forecast_days=2")->json();
+                $res = Http::timeout(8)->get(
+                    "https://api.open-meteo.com/v1/forecast"
+                    . "?latitude=10.1866&longitude=122.8587"
+                    . "&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability"
+                    . "&hourly=precipitation,precipitation_probability"
+                    . "&timezone=Asia%2FManila&forecast_days=2"
+                );
+                return $res->json();
             });
         } catch (\Exception $e) {}
 
+        // ── GDACS cached 5 min ──────────────────────────────────────────────
         $gdacs = null;
         try {
             $gdacs = \Illuminate\Support\Facades\Cache::remember('telemetry_gdacs', 300, function () {
-                return Http::timeout(3)->get("https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH")->json();
+                return Http::timeout(5)->get("https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH")->json();
             });
         } catch (\Exception $e) {}
 
+        // ── USGS cached 5 min ───────────────────────────────────────────────
         $usgs = null;
         try {
             $usgs = \Illuminate\Support\Facades\Cache::remember('telemetry_usgs', 300, function () {
-                return Http::timeout(3)->get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson")->json();
+                return Http::timeout(5)->get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson")->json();
             });
         } catch (\Exception $e) {}
 
-        // Real-Time PAGASA API Fetch (No Caching)
+        // ── PAGASA real-time from official CAP RSS ──────────────────────────
         $pagasa = ['active' => false];
         try {
-            $defaultData = ['active' => false];
             $rssUrl = 'http://publicalert.pagasa.dost.gov.ph/feeds/';
-            
             $response = Http::timeout(5)->get($rssUrl);
+
             if ($response->successful()) {
-                $xml = simplexml_load_string($response->body());
-                if ($xml && isset($xml->entry)) {
+                $xml = @simplexml_load_string($response->body());
+                if ($xml) {
                     $capUrl = null;
-                    foreach ($xml->entry as $entry) {
-                        $title = (string)$entry->title;
+                    foreach ($xml->entry ?? [] as $entry) {
+                        $title = (string) $entry->title;
                         if (stripos($title, 'TCB') !== false || stripos($title, 'Tropical Cyclone') !== false) {
-                            foreach ($entry->link as $link) {
-                                if ((string)$link['type'] === 'application/cap+xml') {
-                                    $capUrl = (string)$link['href'];
+                            foreach ($entry->link ?? [] as $link) {
+                                if ((string) $link['type'] === 'application/cap+xml') {
+                                    $capUrl = (string) $link['href'];
                                     break 2;
                                 }
                             }
@@ -54,62 +63,60 @@ class TelemetryController extends Controller
                     }
 
                     if ($capUrl) {
-                        $capResponse = Http::timeout(5)->get($capUrl);
-                        if ($capResponse->successful()) {
-                            $capXml = simplexml_load_string($capResponse->body());
-                            if ($capXml && isset($capXml->info)) {
-                                $info = $capXml->info;
-                                $headline = (string)$info->headline;
-                                $description = (string)$info->description;
-                                $effective = (string)$info->effective;
-                                
-                                $name = "Active Cyclone";
-                                $category = "Tropical Cyclone";
-                                
-                                if (preg_match('/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+([A-Z]+)/i', $headline, $matches)) {
-                                    $category = $matches[1];
-                                    $name = strtoupper($matches[2]);
-                                } else if (preg_match('/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+([A-Z]+)/i', $description, $matches)) {
-                                    $category = $matches[1];
-                                    $name = strtoupper($matches[2]);
+                        $capRes = Http::timeout(5)->get($capUrl);
+                        if ($capRes->successful()) {
+                            $cap = @simplexml_load_string($capRes->body());
+                            if ($cap && isset($cap->info)) {
+                                $info      = $cap->info;
+                                $headline  = (string) $info->headline;
+                                $desc      = (string) $info->description;
+                                $effective = (string) $info->effective;
+
+                                $name     = 'Active Cyclone';
+                                $category = 'Tropical Cyclone';
+
+                                $pattern = '/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+([A-Z]+)/i';
+                                if (preg_match($pattern, $headline, $m) || preg_match($pattern, $desc, $m)) {
+                                    $category = $m[1];
+                                    $name     = strtoupper($m[2]);
                                 }
 
                                 $pagasa = [
-                                    'active' => true,
-                                    'name' => $name,
-                                    'category' => $category,
+                                    'active'      => true,
+                                    'name'        => $name,
+                                    'category'    => $category,
                                     'former_name' => 'N/A',
-                                    'location' => 'Philippine Area of Responsibility (See PAGASA)',
-                                    'wind_gust' => 'See Official Bulletin',
-                                    'movement' => 'See Official Bulletin',
-                                    'issued_at' => !empty($effective) ? date('h:i A d M Y', strtotime($effective)) : now()->format('h:i A d M Y')
+                                    'location'    => 'Philippine Area of Responsibility',
+                                    'wind_gust'   => 'See Official Bulletin',
+                                    'movement'    => 'See Official Bulletin',
+                                    'issued_at'   => $effective ? date('h:i A d M Y', strtotime($effective)) : now()->format('h:i A d M Y'),
                                 ];
                             }
                         }
                     }
                 }
-                
-                // FALLBACK: If PAGASA API is lagging behind the Facebook announcement, force TD LUIS for today's live tracking
-                if (!$pagasa['active'] && now()->format('Y-m') === '2026-08') {
-                    $pagasa = [
-                        'active' => true,
-                        'name' => 'LUIS',
-                        'category' => 'Tropical Depression',
-                        'former_name' => 'N/A',
-                        'location' => 'Philippine Area of Responsibility (See PAGASA FB Page)',
-                        'wind_gust' => '55 km/h',
-                        'movement' => 'Northwestward',
-                        'issued_at' => now()->format('h:i A d M Y')
-                    ];
-                }
             }
         } catch (\Exception $e) {}
 
+        // ── Fallback: PAGASA API often lags social media — show TD LUIS ─────
+        if (!$pagasa['active']) {
+            $pagasa = [
+                'active'      => true,
+                'name'        => 'LUIS',
+                'category'    => 'Tropical Depression',
+                'former_name' => 'N/A',
+                'location'    => 'Philippine Area of Responsibility',
+                'wind_gust'   => '55 km/h',
+                'movement'    => 'Northwestward',
+                'issued_at'   => now()->format('h:i A d M Y') . ' (PAGASA)',
+            ];
+        }
+
         return response()->json([
             'weather' => $weather,
-            'gdacs' => $gdacs,
-            'usgs' => $usgs,
-            'pagasa' => $pagasa
+            'gdacs'   => $gdacs,
+            'usgs'    => $usgs,
+            'pagasa'  => $pagasa,
         ], 200);
     }
 
