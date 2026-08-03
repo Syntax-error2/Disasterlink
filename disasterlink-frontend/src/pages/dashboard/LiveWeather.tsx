@@ -379,13 +379,9 @@ export default function LiveWeather() {
       sessionStorage.setItem('lw_weather_cache', JSON.stringify(data));
       
       if (rootData.pagasa) {
-         // FORCE OVERRIDE: The backend is serving stuck mock data and deployment is delayed.
-         // We force it to inactive here on the frontend to ensure the UI clears.
-         const forcedPagasa = { ...rootData.pagasa, active: false };
-         setPagasaData(forcedPagasa);
-         sessionStorage.setItem('lw_pagasa_cache', JSON.stringify(forcedPagasa));
+         setPagasaData(rootData.pagasa);
+         sessionStorage.setItem('lw_pagasa_cache', JSON.stringify(rootData.pagasa));
       }
-      
       // Parse GDACS Telemetry (Cyclones and Volcanoes)
       try {
         const cyclones = gdacsJson?.features?.filter((f: any) => {
@@ -509,7 +505,7 @@ export default function LiveWeather() {
       setChartData(mockChartData);
       
       updateHazards(mockWeather.current.wind_speed_10m, 12.5, mockWeather.current.apparent_temperature, mockWeather.current.precipitation_probability);
-      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + " (Simulated)");
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } finally {
       setLoading(false);
     }
