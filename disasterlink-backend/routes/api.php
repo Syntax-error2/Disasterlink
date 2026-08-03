@@ -33,6 +33,20 @@ Route::get('/telemetry', [App\Http\Controllers\TelemetryController::class, 'inde
 Route::get('/route', [App\Http\Controllers\TelemetryController::class, 'getRoute']);
 Route::get('/ai/predictions', [App\Http\Controllers\TelemetryController::class, 'aiPredictions']);
 
+// ==========================================
+// AUTOMATED DISASTER MONITOR WEBHOOK
+// External cron service pings this every 5 min
+// to check threats & send FCM push notifications
+// ==========================================
+Route::get('/cron/monitor/{secret}', function ($secret) {
+    if ($secret !== 'DL2026AutoMonitor') {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+    \Illuminate\Support\Facades\Artisan::call('disaster:monitor');
+    $output = \Illuminate\Support\Facades\Artisan::output();
+    return response()->json(['status' => 'ok', 'output' => trim($output)]);
+});
+
 use App\Http\Controllers\IncidentReportController;
 use App\Http\Controllers\EvacuationCenterController;
 use App\Http\Controllers\DashboardController;
