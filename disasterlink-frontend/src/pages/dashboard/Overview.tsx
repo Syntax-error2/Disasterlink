@@ -274,7 +274,7 @@ export default function Overview() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className={`w-full p-4 rounded-xl flex items-center gap-3 border shadow-sm backdrop-blur-md ${
-              activeBroadcast.includes('RED') 
+              activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') || activeBroadcast.includes('CYCLONE')
                 ? 'bg-red-500/10 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400' 
                 : activeBroadcast.includes('ORANGE')
                   ? 'bg-orange-500/10 border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400'
