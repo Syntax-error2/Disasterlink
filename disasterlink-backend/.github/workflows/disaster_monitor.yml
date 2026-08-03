@@ -1,0 +1,14 @@
+name: Disaster Monitor Ping
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Run every 5 minutes
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  ping_webhook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Disaster Monitor Webhook
+        run: |
+          curl -s -X GET "https://darkgoldenrod-anteater-579870.hostingersite.com/api/cron/monitor/DL2026AutoMonitor"
