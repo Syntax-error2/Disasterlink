@@ -128,23 +128,6 @@ export default function RepresentativeMobile() {
         
         if (lastThreat !== threat) {
             localStorage.setItem(`last_threat_level_${userKey}`, threat);
-            try {
-                const permStatus = await LocalNotifications.checkPermissions();
-                if (permStatus.display === 'prompt') {
-                    await LocalNotifications.requestPermissions();
-                }
-                
-                await LocalNotifications.schedule({
-                    notifications: [
-                        {
-                            title: `🚨 ${displayThreat} in ${lguName}`,
-                            body: `Local weather conditions are currently ${threat}. Please open the app to verify your area.`,
-                            id: Math.floor(Math.random() * 1000000),
-                            schedule: { at: new Date(Date.now() + 1000) }
-                        }
-                    ]
-                });
-            } catch (e) {}
         }
       } catch (e) {
         console.warn("Weather fetch failed. Falling back to default data.", e);

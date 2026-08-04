@@ -194,22 +194,6 @@ export default function CommunityPortal() {
         if (lastThreat !== threat) {
             localStorage.setItem(`last_threat_level_${userKey}`, threat);
             try {
-                const permStatus = await LocalNotifications.checkPermissions();
-                if (permStatus.display === 'prompt') {
-                    await LocalNotifications.requestPermissions();
-                }
-                
-                await LocalNotifications.schedule({
-                    notifications: [
-                        {
-                            title: `🚨 ${displayThreat} in ${lguName}`,
-                            body: `Local weather conditions are currently ${threat}. Stay safe!`,
-                            id: Math.floor(Math.random() * 1000000),
-                            schedule: { at: new Date(Date.now() + 1000) }
-                        }
-                    ]
-                });
-            } catch (e) {}
         }
       } catch (e) {
         console.warn("Weather fetch failed. Falling back to default data.", e);
@@ -364,30 +348,6 @@ export default function CommunityPortal() {
           if (forceShow || !dismissed.includes(broadcastId)) {
             setActiveBroadcast(broadcastMsg);
             sessionStorage.setItem("current_broadcast_id", broadcastId);
-            
-            // Trigger Native Push Notification on Android
-            try {
-               await LocalNotifications.schedule({
-                 notifications: [
-                   {
-                     title: broadcastMsg.includes("VOLCANIC") ? "🌋 Volcanic Eruption Alert" :
-                            broadcastMsg.includes("EARTHQUAKE") ? "⚠️ Earthquake Detected" :
-                            broadcastMsg.includes("RED") ? "🔴 Severe Rain Warning" :
-                            broadcastMsg.includes("ORANGE") ? "🟠 Heavy Rain Warning" :
-                            "🟡 Weather Alert",
-                     body: broadcastMsg,
-                     id: new Date().getTime(),
-                     schedule: { at: new Date(Date.now() + 1000) },
-                     sound: undefined,
-                     attachments: undefined,
-                     actionTypeId: "",
-                     extra: undefined
-                   }
-                 ]
-               });
-            } catch (err) {
-               console.log("LocalNotifications not available or permission denied", err);
-            }
           }
         } else {
           setActiveBroadcast(null);

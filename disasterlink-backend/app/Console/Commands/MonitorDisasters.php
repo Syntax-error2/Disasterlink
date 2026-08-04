@@ -138,12 +138,15 @@ class MonitorDisasters extends Command
                     $weather = Http::timeout(5)->get("https://api.open-meteo.com/v1/forecast", [
                         'latitude' => $latitude,
                         'longitude' => $longitude,
-                        'current' => 'precipitation',
+                        'current' => ['precipitation', 'precipitation_probability'],
                     ]);
                     
                     if ($weather->successful()) {
-                        $precipitation = $weather->json()['current']['precipitation'] ?? 0;
-                        $this->info("Current precipitation rate: {$precipitation} mm/hr");
+                        $current = $weather->json()['current'];
+                        $precipitation = $current['precipitation'] ?? 0;
+                        $prob = $current['precipitation_probability'] ?? 0;
+                        
+                        $this->info("Current precipitation rate: {$precipitation} mm/hr, Prob: {$prob}%");
                         
                         if ($precipitation > 30.0) {
                             $warningMsg = "🔴 PAGASA RED RAINFALL WARNING: {$precipitation} mm/hr detected. Severe flooding expected in low-lying areas of Binalbagan.";
@@ -151,6 +154,10 @@ class MonitorDisasters extends Command
                             $warningMsg = "🟠 PAGASA ORANGE RAINFALL WARNING: {$precipitation} mm/hr detected. Flooding is threatening Binalbagan.";
                         } elseif ($precipitation > 7.5) {
                             $warningMsg = "🟡 PAGASA YELLOW RAINFALL WARNING: {$precipitation} mm/hr detected. Flooding is possible in Binalbagan.";
+                        } elseif ($prob > 80) {
+                            $warningMsg = "🌧️ HEAVY RAIN ADVISORY: {$prob}% chance of heavy rain in Binalbagan. Please bring an umbrella and stay safe.";
+                        } elseif ($prob > 50) {
+                            $warningMsg = "☔ SCATTERED RAIN: {$prob}% chance of thunderstorms in Binalbagan today.";
                         }
                     }
                 } catch (\Exception $e) {

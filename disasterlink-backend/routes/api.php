@@ -47,6 +47,8 @@ Route::get('/cron/monitor/{secret}', function ($secret) {
     return response()->json(['status' => 'ok', 'output' => trim($output)]);
 });
 
+Route::get('/cron', function () { \Illuminate\Support\Facades\Artisan::call('schedule:run'); return response()->json(['message' => 'Cron executed']); });
+
 use App\Http\Controllers\IncidentReportController;
 use App\Http\Controllers\EvacuationCenterController;
 use App\Http\Controllers\DashboardController;
