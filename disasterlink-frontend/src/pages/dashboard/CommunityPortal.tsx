@@ -741,24 +741,49 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
         </div>
       </div>
 
-      {/* THREAT LEVEL */}
+      {/* UNIFIED THREAT LEVEL */}
       {weather && (() => {
-        const rainProb = weather.precipitation_probability ?? 0;
-        let threat = { title: "Low Threat", desc: "Clear skies and stable weather conditions.", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
-        if (rainProb > 80) threat = { title: "High Alert", desc: "Heavy rain and severe weather expected.", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20" };
-        else if (rainProb > 50) threat = { title: "Moderate to High", desc: "Scattered rain and potential thunderstorms.", color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" };
-        else if (rainProb > 20) threat = { title: "Low to Moderate", desc: "Light scattered rain showers expected.", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" };
+        let threat = { 
+          title: "System Normal", 
+          desc: "Your community is currently safe. No severe weather or emergency alerts have been issued.", 
+          color: "text-emerald-500", 
+          bg: "bg-emerald-500/10", 
+          border: "border-emerald-500/20",
+          icon: <ShieldCheck className="h-6 w-6 text-emerald-500" />
+        };
+
+        if (activeBroadcast) {
+          const isRed = activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') || activeBroadcast.includes('CYCLONE');
+          const isOrange = activeBroadcast.includes('ORANGE');
+          
+          threat = {
+            title: isRed ? "High Alert (Emergency)" : isOrange ? "Moderate to High Alert" : "Weather Advisory",
+            desc: activeBroadcast,
+            color: isRed ? "text-red-500" : isOrange ? "text-orange-500" : "text-yellow-500",
+            bg: isRed ? "bg-red-500/10" : isOrange ? "bg-orange-500/10" : "bg-yellow-500/10",
+            border: isRed ? "border-red-500/20" : isOrange ? "border-orange-500/20" : "border-yellow-500/20",
+            icon: <AlertTriangle className={`h-6 w-6 ${isRed ? 'text-red-500' : isOrange ? 'text-orange-500' : 'text-yellow-500'}`} />
+          };
+        } else {
+          // Fallback to weather probability if no official broadcast
+          const rainProb = weather.precipitation_probability ?? 0;
+          if (rainProb > 80) threat = { title: "Heavy Rain Expected", desc: "No official LGU warning yet, but expect heavy rain.", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", icon: <CloudRain className="h-6 w-6 text-blue-400" /> };
+          else if (rainProb > 50) threat = { title: "Scattered Rain", desc: "Potential thunderstorms in your area today.", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", icon: <CloudRain className="h-6 w-6 text-blue-400" /> };
+        }
 
         return (
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg overflow-hidden mt-2 mb-4">
             <div className="p-4 flex items-center gap-4">
               <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border ${threat.bg} ${threat.border}`}>
-                <CloudRain className={`h-6 w-6 ${threat.color}`} />
+                {threat.icon}
               </div>
-              <div>
-                <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5">Local Threat Level</div>
-                <div className="text-base font-bold text-zinc-100">{threat.title}</div>
-                <div className="text-[11px] text-zinc-400 leading-tight mt-0.5">{threat.desc}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5 flex items-center gap-2">
+                  Local Threat Level 
+                  {activeBroadcast && <span className="bg-red-500 h-1.5 w-1.5 rounded-full animate-pulse"></span>}
+                </div>
+                <div className="text-base font-bold text-zinc-100 truncate">{threat.title}</div>
+                <div className="text-[11px] text-zinc-400 leading-tight mt-0.5 line-clamp-2">{threat.desc}</div>
               </div>
             </div>
           </div>
@@ -911,51 +936,7 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
 
       {(!myReports || myReports.length === 0) && (!alerts || alerts.length === 0) && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 pt-2">
-          
-          {/* DYNAMIC THREAT CARD */}
-          <div className={`border rounded-3xl p-6 relative overflow-hidden shadow-sm transition-colors duration-500 ${
-            !activeBroadcast ? "bg-zinc-900 border-zinc-800" :
-            activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') ? "bg-red-500/10 border-red-500/30" :
-            activeBroadcast.includes('ORANGE') ? "bg-orange-500/10 border-orange-500/30" :
-            "bg-yellow-500/10 border-yellow-500/30"
-          }`}>
-             <div className="absolute -top-4 -right-4 p-4 opacity-5">
-               {!activeBroadcast ? <ShieldCheck className="h-40 w-40" /> : <AlertTriangle className="h-40 w-40" />}
-             </div>
-             
-             <div className="relative z-10 flex items-center gap-3 mb-3">
-                <div className={`h-2.5 w-2.5 rounded-full animate-[pulse_2s_ease-in-out_infinite] ${
-                  !activeBroadcast ? "bg-emerald-500" :
-                  activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') ? "bg-red-500" :
-                  activeBroadcast.includes('ORANGE') ? "bg-orange-500" :
-                  "bg-yellow-500"
-                }`}></div>
-                <span className={`text-xs font-black tracking-widest uppercase ${
-                  !activeBroadcast ? "text-emerald-500" :
-                  activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') ? "text-red-400" :
-                  activeBroadcast.includes('ORANGE') ? "text-orange-400" :
-                  "text-yellow-400"
-                }`}>
-                  {!activeBroadcast ? "System Normal" : 
-                   activeBroadcast.includes('VOLCANIC') ? "Volcanic Alert" :
-                   activeBroadcast.includes('EARTHQUAKE') ? "Seismic Alert" : "Weather Alert"}
-                </span>
-             </div>
-             
-             <h3 className="text-2xl font-black text-white mb-2 tracking-tight">
-               {!activeBroadcast ? "No Active Threats" :
-                activeBroadcast.includes('VOLCANIC') ? "Kanlaon Eruption" :
-                activeBroadcast.includes('EARTHQUAKE') ? "Earthquake Detected" :
-                "Possible Flooding"}
-             </h3>
-             
-             <p className="text-sm text-zinc-300 leading-relaxed max-w-[90%] font-medium">
-               {!activeBroadcast 
-                 ? "Your community is currently safe. No severe weather or emergency alerts have been issued for your area."
-                 : activeBroadcast}
-             </p>
-          </div>
-          
+
           <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-[20px] p-4 flex items-center justify-between backdrop-blur-sm">
             <div className="flex items-center gap-4">
                <div className="bg-blue-500/10 p-3 rounded-xl"><Info className="h-6 w-6 text-blue-500" /></div>

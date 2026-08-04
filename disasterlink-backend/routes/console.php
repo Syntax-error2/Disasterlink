@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('disaster:monitor')->everyFiveMinutes();
+Schedule::command('disasterlink:daily-weather-summary')->dailyAt('20:00')->timezone('Asia/Manila');
