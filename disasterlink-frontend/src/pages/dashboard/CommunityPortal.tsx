@@ -639,19 +639,43 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
         };
 
         if (activeBroadcast) {
-          const isRed = activeBroadcast.includes('RED') || activeBroadcast.includes('EARTHQUAKE') || activeBroadcast.includes('VOLCANIC') || activeBroadcast.includes('CYCLONE');
-          const isOrange = activeBroadcast.includes('ORANGE');
+          const text = activeBroadcast.toUpperCase();
+          const isRed = text.includes('RED RAINFALL') || text.includes('EARTHQUAKE') || text.includes('VOLCANIC') || text.includes('CYCLONE');
+          const isOrange = text.includes('ORANGE RAINFALL');
+          const isYellow = text.includes('YELLOW RAINFALL');
+          const isBlue = text.includes('HEAVY RAIN ADVISORY') || text.includes('SCATTERED RAIN');
           
-          threat = {
-            title: isRed ? "High Alert (Emergency)" : isOrange ? "Moderate to High Alert" : "Weather Advisory",
-            desc: activeBroadcast,
-            color: isRed ? "text-red-500" : isOrange ? "text-orange-500" : "text-yellow-500",
-            bg: isRed ? "bg-red-500/10" : isOrange ? "bg-orange-500/10" : "bg-yellow-500/10",
-            border: isRed ? "border-red-500/20" : isOrange ? "border-orange-500/20" : "border-yellow-500/20",
-            cardBg: isRed ? "bg-red-500/5" : isOrange ? "bg-orange-500/5" : "bg-yellow-500/5",
-            cardBorder: isRed ? "border-red-500/30" : isOrange ? "border-orange-500/30" : "border-yellow-500/30",
-            icon: <AlertTriangle className={`h-6 w-6 ${isRed ? 'text-red-500' : isOrange ? 'text-orange-500' : 'text-yellow-500'}`} />
-          };
+          let title = "Weather Advisory";
+          if (isRed) title = "High Alert (Emergency)";
+          else if (isOrange) title = "Moderate to High Alert";
+          else if (isYellow) title = "Moderate Alert";
+          else if (text.includes('HEAVY RAIN ADVISORY')) title = "Heavy Rain Expected";
+          else if (text.includes('SCATTERED RAIN')) title = "Scattered Rain";
+
+          if (isBlue) {
+            threat = {
+              title,
+              desc: activeBroadcast,
+              color: "text-blue-400",
+              bg: "bg-blue-500/10",
+              border: "border-blue-500/20",
+              cardBg: "bg-blue-500/5",
+              cardBorder: "border-blue-500/30",
+              icon: <CloudRain className="h-6 w-6 text-blue-400" />
+            };
+          } else {
+            const isY = !isRed && !isOrange;
+            threat = {
+              title,
+              desc: activeBroadcast,
+              color: isRed ? "text-red-500" : isOrange ? "text-orange-500" : "text-yellow-500",
+              bg: isRed ? "bg-red-500/10" : isOrange ? "bg-orange-500/10" : "bg-yellow-500/10",
+              border: isRed ? "border-red-500/20" : isOrange ? "border-orange-500/20" : "border-yellow-500/20",
+              cardBg: isRed ? "bg-red-500/5" : isOrange ? "bg-orange-500/5" : "bg-yellow-500/5",
+              cardBorder: isRed ? "border-red-500/30" : isOrange ? "border-orange-500/30" : "border-yellow-500/30",
+              icon: <AlertTriangle className={`h-6 w-6 ${isRed ? 'text-red-500' : isOrange ? 'text-orange-500' : 'text-yellow-500'}`} />
+            };
+          }
         } else {
           // Fallback to weather probability if no official broadcast
           const rainProb = weather.precipitation_probability ?? 0;

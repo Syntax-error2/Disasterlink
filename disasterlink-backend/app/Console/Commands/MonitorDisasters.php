@@ -184,7 +184,11 @@ class MonitorDisasters extends Command
                     if (!empty($tokens)) {
                         $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
                         $messaging = $factory->createMessaging();
-                        $notification = \Kreait\Firebase\Messaging\Notification::create('🚨 DISASTER ALERT', $warningMsg);
+                        $title = '🚨 DISASTER ALERT';
+                        if (str_contains($warningMsg, 'RAIN') || str_contains($warningMsg, 'ADVISORY')) {
+                            $title = '🌧️ Rain Advisory';
+                        }
+                        $notification = \Kreait\Firebase\Messaging\Notification::create($title, $warningMsg);
                         
                         $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
                             'priority' => 'high',
