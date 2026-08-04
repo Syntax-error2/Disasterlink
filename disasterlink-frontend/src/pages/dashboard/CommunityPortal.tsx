@@ -7,7 +7,7 @@ import axiosInstance from "../../lib/axios";
 import { 
   Home, Map as MapIcon, PlusCircle, Users, AlertTriangle, CloudRain, 
   Navigation, PhoneCall, ShieldCheck, Camera, Send, Heart, 
-  MessageSquare, CheckCircle, Flame, Waves, Wind, Filter, Info, Loader2, Clock, Activity, MapPin, Thermometer, Droplets, Gauge, X,
+  MessageSquare, CheckCircle, Flame, Waves, Wind, Filter, Info, Loader2, Clock, Activity, MapPin, Thermometer, Droplets, Gauge, X, Trash2,
   LogOut, User as UserIcon
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -1468,8 +1468,10 @@ function FeedView({ showToast, posts, setPosts, user, isOffline, fetchMoreFeedPo
     }
 
     try {
-      // Must set multipart/form-data implicitly by sending FormData
-      const res = await axiosInstance.post('/feed', formData);
+      // Must explicitly set multipart/form-data to override the global application/json config
+      const res = await axiosInstance.post('/feed', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+      });
       
       // Update local state by manually applying the backend masking if anonymous
       // to avoid waiting for a refetch (since backend masks in index, not in store response if we use the raw object).
@@ -1514,6 +1516,17 @@ function FeedView({ showToast, posts, setPosts, user, isOffline, fetchMoreFeedPo
       setPosts(posts.map((p:any) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
       await axiosInstance.post(`/feed/${id}/like`);
     } catch(e) {}
+  };
+
+  const deletePost = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    try {
+      await axiosInstance.delete(`/feed/${id}`);
+      setPosts(posts.filter((p:any) => p.id !== id));
+      showToast("Post deleted successfully", "success");
+    } catch(e) {
+      showToast("Failed to delete post", "error");
+    }
   };
 
   return (
@@ -1577,7 +1590,14 @@ function FeedView({ showToast, posts, setPosts, user, isOffline, fetchMoreFeedPo
                       </p>
                     </div>
                 </div>
-                {post.type === 'official' && <span className="bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Official</span>}
+                <div className="flex items-center gap-2">
+                  {post.original_author === user.name && (
+                    <button onClick={() => deletePost(post.id)} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-colors">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                  {post.type === 'official' && <span className="bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Official</span>}
+                </div>
               </div>
               
               <p className="text-sm text-zinc-300 leading-relaxed mb-4">{post.content}</p>

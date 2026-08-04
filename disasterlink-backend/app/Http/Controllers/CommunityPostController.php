@@ -14,6 +14,7 @@ class CommunityPostController extends Controller
                 if ($post->image_path) {
                     $post->image_url = asset('storage/' . $post->image_path);
                 }
+                $post->original_author = $post->author;
                 if ($post->is_anonymous) {
                     $post->author = 'Anonymous Citizen';
                     if ($post->barangay) {
@@ -74,6 +75,22 @@ class CommunityPostController extends Controller
             $post = CommunityPost::findOrFail($id);
             $post->increment('likes');
             return response()->json(['message' => 'Post liked!', 'likes' => $post->likes], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $post = CommunityPost::findOrFail($id);
+            
+            if ($post->image_path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($post->image_path);
+            }
+            
+            $post->delete();
+            return response()->json(['message' => 'Post deleted successfully'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

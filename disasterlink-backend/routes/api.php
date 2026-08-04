@@ -88,6 +88,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/feed', [CommunityPostController::class, 'index']);
     Route::post('/feed', [CommunityPostController::class, 'store']);
     Route::post('/feed/{id}/like', [CommunityPostController::class, 'like']);
+    Route::delete('/feed/{id}', [CommunityPostController::class, 'destroy']);
 
     // ==========================================
     // FAMILY TRACKING API
