@@ -193,7 +193,6 @@ export default function CommunityPortal() {
         
         if (lastThreat !== threat) {
             localStorage.setItem(`last_threat_level_${userKey}`, threat);
-            try {
         }
       } catch (e) {
         console.warn("Weather fetch failed. Falling back to default data.", e);
