@@ -750,6 +750,8 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
           color: "text-emerald-500", 
           bg: "bg-emerald-500/10", 
           border: "border-emerald-500/20",
+          cardBg: "bg-zinc-900",
+          cardBorder: "border-zinc-800",
           icon: <ShieldCheck className="h-6 w-6 text-emerald-500" />
         };
 
@@ -763,17 +765,19 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
             color: isRed ? "text-red-500" : isOrange ? "text-orange-500" : "text-yellow-500",
             bg: isRed ? "bg-red-500/10" : isOrange ? "bg-orange-500/10" : "bg-yellow-500/10",
             border: isRed ? "border-red-500/20" : isOrange ? "border-orange-500/20" : "border-yellow-500/20",
+            cardBg: isRed ? "bg-red-500/5" : isOrange ? "bg-orange-500/5" : "bg-yellow-500/5",
+            cardBorder: isRed ? "border-red-500/30" : isOrange ? "border-orange-500/30" : "border-yellow-500/30",
             icon: <AlertTriangle className={`h-6 w-6 ${isRed ? 'text-red-500' : isOrange ? 'text-orange-500' : 'text-yellow-500'}`} />
           };
         } else {
           // Fallback to weather probability if no official broadcast
           const rainProb = weather.precipitation_probability ?? 0;
-          if (rainProb > 80) threat = { title: "Heavy Rain Expected", desc: "No official LGU warning yet, but expect heavy rain.", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", icon: <CloudRain className="h-6 w-6 text-blue-400" /> };
-          else if (rainProb > 50) threat = { title: "Scattered Rain", desc: "Potential thunderstorms in your area today.", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", icon: <CloudRain className="h-6 w-6 text-blue-400" /> };
+          if (rainProb > 80) threat = { title: "Heavy Rain Expected", desc: "No official LGU warning yet, but expect heavy rain.", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", cardBg: "bg-blue-500/5", cardBorder: "border-blue-500/30", icon: <CloudRain className="h-6 w-6 text-blue-400" /> };
+          else if (rainProb > 50) threat = { title: "Scattered Rain", desc: "Potential thunderstorms in your area today.", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", cardBg: "bg-blue-500/5", cardBorder: "border-blue-500/30", icon: <CloudRain className="h-6 w-6 text-blue-400" /> };
         }
 
         return (
-          <div className={`border rounded-2xl shadow-lg overflow-hidden mt-2 mb-4 transition-colors duration-500 ${threat.border.replace('/20', '/50')} ${activeBroadcast ? threat.bg.replace('/10', '/5') : 'bg-zinc-900 border-zinc-800'}`}>
+          <div className={`border rounded-2xl shadow-lg overflow-hidden mt-2 mb-4 transition-colors duration-500 ${threat.cardBg} ${threat.cardBorder}`}>
             <div className="p-4 flex items-center gap-4">
               <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border ${threat.bg} ${threat.border}`}>
                 {threat.icon}
