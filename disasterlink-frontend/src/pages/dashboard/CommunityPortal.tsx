@@ -665,13 +665,10 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
               <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border ${threat.bg} ${threat.border}`}>
                 {threat.icon}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5 flex items-center gap-2">
-                  Local Threat Level 
-                  {activeBroadcast && <span className="bg-red-500 h-1.5 w-1.5 rounded-full animate-pulse"></span>}
-                </div>
-                <div className="text-base font-bold text-zinc-100 truncate">{threat.title}</div>
-                <div className="text-[11px] text-zinc-400 leading-tight mt-0.5 line-clamp-2">{threat.desc}</div>
+              <div>
+                <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5">Local Threat Level</div>
+                <div className="text-base font-bold text-zinc-100">{threat.title}</div>
+                <div className="text-[11px] text-zinc-400 leading-tight mt-0.5">{threat.desc}</div>
               </div>
             </div>
           </div>
