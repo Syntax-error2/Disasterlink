@@ -159,6 +159,10 @@ class MonitorDisasters extends Command
                         } elseif ($prob > 50) {
                             $warningMsg = "☔ SCATTERED RAIN: {$prob}% chance of thunderstorms in Binalbagan today.";
                         }
+                        
+                        if ($warningMsg) {
+                            $duration = 30; // 30 minutes cache for rain advisories
+                        }
                     }
                 } catch (\Exception $e) {
                     $this->warn("Open-Meteo check failed: " . $e->getMessage());

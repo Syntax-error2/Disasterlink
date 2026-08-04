@@ -25,7 +25,7 @@ const HAZARD_MATRIX = [
   { name: "Flood Risk", level: "High", color: "bg-red-500", percent: 85 },
   { name: "Landslide", level: "Medium", color: "bg-amber-500", percent: 45 },
   { name: "Storm Surge", level: "Low", color: "bg-emerald-500", percent: 15 },
-  { name: "Heat Index", level: "Warning", color: "bg-orange-500", percent: 70 },
+  { name: "PAGASA Heat Index", level: "Warning", color: "bg-orange-500", percent: 70 },
 ];
 
 const binalbaganCoords: [number, number] = [10.1866, 122.8587];
@@ -333,7 +333,7 @@ export default function LiveWeather() {
       setHazardMatrix([
         { name: "Flood Risk", level: totalRain24h > 50 ? "High" : totalRain24h > 10 ? "Medium" : "Low", color: totalRain24h > 50 ? "bg-red-500" : totalRain24h > 10 ? "bg-amber-500" : "bg-blue-500", percent: Math.min(100, Math.round((totalRain24h / 50) * 100)) },
         { name: "Wind Damage", level: wind > 60 ? "High" : wind > 30 ? "Medium" : "Low", color: wind > 60 ? "bg-red-500" : wind > 30 ? "bg-amber-500" : "bg-blue-500", percent: Math.min(100, Math.round((wind / 100) * 100)) },
-        { name: "Heat Index", level: heatIndex > 35 ? "Warning" : "Normal", color: heatIndex > 35 ? "bg-orange-500" : "bg-emerald-500", percent: Math.min(100, Math.round((heatIndex / 45) * 100)) },
+        { name: "PAGASA Heat Index", level: heatIndex > 35 ? "Warning" : "Normal", color: heatIndex > 35 ? "bg-orange-500" : "bg-emerald-500", percent: Math.min(100, Math.round((heatIndex / 45) * 100)) },
       ]);
 
       let recText = "Weather conditions are currently stable. No immediate hazard response required at this time.";
@@ -643,7 +643,7 @@ export default function LiveWeather() {
               <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2"><Thermometer className="h-4 w-4 text-orange-400"/> Air Temp</div>
               <div className="text-4xl font-black tracking-tighter">{weather?.current.temperature_2m.toFixed(1)}°C</div>
               <div className="text-sm mt-1 font-bold flex items-center gap-1">
-                <span className="text-zinc-500">Heat Index:</span> 
+                <span className="text-zinc-500">PAGASA Heat Index:</span> 
                 <span className={(weather?.current.apparent_temperature || 0) > 35 ? 'text-red-400 animate-pulse' : 'text-orange-400'}>{weather?.current.apparent_temperature.toFixed(1)}°C</span>
               </div>
             </CardContent>

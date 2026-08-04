@@ -44,7 +44,7 @@ class DailyWeatherSummary extends Command
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'current' => ['temperature_2m', 'precipitation_probability', 'weather_code'],
-                'daily' => ['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'],
+                'daily' => ['temperature_2m_max', 'apparent_temperature_max', 'precipitation_sum'],
                 'timezone' => 'Asia/Manila',
                 'forecast_days' => 2
             ]);
@@ -56,12 +56,15 @@ class DailyWeatherSummary extends Command
                 $tomorrowMaxTemp = $data['daily']['temperature_2m_max'][1] ?? null;
                 $tomorrowRainSum = $data['daily']['precipitation_sum'][1] ?? 0;
                 
-                // We calculate a basic heat index estimation (feels like) based on typical PH humidity
-                $heatIndex = $tomorrowMaxTemp ? round($tomorrowMaxTemp + 3.0) : null; 
+                // Open-Meteo's apparent_temperature_max uses the Rothfusz Heat Index formula, exactly what PAGASA uses!
+                $heatIndex = $data['daily']['apparent_temperature_max'][1] ?? ($tomorrowMaxTemp ? round($tomorrowMaxTemp + 3.0) : null); 
+                if ($heatIndex) {
+                    $heatIndex = round($heatIndex);
+                }
 
                 $tonightText = $tonightRain > 30 ? "Expect scattered rain tonight ({$tonightRain}% chance)." : "Clear skies expected tonight.";
                 $tomorrowText = $tomorrowRainSum > 5.0 ? "Rain expected tomorrow." : "Generally dry tomorrow.";
-                $heatText = $heatIndex ? "Expected Heat Index: {$heatIndex}°C." : "";
+                $heatText = $heatIndex ? "PAGASA Heat Index: {$heatIndex}°C." : "";
 
                 $messageText = "🌙 {$tonightText} {$tomorrowText} {$heatText}";
 

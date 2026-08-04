@@ -393,47 +393,7 @@ export default function CommunityPortal() {
     };
   }, []);
 
-  // --- TTS & VIBRATION LOOP WHEN ALERT IS ACTIVE ---
-  useEffect(() => {
-    let vibInterval: any;
-    
-    if (activeBroadcast) {
-      // 1. Start continuous vibration
-      const runVibration = async () => {
-        try {
-          await Haptics.vibrate();
-          setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1100);
-          setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1300);
-        } catch (e) {}
-      };
-      
-      runVibration(); // run immediately
-      vibInterval = setInterval(runVibration, 2500);
-
-      // 2. Start Text-to-Speech (Native Capacitor Plugin)
-      const playTTS = async () => {
-        try {
-          await TextToSpeech.speak({
-            text: `EMERGENCY ALERT. ${activeBroadcast}`,
-            lang: 'en-US',
-            rate: 0.9,
-            pitch: 1.1,
-            volume: 1.0
-          });
-        } catch (e) {
-          console.warn("Native TTS Failed", e);
-        }
-      };
-      
-      // Delay TTS slightly to let the modal animate in and haptics start
-      setTimeout(playTTS, 800);
-    }
-
-    return () => {
-      clearInterval(vibInterval);
-      TextToSpeech.stop().catch(() => {});
-    };
-  }, [activeBroadcast]);
+  // --- TTS & VIBRATION (Removed per user request to keep it local) ---
 
   const showToast = (msg: string, type: 'success' | 'info' | 'error' = 'info') => {
     setToast({ msg, type });
@@ -524,43 +484,7 @@ export default function CommunityPortal() {
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[#0a0a0c] text-zinc-50 font-sans overflow-hidden selection:bg-red-500/30 relative">
       
-      {/* EMERGENCY BROADCAST OVERLAY */}
-      <AnimatePresence>
-        {activeBroadcast && (
-          <motion.div 
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            className="absolute inset-0 z-[999] bg-red-600/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center"
-          >
-            <motion.div 
-              animate={{ scale: [1, 1.2, 1] }} 
-              transition={{ repeat: Infinity, duration: 1.5 }}
-              className="bg-white/20 p-6 rounded-full mb-6"
-            >
-              <AlertTriangle className="h-20 w-20 text-white" />
-            </motion.div>
-            <h1 className="text-4xl font-black text-white tracking-tighter mb-4 uppercase">Emergency Broadcast</h1>
-            <p className="text-xl text-white/90 font-medium leading-relaxed max-w-sm mb-12">
-              {activeBroadcast}
-            </p>
-            <button 
-              onClick={() => {
-                const currentId = sessionStorage.getItem("current_broadcast_id") || activeBroadcast;
-                const dismissed = JSON.parse(sessionStorage.getItem("dismissed_session_broadcasts") || "[]");
-                if (currentId && !dismissed.includes(currentId)) {
-                  dismissed.push(currentId);
-                  sessionStorage.setItem("dismissed_session_broadcasts", JSON.stringify(dismissed));
-                }
-                setActiveBroadcast(null);
-              }} 
-              className="px-8 py-4 bg-white text-red-600 font-bold rounded-full shadow-2xl active:scale-95 transition-all text-lg"
-            >
-              Acknowledge & Dismiss
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* EMERGENCY BROADCAST OVERLAY REMOVED (per user request to keep local) */}
 
       <AnimatePresence>
         {toast && (
@@ -1550,7 +1474,7 @@ function FeedView({ showToast, posts, setPosts, user, isOffline, fetchMoreFeedPo
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {post.original_author === user.name && (
+                  {(post.original_author === user.name || post.author === user.name) && (
                     <button onClick={() => deletePost(post.id)} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-colors">
                       <Trash2 className="h-4 w-4" />
                     </button>
