@@ -682,6 +682,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, isPrimary }: any) {
 // ==========================================
 function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, user, myReports, activeBroadcast, proximityAlerts, weather }: any) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [showGoBag, setShowGoBag] = useState(false);
   const { logout } = useAuth();
 
   return (
@@ -772,7 +773,7 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
         }
 
         return (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg overflow-hidden mt-2 mb-4">
+          <div className={`border rounded-2xl shadow-lg overflow-hidden mt-2 mb-4 transition-colors duration-500 ${threat.border.replace('/20', '/50')} ${activeBroadcast ? threat.bg.replace('/10', '/5') : 'bg-zinc-900 border-zinc-800'}`}>
             <div className="p-4 flex items-center gap-4">
               <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border ${threat.bg} ${threat.border}`}>
                 {threat.icon}
@@ -945,10 +946,57 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
                   <p className="text-xs text-zinc-500 mt-0.5">Read the LGU emergency guidelines.</p>
                </div>
             </div>
-            <button onClick={() => showToast("Opening emergency guidelines...", "info")} className="text-xs font-bold text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 active:scale-95 transition-all px-4 py-2 rounded-lg">View</button>
+            <button onClick={() => setShowGoBag(true)} className="text-xs font-bold text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 active:scale-95 transition-all px-4 py-2 rounded-lg">View</button>
           </div>
         </motion.div>
       )}
+
+      <AnimatePresence>
+        {showGoBag && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowGoBag(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="p-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900 sticky top-0 z-10">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-500/20 p-2 rounded-lg"><Info className="h-5 w-5 text-blue-500" /></div>
+                  <h3 className="text-lg font-black text-white">Emergency Go-Bag</h3>
+                </div>
+                <button onClick={() => setShowGoBag(false)} className="p-2 rounded-full hover:bg-zinc-800 transition-colors"><X className="h-5 w-5 text-zinc-400" /></button>
+              </div>
+              
+              <div className="p-5 overflow-y-auto space-y-4">
+                <p className="text-sm text-zinc-400 font-medium">Prepare these essential items in an easy-to-carry bag in case of sudden evacuation orders by the LGU.</p>
+                
+                <div className="space-y-2">
+                  {[
+                    "Water (1 gallon per person per day)",
+                    "Non-perishable food & can opener",
+                    "Flashlight & extra batteries",
+                    "First aid kit & essential medicines",
+                    "Important family documents (ID, insurance)",
+                    "Extra cash (ATMs may be offline)",
+                    "Powerbank & charging cables",
+                    "Whistle to signal for help"
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-3 bg-zinc-800/50 p-3 rounded-xl border border-zinc-800">
+                      <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+                      <span className="text-sm text-zinc-200 font-medium">{item}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mt-2">
+                  <div className="text-red-400 font-bold text-xs uppercase tracking-wider mb-1 flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Tip</div>
+                  <p className="text-xs text-red-200 leading-relaxed">Keep your Go-Bag near your front door or in your car. Check expiration dates on food and medicine every 6 months.</p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
