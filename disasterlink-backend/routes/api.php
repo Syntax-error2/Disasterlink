@@ -21,11 +21,7 @@ Route::middleware('throttle:auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     
-    // TEMPORARY HIDDEN ROUTE TO SEED TEST ACCOUNTS
-    Route::get('/setup-test-accounts', function () {
-        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'TestAccountsSeeder']);
-        return response()->json(['message' => 'Test Accounts Created: kap.villasta@gmail.com and rep.villasta@gmail.com (Password: password123)']);
-    });
+
 });
 Route::get('/tenant-config/{subdomain}', [AuthController::class, 'tenantConfig'])->middleware('throttle:api');
 
