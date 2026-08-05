@@ -73,56 +73,37 @@ class MonitorDisasters extends Command
             if (!$warningMsg) {
                 $this->info("Checking PAGASA Tropical Cyclones...");
                 try {
-                    $rssUrl = 'http://publicalert.pagasa.dost.gov.ph/feeds/';
-                    $response = Http::withoutVerifying()->timeout(5)->get($rssUrl);
+                    $response = Http::withoutVerifying()
+                        ->timeout(8)
+                        ->withHeaders([
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        ])
+                        ->get('https://bagong.pagasa.dost.gov.ph/tropical-cyclone/severe-weather-bulletin');
+                    
                     if ($response->successful()) {
-                        $xml = @simplexml_load_string($response->body());
-                        if ($xml) {
-                            $capUrl = null;
-                            foreach ($xml->entry ?? [] as $entry) {
-                                $title = (string) $entry->title;
-                                if (stripos($title, 'TCB') !== false || stripos($title, 'Tropical Cyclone') !== false) {
-                                    foreach ($entry->link ?? [] as $link) {
-                                        if ((string) $link['type'] === 'application/cap+xml') {
-                                            $capUrl = (string) $link['href'];
-                                            break 2;
-                                        }
-                                    }
+                        $html = $response->body();
+                        if (stripos($html, 'Tropical Cyclone Bulletin') !== false) {
+                            $pattern = '/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+(&quot;|"|\')([A-Za-z]+)(&quot;|"|\')/i';
+                            if (preg_match($pattern, $html, $m)) {
+                                $name = strtoupper($m[3]);
+                                
+                                $location = 'PAR';
+                                if (preg_match('/was estimated based on all available data at\s+([^<]+)/i', $html, $mLoc)) {
+                                    $location = trim($mLoc[1]);
                                 }
-                            }
-
-                            if ($capUrl) {
-                                $capRes = Http::withoutVerifying()->timeout(5)->get($capUrl);
-                                if ($capRes->successful()) {
-                                    $cap = @simplexml_load_string($capRes->body());
-                                    if ($cap && isset($cap->info)) {
-                                        $desc = (string) $cap->info->description;
-                                        $headline = (string) $cap->info->headline;
-                                        
-                                        $name = 'CYCLONE';
-                                        if (preg_match('/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+([A-Z]+)/i', $headline, $m) || preg_match('/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+([A-Z]+)/i', $desc, $m)) {
-                                            $name = strtoupper($m[2]);
-                                        }
-                                        
-                                        $location = 'PAR';
-                                        if (preg_match('/was estimated based on all available data at ([^.]+)/i', $desc, $m) || preg_match('/located at ([^.]+)/i', $desc, $m)) {
-                                            $location = trim($m[1]);
-                                        }
-                                        
-                                        $wind = 'Unknown';
-                                        if (preg_match('/winds of ([0-9]+\s*km\/h)/i', $desc, $m)) {
-                                            $wind = $m[1];
-                                        }
-                                        
-                                        $gust = 'Unknown';
-                                        if (preg_match('/gustiness of up to ([0-9]+\s*km\/h)/i', $desc, $m)) {
-                                            $gust = $m[1];
-                                        }
-
-                                        $warningMsg = "🌀 TROPICAL CYCLONE UPDATE: {$name} is located at {$location}. Winds: {$wind}, Gusts: up to {$gust}.";
-                                        $duration = 60; // Hourly notifications for cyclones
-                                    }
+                                
+                                $wind = 'Unknown';
+                                if (preg_match('/winds of\s+([^<]+)/i', $html, $mGust)) {
+                                    $wind = trim($mGust[1]);
                                 }
+                                
+                                $gust = 'Unknown';
+                                if (preg_match('/gustiness of up to\s+([^<]+)/i', $html, $mGust)) {
+                                    $gust = trim($mGust[1]);
+                                }
+
+                                $warningMsg = "🌀 TROPICAL CYCLONE UPDATE: {$name} is located at {$location}. Winds: {$wind}, Gusts: up to {$gust}.";
+                                $duration = 60; // Hourly notifications for cyclones
                             }
                         }
                     }
