@@ -74,7 +74,7 @@ class MonitorDisasters extends Command
                 $this->info("Checking PAGASA Tropical Cyclones...");
                 try {
                     $rssUrl = 'http://publicalert.pagasa.dost.gov.ph/feeds/';
-                    $response = Http::timeout(5)->get($rssUrl);
+                    $response = Http::withoutVerifying()->timeout(5)->get($rssUrl);
                     if ($response->successful()) {
                         $xml = @simplexml_load_string($response->body());
                         if ($xml) {
@@ -92,7 +92,7 @@ class MonitorDisasters extends Command
                             }
 
                             if ($capUrl) {
-                                $capRes = Http::timeout(5)->get($capUrl);
+                                $capRes = Http::withoutVerifying()->timeout(5)->get($capUrl);
                                 if ($capRes->successful()) {
                                     $cap = @simplexml_load_string($capRes->body());
                                     if ($cap && isset($cap->info)) {
@@ -172,12 +172,42 @@ class MonitorDisasters extends Command
 
         if ($warningMsg) {
             $currentBroadcast = Cache::get('active_broadcast');
-            $currentMsg = is_array($currentBroadcast) ? ($currentBroadcast['message'] ?? '') : ($currentBroadcast ?? '');
             
-            if ($warningMsg !== $currentMsg) {
-                $this->warn("NEW THREAT DETECTED. Sending Background Push Notification: " . $warningMsg);
+            $severityLevel = 0;
+            if (str_contains($warningMsg, 'EARTHQUAKE') || str_contains($warningMsg, 'VOLCANIC') || str_contains($warningMsg, 'CYCLONE') || str_contains($warningMsg, 'RED RAINFALL')) {
+                $severityLevel = 5;
+            } elseif (str_contains($warningMsg, 'ORANGE RAINFALL')) {
+                $severityLevel = 4;
+            } elseif (str_contains($warningMsg, 'YELLOW RAINFALL')) {
+                $severityLevel = 3;
+            } elseif (str_contains($warningMsg, 'HEAVY RAIN ADVISORY')) {
+                $severityLevel = 2;
+            } elseif (str_contains($warningMsg, 'SCATTERED RAIN')) {
+                $severityLevel = 1;
+            }
+
+            $lastPushedAt = Cache::get('last_push_time', 0);
+            $lastSeverity = Cache::get('last_push_severity', 0);
+            $timeSinceLastPush = time() - $lastPushedAt;
+            $shouldPush = false;
+
+            if ($severityLevel > $lastSeverity) {
+                // Escalate! Always push if things get worse (e.g. Scattered -> Heavy)
+                $shouldPush = true;
+            } else {
+                // Determine cooldown based on current severity
+                if ($severityLevel == 1) $cooldown = 3600 * 6; // 6 hours for standard/scattered rain
+                elseif ($severityLevel == 2) $cooldown = 3600 * 2; // 2 hours for heavy rain
+                else $cooldown = 3600 * 1; // 1 hour for severe warnings
                 
-                // Trigger Firebase Push Notifications in the background!
+                if ($timeSinceLastPush >= $cooldown) {
+                    $shouldPush = true;
+                }
+            }
+
+            if ($shouldPush) {
+                $this->warn("NEW OR ESCALATED THREAT. Sending Background Push Notification: " . $warningMsg);
+                
                 try {
                     $tokens = \App\Models\User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
                     
@@ -211,19 +241,19 @@ class MonitorDisasters extends Command
                     \Illuminate\Support\Facades\Log::error('Background Firebase Push Failed: ' . $e->getMessage());
                     $this->warn("FCM Failed: " . $e->getMessage());
                 }
+                
+                Cache::put('last_push_time', time(), now()->addDays(1));
+                Cache::put('last_push_severity', $severityLevel, now()->addDays(1));
             } else {
-                $this->info("Threat is already active. Skipping duplicate push notification.");
+                $this->info("Threat active but in cooldown. Skipping push notification.");
             }
 
-            $broadcast = ['id' => uniqid('monitor_'), 'message' => $warningMsg];
+            $broadcast = ['id' => uniqid('monitor_'), 'message' => $warningMsg, 'severity' => $severityLevel];
             Cache::put('active_broadcast', $broadcast, now()->addMinutes($duration));
         } else {
             $this->info("No active weather or seismic threats. System Normal.");
-            $currentBroadcast = Cache::get('active_broadcast');
-            $msg = is_array($currentBroadcast) ? ($currentBroadcast['message'] ?? '') : ($currentBroadcast ?? '');
-            if ($msg && (str_contains($msg, 'PAGASA') || str_contains($msg, 'EARTHQUAKE') || str_contains($msg, 'VOLCANIC'))) {
-                Cache::forget('active_broadcast');
-            }
+            Cache::forget('active_broadcast');
+            Cache::forget('last_push_severity');
         }
         
         return Command::SUCCESS;

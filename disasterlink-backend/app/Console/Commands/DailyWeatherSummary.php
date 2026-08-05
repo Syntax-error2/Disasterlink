@@ -32,6 +32,19 @@ class DailyWeatherSummary extends Command
      */
     public function handle()
     {
+        $now = \Carbon\Carbon::now('Asia/Manila');
+        // We only want to send this during the 8 PM hour (20:00 - 20:59)
+        if ($now->hour !== 20) {
+            $this->info("It's not 8 PM yet. Current hour: {$now->hour}");
+            return Command::SUCCESS;
+        }
+
+        $cacheKey = 'daily_weather_sent_' . $now->format('Y-m-d');
+        if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+            $this->info("Daily digest already sent for today.");
+            return Command::SUCCESS;
+        }
+
         $this->info("Fetching daily weather digest for Binalbagan...");
 
         // Coordinates for Binalbagan
@@ -89,6 +102,7 @@ class DailyWeatherSummary extends Command
                     
                     $messaging->sendMulticast($cloudMessage, $tokens);
                     $this->info("Daily Digest pushed to " . count($tokens) . " devices: " . $messageText);
+                    \Illuminate\Support\Facades\Cache::put($cacheKey, true, now()->addDays(1));
                 } else {
                     $this->info("No FCM tokens found.");
                 }

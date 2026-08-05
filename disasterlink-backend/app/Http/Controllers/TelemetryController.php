@@ -44,7 +44,7 @@ class TelemetryController extends Controller
         $pagasa = ['active' => false];
         try {
             $rssUrl = 'http://publicalert.pagasa.dost.gov.ph/feeds/';
-            $response = Http::timeout(5)->get($rssUrl);
+            $response = Http::withoutVerifying()->timeout(5)->get($rssUrl);
 
             if ($response->successful()) {
                 $xml = @simplexml_load_string($response->body());
@@ -63,7 +63,7 @@ class TelemetryController extends Controller
                     }
 
                     if ($capUrl) {
-                        $capRes = Http::timeout(5)->get($capUrl);
+                        $capRes = Http::withoutVerifying()->timeout(5)->get($capUrl);
                         if ($capRes->successful()) {
                             $cap = @simplexml_load_string($capRes->body());
                             if ($cap && isset($cap->info)) {
@@ -120,20 +120,6 @@ class TelemetryController extends Controller
                 }
             }
         } catch (\Exception $e) {}
-
-        // ── Fallback: PAGASA API often lags social media — show TD LUIS ─────
-        if (!$pagasa['active']) {
-            $pagasa = [
-                'active'      => true,
-                'name'        => 'LUIS',
-                'category'    => 'Tropical Depression',
-                'former_name' => 'N/A',
-                'location'    => 'Philippine Area of Responsibility',
-                'wind_gust'   => '55 km/h',
-                'movement'    => 'Northwestward',
-                'issued_at'   => now()->format('h:i A d M Y') . ' (PAGASA)',
-            ];
-        }
 
         return response()->json([
             'weather' => $weather,
