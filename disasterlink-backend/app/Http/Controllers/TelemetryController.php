@@ -41,51 +41,57 @@ class TelemetryController extends Controller
         } catch (\Exception $e) {}
 
         // ── PAGASA real-time from official CAP RSS (Deprecated, using HTML Scrape) ──
-        $pagasa = ['active' => false];
+        $pagasa = null;
         try {
-            $response = Http::withoutVerifying()
-                ->timeout(8)
-                ->withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                ])
-                ->get('https://bagong.pagasa.dost.gov.ph/tropical-cyclone/severe-weather-bulletin');
+            $pagasa = \Illuminate\Support\Facades\Cache::remember('telemetry_pagasa', 300, function () {
+                $data = ['active' => false];
+                $response = Http::withoutVerifying()
+                    ->timeout(8)
+                    ->withHeaders([
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    ])
+                    ->get('https://bagong.pagasa.dost.gov.ph/tropical-cyclone/severe-weather-bulletin');
 
-            if ($response->successful()) {
-                $html = $response->body();
-                if (stripos($html, 'Tropical Cyclone Bulletin') !== false) {
-                    $pattern = '/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+(&quot;|"|\')([A-Za-z]+)(&quot;|"|\')/i';
-                    if (preg_match($pattern, $html, $m)) {
-                        $pagasa['active'] = true;
-                        $pagasa['category'] = $m[1];
-                        $pagasa['name'] = strtoupper($m[3]);
-                        $pagasa['former_name'] = 'N/A';
-                        $pagasa['location'] = 'Philippine Area of Responsibility';
-                        $pagasa['wind_gust'] = 'See Official Bulletin';
-                        $pagasa['movement'] = 'See Official Bulletin';
-                        
-                        if (preg_match('/Issued at\s+([^<]+)/i', $html, $mIssued)) {
-                            $pagasa['issued_at'] = trim($mIssued[1]);
-                        } else {
-                            $pagasa['issued_at'] = date('h:i A d M Y');
-                        }
+                if ($response->successful()) {
+                    $html = $response->body();
+                    if (stripos($html, 'Tropical Cyclone Bulletin') !== false) {
+                        $pattern = '/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+(&quot;|"|\')([A-Za-z]+)(&quot;|"|\')/i';
+                        if (preg_match($pattern, $html, $m)) {
+                            $data['active'] = true;
+                            $data['category'] = $m[1];
+                            $data['name'] = strtoupper($m[3]);
+                            $data['former_name'] = 'N/A';
+                            $data['location'] = 'Philippine Area of Responsibility';
+                            $data['wind_gust'] = 'See Official Bulletin';
+                            $data['movement'] = 'See Official Bulletin';
+                            
+                            if (preg_match('/Issued at\s+([^<]+)/i', $html, $mIssued)) {
+                                $data['issued_at'] = trim($mIssued[1]);
+                            } else {
+                                $data['issued_at'] = date('h:i A d M Y');
+                            }
 
-                        if (preg_match('/was estimated based on all available data at\s+([^<]+)/i', $html, $mLoc)) {
-                            $pagasa['location'] = trim($mLoc[1]);
-                        }
+                            if (preg_match('/was estimated based on all available data at\s+([^<]+)/i', $html, $mLoc)) {
+                                $data['location'] = trim($mLoc[1]);
+                            }
 
-                        if (preg_match('/gustiness of up to\s+([^<]+)/i', $html, $mGust)) {
-                            $pagasa['wind_gust'] = "Up to " . trim($mGust[1]);
-                        } elseif (preg_match('/winds of\s+([^<]+)/i', $html, $mGust)) {
-                            $pagasa['wind_gust'] = trim($mGust[1]);
-                        }
+                            if (preg_match('/gustiness of up to\s+([^<]+)/i', $html, $mGust)) {
+                                $data['wind_gust'] = "Up to " . trim($mGust[1]);
+                            } elseif (preg_match('/winds of\s+([^<]+)/i', $html, $mGust)) {
+                                $data['wind_gust'] = trim($mGust[1]);
+                            }
 
-                        if (preg_match('/Moving\s+([^<]+)/i', $html, $mMov)) {
-                            $pagasa['movement'] = trim($mMov[1]);
+                            if (preg_match('/Moving\s+([^<]+)/i', $html, $mMov)) {
+                                $data['movement'] = trim($mMov[1]);
+                            }
                         }
                     }
                 }
-            }
-        } catch (\Exception $e) {}
+                return $data;
+            });
+        } catch (\Exception $e) {
+            $pagasa = ['active' => false];
+        }
 
         return response()->json([
             'weather' => $weather,
