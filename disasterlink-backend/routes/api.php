@@ -43,7 +43,16 @@ Route::get('/cron/monitor/{secret}', function ($secret) {
     return response()->json(['status' => 'ok', 'output' => trim($output)]);
 });
 
-Route::get('/cron', function () { \Illuminate\Support\Facades\Artisan::call('schedule:run'); return response()->json(['message' => 'Cron executed']); });
+Route::get('/cron', function () { 
+    $logPath = storage_path('logs/laravel.log');
+    if (file_exists($logPath)) {
+        // Get last 1000 lines
+        $lines = file($logPath);
+        $lastLines = array_slice($lines, -500);
+        return response()->json(['log' => implode("", $lastLines)]);
+    }
+    return response()->json(['message' => 'No log file']); 
+});
 
 use App\Http\Controllers\IncidentReportController;
 use App\Http\Controllers\EvacuationCenterController;
