@@ -28,6 +28,15 @@ class IncidentReportController extends Controller
         }
     }
 
+    private function safeBroadcast($event)
+    {
+        try {
+            event($event);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Broadcast failed: ' . $e->getMessage());
+        }
+    }
+
     private function clearIncidentCaches()
     {
         \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
@@ -99,7 +108,7 @@ class IncidentReportController extends Controller
                         'longitude' => $request->input('longitude') ?: $recentIncident->longitude,
                         'details' => $recentIncident->details . " [ESCALATED BY SOS PING from " . $request->input('exact_location', 'Unknown') . "]",
                     ]);
-                    event(new IncidentEvent('updated', $recentIncident));
+                    $this->safeBroadcast(new IncidentEvent('updated', $recentIncident));
             $this->clearIncidentCaches();
                     return response()->json(['message' => 'SOS Merged!', 'id' => $recentIncident->id], 200);
                 } else if (!$isSOS && $recentIncident->incident_type === 'SOS Emergency') {
@@ -109,7 +118,7 @@ class IncidentReportController extends Controller
                         'image_data' => $imageData ?: $recentIncident->image_data,
                         'image_path' => $imagePath ?: $recentIncident->image_path,
                     ]);
-                    event(new IncidentEvent('updated', $recentIncident));
+                    $this->safeBroadcast(new IncidentEvent('updated', $recentIncident));
             $this->clearIncidentCaches();
                     return response()->json(['message' => 'Report Merged!', 'id' => $recentIncident->id], 200);
                 }
@@ -129,7 +138,7 @@ class IncidentReportController extends Controller
                 'status'             => $request->input('status', 'Pending Review'),
             ]);
             
-            event(new IncidentEvent('created', $incident));
+            $this->safeBroadcast(new IncidentEvent('created', $incident));
             $this->clearIncidentCaches();
             
             return response()->json(['message' => 'Incident created!', 'id' => $incident->id], 201);
@@ -153,7 +162,7 @@ class IncidentReportController extends Controller
         ]);
         
         $incident->update($validatedData);
-        event(new IncidentEvent('updated', $incident));
+        $this->safeBroadcast(new IncidentEvent('updated', $incident));
             $this->clearIncidentCaches();
         return response()->json($incident, 200);
     }
@@ -186,7 +195,7 @@ class IncidentReportController extends Controller
                 }
             }
             
-            event(new IncidentEvent('updated', $incident));
+            $this->safeBroadcast(new IncidentEvent('updated', $incident));
             $this->clearIncidentCaches();
             return response()->json($incident, 200);
         } catch (\Exception $e) {
@@ -199,7 +208,7 @@ class IncidentReportController extends Controller
         try {
             $incident = IncidentReport::findOrFail($id);
             $incident->delete();
-            event(new IncidentEvent('deleted', ['id' => $id]));
+            $this->safeBroadcast(new IncidentEvent('deleted', ['id' => $id]));
             $this->clearIncidentCaches();
             return response()->json(['message' => 'Incident deleted successfully'], 200);
         } catch (\Exception $e) {
