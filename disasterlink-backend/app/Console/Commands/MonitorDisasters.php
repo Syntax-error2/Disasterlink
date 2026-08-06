@@ -88,8 +88,12 @@ class MonitorDisasters extends Command
                                 $name = strtoupper($m[3]);
                                 
                                 $location = 'PAR';
-                                if (preg_match('/was estimated based on all available data at\s+([^<]+)/i', $html, $mLoc)) {
-                                    $location = trim($mLoc[1]);
+                                if (preg_match('/<div class="panel-heading">\s*Location of Eye\/center\s*<\/div>\s*<div class="panel-body">\s*<p>(.*?)<\/p>/is', $html, $mLoc)) {
+                                    $locText = trim($mLoc[1]);
+                                    if (preg_match('/(?:in the vicinity of|at)\s+(.*)/i', $locText, $mClean)) {
+                                        $locText = trim($mClean[1]);
+                                    }
+                                    $location = $locText;
                                 }
                                 
                                 $wind = 'Unknown';
