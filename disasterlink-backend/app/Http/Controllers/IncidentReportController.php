@@ -125,6 +125,7 @@ class IncidentReportController extends Controller
             }
 
             $incident = IncidentReport::create([
+                'user_id'            => auth()->check() ? auth()->id() : null,
                 'lgu_id'             => auth()->check() ? auth()->user()->lgu_id : null,
                 'reporting_barangay' => $barangay,
                 'incident_type'      => $request->input('incident_type', 'Fire'),
