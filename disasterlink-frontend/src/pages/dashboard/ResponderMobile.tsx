@@ -12,6 +12,7 @@ import { KeepAwake } from '@capacitor-community/keep-awake';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
+import RealtimeRouter from "../../components/RealtimeRouter";
 
 // Map Icons
 const responderIcon = L.divIcon({
@@ -249,7 +250,8 @@ export default function ResponderMobile() {
 
   const handleGetDirections = () => {
     if (incident?.latitude && incident?.longitude) {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${incident.latitude},${incident.longitude}`, '_blank');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast("Live routing initialized on the map.", "success");
     } else {
       showToast("GPS coordinates not available for this incident.", "warning");
     }
@@ -464,6 +466,13 @@ export default function ResponderMobile() {
                   />
                   {/* Real-time moving Responder Marker on the Incident map! */}
                   <Marker position={responderLocation} icon={responderIcon} />
+                  
+                  {incident.latitude && incident.longitude && (
+                    <RealtimeRouter 
+                      start={responderLocation} 
+                      end={[parseFloat(incident.latitude), parseFloat(incident.longitude)]} 
+                    />
+                  )}
                 </MapContainer>
                 
                 {/* Gradient fade into the card */}

@@ -15,6 +15,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import RealtimeRouter from "../../components/RealtimeRouter";
 
 const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6 w-6 bg-red-600 rounded-full border-2 border-white flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.8)] animate-pulse"></div>`, iconSize: [24, 24] });
 
@@ -492,7 +493,7 @@ export default function RepresentativeMobile() {
                             <div className="font-bold text-red-600 mb-1">{inc.incident_type}</div>
                             <div className="text-xs text-zinc-600 mb-3">{inc.exact_location}</div>
                             <div className="flex gap-2">
-                              <a href={`https://www.google.com/maps/dir/?api=1&destination=${inc.latitude},${inc.longitude}`} target="_blank" rel="noreferrer" className="flex-1 bg-zinc-100 text-zinc-700 text-[10px] font-bold py-1.5 rounded text-center border border-zinc-200">Directions</a>
+                              <button onClick={() => { setIncident(inc); setStatus("Dispatched"); }} className="flex-1 bg-zinc-100 text-zinc-700 text-[10px] font-bold py-1.5 rounded text-center border border-zinc-200">Directions</button>
                               <button onClick={() => { setIncident(inc); setStatus("Dispatched"); }} className="flex-1 bg-red-600 text-white text-[10px] font-bold py-1.5 rounded text-center shadow">Verify</button>
                             </div>
                           </Popup>
@@ -586,6 +587,10 @@ export default function RepresentativeMobile() {
                         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                       />
                       <Marker position={[Number(incident.latitude), Number(incident.longitude)]} icon={evacIcon} />
+                      <RealtimeRouter 
+                        start={userLoc} 
+                        end={[Number(incident.latitude), Number(incident.longitude)]} 
+                      />
                     </MapContainer>
                   </div>
                 )}

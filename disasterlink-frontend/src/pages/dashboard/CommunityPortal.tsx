@@ -20,7 +20,7 @@ import { KeepAwake } from '@capacitor-community/keep-awake';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
-import RoutingMachine from "../../components/RoutingMachine";
+import RealtimeRouter from "../../components/RealtimeRouter";
 import ErrorBoundary from "../../components/ErrorBoundary";
 
 const responderIcon = L.divIcon({ 
@@ -1037,7 +1037,7 @@ function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTarge
               </Marker>
             ))}
 
-            <RoutingMachine start={userLoc || center} end={targetRoute} />
+            {targetRoute && <RealtimeRouter start={userLoc || center} end={targetRoute} />}
 
             {evacCenters.map((evac:any) => {
                const percentage = (evac.current_occupants / evac.capacity) * 100;
