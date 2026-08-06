@@ -36,6 +36,7 @@ export default function RepresentativeMobile() {
   const [verifyImage, setVerifyImage] = useState<string | null>(null);
   const [status, setStatus] = useState<"Available" | "Dispatched">("Available");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
   const [resolvedIds, setResolvedIds] = useState<string[]>([]);
   const [weather, setWeather] = useState<any>(() => {
     try {

@@ -7,9 +7,10 @@ import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 interface RealtimeRouterProps {
   start: [number, number] | null;
   end: [number, number] | null;
+  showInstructions?: boolean;
 }
 
-export default function RealtimeRouter({ start, end }: RealtimeRouterProps) {
+export default function RealtimeRouter({ start, end, showInstructions = false }: RealtimeRouterProps) {
   const map = useMap();
 
   useEffect(() => {
@@ -25,10 +26,15 @@ export default function RealtimeRouter({ start, end }: RealtimeRouterProps) {
       addWaypoints: false,
       fitSelectedRoutes: true,
       showAlternatives: false,
+      show: showInstructions,
+      createMarker: function() { return null; }, // Hide default waypoint markers
       lineOptions: {
-        styles: [{ color: '#3b82f6', weight: 6, opacity: 0.8 }]
+        styles: [{ color: '#3b82f6', weight: 6, opacity: 0.8 }],
+        extendToWaypoints: true,
+        missingRouteTolerance: 0
       }
     }).addTo(map);
+
 
     return () => {
       if (map && routingControl) {
