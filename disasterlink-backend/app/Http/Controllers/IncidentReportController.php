@@ -91,6 +91,11 @@ class IncidentReportController extends Controller
                         'longitude' => $request->input('longitude') ?: $recentIncident->longitude,
                         'details' => $recentIncident->details . " [ESCALATED BY SOS PING from " . $request->input('exact_location', 'Unknown') . "]",
                     ]);
+                    event(new IncidentEvent('updated', $recentIncident));
+                    \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
+                    if (auth()->check()) {
+                        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
+                    }
                     return response()->json(['message' => 'SOS Merged!', 'id' => $recentIncident->id], 200);
                 } else if (!$isSOS && $recentIncident->incident_type === 'SOS Emergency') {
                     $recentIncident->update([
@@ -100,6 +105,10 @@ class IncidentReportController extends Controller
                         'image_path' => $imagePath ?: $recentIncident->image_path,
                     ]);
                     event(new IncidentEvent('updated', $recentIncident));
+                    \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
+                    if (auth()->check()) {
+                        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
+                    }
                     return response()->json(['message' => 'Report Merged!', 'id' => $recentIncident->id], 200);
                 }
             }
