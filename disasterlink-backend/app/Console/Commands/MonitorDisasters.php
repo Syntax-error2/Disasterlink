@@ -132,7 +132,13 @@ class MonitorDisasters extends Command
                             
                             if (preg_match('/<div class="panel-heading">\s*Location of Eye\/center\s*<\/div>\s*<div class="panel-body">\s*<p>(.*?)<\/p>/is', $html, $mLoc)) {
                                 $locText = trim(strip_tags($mLoc[1]));
-                                $location = preg_replace('/^The center of.*? estimated based on all available data.*?(?:from.*? Radar\s*|at\s*|in the vicinity of\s*|\s*)/i', '', $locText);
+                                if (preg_match('/([0-9]+\s*km\s+[a-zA-Z\s\-]+of\s+[^\(]+\([^\)]+\))/i', $locText, $mPrecise)) {
+                                    $location = trim($mPrecise[1]);
+                                } else if (preg_match('/(?:vicinity of|at)\s+(.*)/i', $locText, $mClean)) {
+                                    $location = trim($mClean[1]);
+                                } else {
+                                    $location = preg_replace('/^.*?estimated based on all available data.*?(?:from.*?Radar\s*|at\s*|in the vicinity of\s*)/i', '', $locText);
+                                }
                                 
                                 // Extract coordinates
                                 if (preg_match('/([0-9\.]+)\s*°N,\s*([0-9\.]+)\s*°E/i', $location, $mCoords)) {
@@ -142,7 +148,9 @@ class MonitorDisasters extends Command
                             }
                             
                             $wind = 'Unknown';
-                            if (preg_match('/winds of\s+([^<]+)/i', $html, $mGust)) $wind = trim($mGust[1]);
+                            if (preg_match('/winds of\s+([^<]+)/i', $html, $mGust)) {
+                                $wind = trim(preg_replace('/\s+and\s+.*/i', '', $mGust[1]));
+                            }
                             
                             $gust = 'Unknown';
                             if (preg_match('/gustiness of up to\s+([^<]+)/i', $html, $mGust)) $gust = trim($mGust[1]);
