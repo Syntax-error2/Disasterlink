@@ -10,10 +10,7 @@ class IncidentReportController extends Controller
 {
     public function sync()
     {
-        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
-        if (auth()->check()) {
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
-        }
+            $this->clearIncidentCaches();
         return $this->index();
     }
 
@@ -28,6 +25,17 @@ class IncidentReportController extends Controller
             return response()->json($incidents, 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    private function clearIncidentCaches()
+    {
+        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
+        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_'); // For citizens (lgu_id = null)
+        
+        $lgus = \App\Models\Lgu::pluck('id');
+        foreach ($lgus as $lgu) {
+            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . $lgu);
         }
     }
 
@@ -92,10 +100,7 @@ class IncidentReportController extends Controller
                         'details' => $recentIncident->details . " [ESCALATED BY SOS PING from " . $request->input('exact_location', 'Unknown') . "]",
                     ]);
                     event(new IncidentEvent('updated', $recentIncident));
-                    \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
-                    if (auth()->check()) {
-                        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
-                    }
+            $this->clearIncidentCaches();
                     return response()->json(['message' => 'SOS Merged!', 'id' => $recentIncident->id], 200);
                 } else if (!$isSOS && $recentIncident->incident_type === 'SOS Emergency') {
                     $recentIncident->update([
@@ -105,10 +110,7 @@ class IncidentReportController extends Controller
                         'image_path' => $imagePath ?: $recentIncident->image_path,
                     ]);
                     event(new IncidentEvent('updated', $recentIncident));
-                    \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
-                    if (auth()->check()) {
-                        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
-                    }
+            $this->clearIncidentCaches();
                     return response()->json(['message' => 'Report Merged!', 'id' => $recentIncident->id], 200);
                 }
             }
@@ -128,10 +130,7 @@ class IncidentReportController extends Controller
             ]);
             
             event(new IncidentEvent('created', $incident));
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
-        if (auth()->check()) {
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
-        }
+            $this->clearIncidentCaches();
             
             return response()->json(['message' => 'Incident created!', 'id' => $incident->id], 201);
         } catch (\Exception $e) {
@@ -155,10 +154,7 @@ class IncidentReportController extends Controller
         
         $incident->update($validatedData);
         event(new IncidentEvent('updated', $incident));
-        \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
-        if (auth()->check()) {
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
-        }
+            $this->clearIncidentCaches();
         return response()->json($incident, 200);
     }
 
@@ -191,10 +187,7 @@ class IncidentReportController extends Controller
             }
             
             event(new IncidentEvent('updated', $incident));
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
-        if (auth()->check()) {
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
-        }
+            $this->clearIncidentCaches();
             return response()->json($incident, 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -207,10 +200,7 @@ class IncidentReportController extends Controller
             $incident = IncidentReport::findOrFail($id);
             $incident->delete();
             event(new IncidentEvent('deleted', ['id' => $id]));
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_guest');
-        if (auth()->check()) {
-            \Illuminate\Support\Facades\Cache::forget('incidents_lgu_' . auth()->user()->lgu_id);
-        }
+            $this->clearIncidentCaches();
             return response()->json(['message' => 'Incident deleted successfully'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
