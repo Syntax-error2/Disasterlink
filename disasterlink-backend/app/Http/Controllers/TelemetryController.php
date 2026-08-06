@@ -40,62 +40,8 @@ class TelemetryController extends Controller
             });
         } catch (\Exception $e) {}
 
-        // ── PAGASA real-time from official CAP RSS (Deprecated, using HTML Scrape) ──
-        $pagasa = null;
-        try {
-            $pagasa = \Illuminate\Support\Facades\Cache::remember('telemetry_pagasa', 300, function () {
-                $data = ['active' => false];
-                $response = Http::withoutVerifying()
-                    ->timeout(8)
-                    ->withHeaders([
-                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    ])
-                    ->get('https://bagong.pagasa.dost.gov.ph/tropical-cyclone/severe-weather-bulletin');
-
-                if ($response->successful()) {
-                    $html = $response->body();
-                    if (stripos($html, 'Tropical Cyclone Bulletin') !== false) {
-                        $pattern = '/(Tropical Depression|Tropical Storm|Severe Tropical Storm|Typhoon|Super Typhoon)\s+(&quot;|"|\')([A-Za-z]+)(&quot;|"|\')/i';
-                        if (preg_match($pattern, $html, $m)) {
-                            $data['active'] = true;
-                            $data['category'] = $m[1];
-                            $data['name'] = strtoupper($m[3]);
-                            $data['former_name'] = 'N/A';
-                            $data['location'] = 'Philippine Area of Responsibility';
-                            $data['wind_gust'] = 'See Official Bulletin';
-                            $data['movement'] = 'See Official Bulletin';
-                            
-                            if (preg_match('/Issued at\s+([^<]+)/i', $html, $mIssued)) {
-                                $data['issued_at'] = trim($mIssued[1]);
-                            } else {
-                                $data['issued_at'] = date('h:i A d M Y');
-                            }
-
-                            if (preg_match('/<div class="panel-heading">\s*Location of Eye\/center\s*<\/div>\s*<div class="panel-body">\s*<p>(.*?)<\/p>/is', $html, $mLoc)) {
-                                $locText = trim($mLoc[1]);
-                                if (preg_match('/(?:in the vicinity of|at)\s+(.*)/i', $locText, $mClean)) {
-                                    $locText = trim($mClean[1]);
-                                }
-                                $data['location'] = $locText;
-                            }
-
-                            if (preg_match('/gustiness of up to\s+([^<]+)/i', $html, $mGust)) {
-                                $data['wind_gust'] = "Up to " . trim($mGust[1]);
-                            } elseif (preg_match('/winds of\s+([^<]+)/i', $html, $mGust)) {
-                                $data['wind_gust'] = trim($mGust[1]);
-                            }
-
-                            if (preg_match('/<div class="panel-heading">\s*Movement\s*<\/div>\s*<div class="panel-body">\s*<p>(.*?)<\/p>/is', $html, $mMov)) {
-                                $data['movement'] = trim($mMov[1]);
-                            }
-                        }
-                    }
-                }
-                return $data;
-            });
-        } catch (\Exception $e) {
-            $pagasa = ['active' => false];
-        }
+        // ── PAGASA real-time from official CAP RSS (Deprecated, removed per user request) ──
+        $pagasa = ['active' => false];
 
         return response()->json([
             'weather' => $weather,
