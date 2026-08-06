@@ -131,11 +131,8 @@ class MonitorDisasters extends Command
                             $cycloneLng = 0;
                             
                             if (preg_match('/<div class="panel-heading">\s*Location of Eye\/center\s*<\/div>\s*<div class="panel-body">\s*<p>(.*?)<\/p>/is', $html, $mLoc)) {
-                                $locText = trim($mLoc[1]);
-                                if (preg_match('/(?:in the vicinity of|at)\s+(.*)/i', $locText, $mClean)) {
-                                    $locText = trim($mClean[1]);
-                                }
-                                $location = $locText;
+                                $locText = trim(strip_tags($mLoc[1]));
+                                $location = preg_replace('/^The center of.*? estimated based on all available data.*?(?:from.*? Radar\s*|at\s*|in the vicinity of\s*|\s*)/i', '', $locText);
                                 
                                 // Extract coordinates
                                 if (preg_match('/([0-9\.]+)\s*°N,\s*([0-9\.]+)\s*°E/i', $location, $mCoords)) {
