@@ -837,11 +837,7 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
                       <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
-                    {report.status.includes("Dispatch") ? <Activity className="h-3 w-3 animate-pulse" /> : 
-                     report.status.includes("Resolved") ? <CheckCircle className="h-3 w-3" /> : 
-                     <ShieldCheck className="h-3 w-3" />}
-                    {report.status}
-                  </div>
+
                 </div>
               </div>
             ))}
