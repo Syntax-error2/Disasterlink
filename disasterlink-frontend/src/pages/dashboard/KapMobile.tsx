@@ -48,6 +48,11 @@ export default function KapMobile() {
     } catch (e) {}
   };
 
+  const showToast = (msg: string, type: 'success' | 'alert' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const triggerAlert = (incident: any) => {
     if (!toast || !toast.msg.includes(incident.incident_type)) {
       showToast(`NEW INCIDENT REPORTED: ${incident.incident_type} at ${incident.exact_location}`, 'alert');
@@ -97,11 +102,6 @@ export default function KapMobile() {
       });
     };
   }, [user]);
-
-  const showToast = (msg: string, type: 'success' | 'alert' = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {

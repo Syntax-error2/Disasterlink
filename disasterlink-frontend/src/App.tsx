@@ -28,6 +28,7 @@ const EmergencyAlerts = lazyWithDelay(() => import("./pages/dashboard/EmergencyA
 const Settings = lazyWithDelay(() => import("./pages/dashboard/Settings"));
 const ResponderMobile = lazyWithDelay(() => import("./pages/dashboard/ResponderMobile"), 0);
 const RepresentativeMobile = lazyWithDelay(() => import("./pages/dashboard/RepresentativeMobile"), 0);
+const KapMobile = lazyWithDelay(() => import("./pages/dashboard/KapMobile"), 0);
 const BarangayDashboard = lazyWithDelay(() => import("./pages/dashboard/BarangayDashboard"), 0);
 const CommunityPortal = lazyWithDelay(() => import("./pages/dashboard/CommunityPortal"), 0);
 const SuperAdmin = lazyWithDelay(() => import("./pages/dashboard/SuperAdmin"), 0);
