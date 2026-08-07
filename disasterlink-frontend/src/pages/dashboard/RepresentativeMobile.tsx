@@ -229,7 +229,7 @@ export default function RepresentativeMobile() {
         echo.leaveChannel('incidents');
       });
     };
-  }, [status, resolvedIds, user]); 
+  }, [resolvedIds, user]); 
 
   const updateIncidentStatus = async (newStatus: string) => {
     if (!incident) return;

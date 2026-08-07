@@ -141,7 +141,7 @@ export default function CommunityPortal() {
     }
     
     // My Reports
-    const myActiveReports = (globalIncidents || []).filter((inc: any) => myIds.includes(inc.id));
+    const myActiveReports = (globalIncidents || []).filter((inc: any) => myIds.map(String).includes(String(inc.id)));
     setMyReports(myActiveReports);
 
     // Proximity 50m SOS Alerts
@@ -1227,7 +1227,7 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
       const responseData = response.data;
 
       if (responseData.id) {
-        const userKey = "my_report_ids_" + (user.id || user.email || 'guest');
+        const userKey = "my_report_ids_" + (user?.id || user?.email || 'guest');
         const existingIds = JSON.parse(localStorage.getItem(userKey) || "[]");
         existingIds.push(responseData.id);
         localStorage.setItem(userKey, JSON.stringify(existingIds));

@@ -7,7 +7,28 @@ import axiosInstance from "../../lib/axios";
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import { OpenStreetMapProvider } from 'leaflet-geosearch';
+import { Loader2, Search } from "lucide-react";
 
+// Fix for default marker icons in React Leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/leaflet-shadow.png",
+});
+
+const LocationPicker = ({ position, setPosition }: { position: [number, number], setPosition: (pos: [number, number]) => void }) => {
+  useMapEvents({
+    click(e) {
+      setPosition([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return <Marker position={position} />;
+};
 export default function KapMobile() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -22,7 +43,11 @@ export default function KapMobile() {
   const [toast, setToast] = useState<{msg: string, type: string} | null>(null);
 
   const [showAddEvac, setShowAddEvac] = useState(false);
-  const [evacForm, setEvacForm] = useState({ name: '', location: '', capacity: '' });
+  const [evacForm, setEvacForm] = useState({ name: '', location: '', capacity: '', lat: 10.203, lng: 122.862 });
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<any>(null);
+  const provider = new OpenStreetMapProvider();
   
   const [showAddTanod, setShowAddTanod] = useState(false);
   const [tanodForm, setTanodForm] = useState({ name: '', phone: '', purok: '' });
@@ -68,19 +93,22 @@ export default function KapMobile() {
 
   const handleAddEvac = async () => {
     try {
-      await axiosInstance.post('/evacuation-centers', {
+      const payload = {
         name: evacForm.name,
-        location: evacForm.location || user?.assigned_barangay || "Unknown",
-        capacity: Number(evacForm.capacity || 100),
+        location: evacForm.location,
+        capacity: evacForm.capacity,
+        current_occupants: 0,
         status: 'Active',
-        lgu_id: user?.lgu?.id,
-        lat: 10.1866,
-        lng: 122.8587
-      });
-      showToast('Evacuation center added', 'success');
+        barangay: user?.assigned_barangay,
+        lat: evacForm.lat,
+        lng: evacForm.lng
+      };
+      
+      const res = await axiosInstance.post('/evacuation-centers', payload);
+      setCenters([res.data, ...centers]);
       setShowAddEvac(false);
-      setEvacForm({ name: '', location: '', capacity: '' });
-      fetchCenters();
+      setEvacForm({ name: '', location: '', capacity: '', lat: 10.203, lng: 122.862 });
+      showToast("Evacuation center added successfully");
     } catch (e) {
       showToast('Failed to add center', 'error');
     }
@@ -313,7 +341,56 @@ export default function KapMobile() {
                 <input type="text" placeholder="Center Name" className="w-full bg-zinc-800 text-white rounded p-2 text-sm" value={evacForm.name} onChange={e => setEvacForm({...evacForm, name: e.target.value})} />
                 <input type="text" placeholder="Location Details" className="w-full bg-zinc-800 text-white rounded p-2 text-sm" value={evacForm.location} onChange={e => setEvacForm({...evacForm, location: e.target.value})} />
                 <input type="number" placeholder="Capacity" className="w-full bg-zinc-800 text-white rounded p-2 text-sm" value={evacForm.capacity} onChange={e => setEvacForm({...evacForm, capacity: e.target.value})} />
-                <button onClick={handleAddEvac} className="w-full bg-emerald-600 text-white rounded py-2 text-sm font-bold shadow-md">Save Evac Center</button>
+                
+                {/* OSM GEOSEARCH API INTEGRATION */}
+                <div className="space-y-1.5 mt-2 border border-emerald-500/30 p-2 rounded-lg bg-emerald-950/10 relative">
+                  <label className="text-xs font-semibold flex items-center gap-2 text-emerald-400">
+                    <Search className="h-3 w-3" /> GeoSearch
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      placeholder="Search landmark..." 
+                      onChange={(e) => handleLocationSearch(e.target.value)}
+                      className="w-full bg-zinc-800 text-white rounded p-2 text-sm outline-none border border-emerald-500/50"
+                    />
+                    {isSearchingLocation && (
+                      <Loader2 className="absolute right-2 top-2 h-4 w-4 animate-spin text-emerald-500" />
+                    )}
+                  </div>
+                  {searchResults.length > 0 && (
+                    <div className="absolute z-[100] w-[calc(100%-1rem)] bg-zinc-800 border border-zinc-700 rounded-md shadow-2xl mt-1 max-h-40 overflow-y-auto">
+                      {searchResults.map((res, i) => (
+                        <div 
+                          key={i} 
+                          onClick={() => handleSelectLocation(res)}
+                          className="px-3 py-2 hover:bg-zinc-700 cursor-pointer text-sm border-b border-zinc-700 last:border-0"
+                        >
+                          <div className="font-bold text-white">{res.label.split(',')[0]}</div>
+                          <div className="text-[10px] text-zinc-400 truncate">{res.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* MAP SELECTOR */}
+                <div className="space-y-1.5 mt-2">
+                  <label className="text-xs font-semibold flex items-center gap-2 text-white">
+                    <MapPin className="h-3 w-3 text-emerald-500" /> Pinpoint Location
+                  </label>
+                  <div className="h-40 w-full rounded-md overflow-hidden border border-zinc-700 z-10">
+                    <MapContainer center={[evacForm.lat, evacForm.lng]} zoom={14} style={{ height: "100%", width: "100%" }}>
+                      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                      <LocationPicker 
+                        position={[evacForm.lat, evacForm.lng]} 
+                        setPosition={(pos) => setEvacForm({ ...evacForm, lat: pos[0], lng: pos[1] })} 
+                      />
+                    </MapContainer>
+                  </div>
+                </div>
+
+                <button onClick={handleAddEvac} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded py-2 text-sm font-bold shadow-md transition-colors mt-2">Save Evac Center</button>
               </div>
             )}
 

@@ -103,6 +103,11 @@ export default function BarangayDashboard() {
     }
   }, []);
 
+  const normalize = (str: string) => {
+    if (!str) return "";
+    return str.toLowerCase().replace(/brgy\.?/g, '').replace(/barangay/g, '').replace(/sta\.?/g, 'santa').replace(/sto\.?/g, 'santo').replace(/[^a-z0-9]/g, '');
+  };
+
   const fetchLocalIncidents = async (barangay: string) => {
     setIsLoadingReports(true);
     try {
@@ -110,7 +115,11 @@ export default function BarangayDashboard() {
       const data = response.data.data ? response.data.data : response.data;
       
       // Filter so the Captain ONLY sees reports from their Barangay
-      const filtered = data.filter((report: any) => report.reporting_barangay === barangay);
+      const filtered = data.filter((report: any) => {
+        const s1 = normalize(report.reporting_barangay);
+        const s2 = normalize(barangay);
+        return s1.includes(s2) || s2.includes(s1);
+      });
       setLocalReports(filtered);
     } catch (error) {
       console.warn("API Offline, skipping fetch.");
