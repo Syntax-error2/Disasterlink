@@ -85,7 +85,7 @@ export default function DashboardLayout() {
           id: `live-${inc.id}`,
           type: (inc.severity_level === 'Critical' || inc.exact_location === 'SOS EMERGENCY PING') ? 'critical' : 'warning',
           title: inc.exact_location === 'SOS EMERGENCY PING' ? 'SOS Emergency Ping' : `${inc.severity_level} ${inc.incident_type}`,
-          message: `${inc.exact_location} - ${inc.details}`,
+          message: `${inc.exact_location || 'Unknown Location'}${inc.details ? ` - ${inc.details}` : ''}`,
           time: new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           read: false,
           targetRole: 'all',

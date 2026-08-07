@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Navigation, CheckCircle, AlertTriangle, CloudRain, Send, Loader2, Activity, ShieldAlert, LogOut, Radio, Home, Map as MapIcon, Thermometer, Wind, Droplets, Camera as CameraIcon } from "lucide-react";
+import { MapPin, Navigation, CheckCircle, AlertTriangle, CloudRain, Send, Loader2, Activity, ShieldAlert, LogOut, Radio, Home, Map as MapIcon, Thermometer, Wind, Droplets, Camera as CameraIcon, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axiosInstance from "../../lib/axios";
 import { KeepAwake } from '@capacitor-community/keep-awake';
@@ -33,6 +33,7 @@ export default function RepresentativeMobile() {
   const [activeTab, setActiveTab] = useState("home");
   const [userLoc, setUserLoc] = useState<[number, number]>([10.1866, 122.8587]);
   const [incident, setIncident] = useState<any | null>(null);
+  const notifiedIncidentIds = useRef<Set<number>>(new Set());
   
   // Report Form States
   const [reportType, setReportType] = useState("General Hazard");
@@ -179,29 +180,33 @@ export default function RepresentativeMobile() {
         if (incomingDispatch) {
           setIncident(incomingDispatch);
           setStatus("Dispatched");
-          showToast("URGENT: SOS Alert in your Barangay!", "alert");
           
-          try {
-            Haptics.vibrate();
-            setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1000);
+          if (!notifiedIncidentIds.current.has(incomingDispatch.id)) {
+            notifiedIncidentIds.current.add(incomingDispatch.id);
+            showToast("URGENT: SOS Alert in your Barangay!", "alert");
             
-            TextToSpeech.speak({
-              text: `URGENT. New SOS Incident Dispatched. ${incomingDispatch.incident_type}`,
-              lang: 'en-US',
-              rate: 0.9,
-            }).catch(() => {});
-            
-            LocalNotifications.schedule({
-              notifications: [
-                {
-                  title: "🚨 URGENT SOS ALERT",
-                  body: `Emergency in your jurisdiction: ${incomingDispatch.incident_type}`,
-                  id: Math.floor(Math.random() * 1000000),
-                  schedule: { at: new Date(Date.now() + 500) }
-                }
-              ]
-            }).catch(() => {});
-          } catch(e) {}
+            try {
+              Haptics.vibrate();
+              setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1000);
+              
+              TextToSpeech.speak({
+                text: `URGENT. New SOS Incident Dispatched. ${incomingDispatch.incident_type}`,
+                lang: 'en-US',
+                rate: 0.9,
+              }).catch(() => {});
+              
+              LocalNotifications.schedule({
+                notifications: [
+                  {
+                    title: "🚨 URGENT SOS ALERT",
+                    body: `Emergency in your jurisdiction: ${incomingDispatch.incident_type}`,
+                    id: incomingDispatch.id,
+                    schedule: { at: new Date(Date.now() + 500) }
+                  }
+                ]
+              }).catch(() => {});
+            } catch(e) {}
+          }
         }
     } catch (error) {}
   };
