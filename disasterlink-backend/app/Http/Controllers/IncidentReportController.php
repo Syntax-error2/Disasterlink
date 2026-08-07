@@ -141,6 +141,7 @@ class IncidentReportController extends Controller
             
             $this->safeBroadcast(new IncidentEvent('created', $incident));
             $this->clearIncidentCaches();
+            \App\Jobs\ProcessIncidentNotifications::dispatch($incident);
             
             return response()->json(['message' => 'Incident created!', 'id' => $incident->id], 201);
         } catch (\Exception $e) {

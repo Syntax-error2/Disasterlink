@@ -4,6 +4,9 @@ import { useAuth } from "../../context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, CheckCircle, ShieldAlert, Radio, AlertTriangle, Users, Tent, Navigation, LogOut, ShieldCheck } from "lucide-react";
 import axiosInstance from "../../lib/axios";
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
 export default function KapMobile() {
   const { logout, user } = useAuth();
@@ -45,12 +48,54 @@ export default function KapMobile() {
     } catch (e) {}
   };
 
+  const triggerAlert = (incident: any) => {
+    if (!toast || !toast.msg.includes(incident.incident_type)) {
+      showToast(`NEW INCIDENT REPORTED: ${incident.incident_type} at ${incident.exact_location}`, 'alert');
+      try {
+        Haptics.vibrate();
+        setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }), 1000);
+        TextToSpeech.speak({
+          text: `URGENT. New incident reported in your barangay. ${incident.incident_type}`,
+          lang: 'en-US',
+          rate: 0.9,
+        }).catch(() => {});
+        LocalNotifications.schedule({
+          notifications: [
+            {
+              title: "🚨 URGENT INCIDENT",
+              body: `New emergency in your barangay: ${incident.incident_type}`,
+              id: Math.floor(Math.random() * 1000000),
+              schedule: { at: new Date(Date.now() + 500) }
+            }
+          ]
+        }).catch(() => {});
+      } catch(e) {}
+    }
+  };
+
   useEffect(() => {
     fetchIncidents();
     fetchCenters();
     fetchPersonnel();
-    const interval = setInterval(fetchIncidents, 10000);
-    return () => clearInterval(interval);
+    
+    import('../../lib/echo').then(({ default: echo }) => {
+      echo.channel('incidents')
+        .listen('.incident.event', async (e: any) => {
+          if (e.type === 'created' || e.type === 'updated') {
+            await fetchIncidents();
+            // Try to find the incident from the event if it matches Kap's barangay
+            if (e.type === 'created' && e.incident && e.incident.reporting_barangay?.toLowerCase().includes(user?.assigned_barangay?.toLowerCase() || '')) {
+              triggerAlert(e.incident);
+            }
+          }
+        });
+    });
+
+    return () => {
+      import('../../lib/echo').then(({ default: echo }) => {
+        echo.leaveChannel('incidents');
+      });
+    };
   }, [user]);
 
   const showToast = (msg: string, type: 'success' | 'alert' = 'success') => {

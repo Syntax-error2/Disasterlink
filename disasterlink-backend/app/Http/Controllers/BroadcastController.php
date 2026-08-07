@@ -113,6 +113,41 @@ class BroadcastController extends Controller
         // Broadcast Event
         event(new \App\Events\EmergencyBroadcastEvent($broadcast));
         
+        // Firebase Push Notifications for Local Broadcast
+        try {
+            $tokens = \App\Models\User::whereNotNull('fcm_token')
+                ->where(function ($query) use ($barangay) {
+                    $query->where('barangay', 'LIKE', '%' . $barangay . '%')
+                          ->orWhere('assigned_barangay', 'LIKE', '%' . $barangay . '%');
+                })
+                ->pluck('fcm_token')
+                ->toArray();
+            
+            if (!empty($tokens)) {
+                $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
+                $messaging = $factory->createMessaging();
+                $notification = \Kreait\Firebase\Messaging\Notification::create('🚨 ' . $title, $message);
+                
+                $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                    'priority' => 'high',
+                    'notification' => [
+                        'channel_id' => 'emergency_alerts',
+                        'sound' => 'default',
+                        'default_vibrate_timings' => true,
+                        'default_light_settings' => true,
+                    ],
+                ]);
+
+                $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()
+                    ->withNotification($notification)
+                    ->withAndroidConfig($config);
+                
+                $messaging->sendMulticast($cloudMessage, $tokens);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Local Firebase Push Failed: ' . $e->getMessage());
+        }
+        
         return response()->json(['message' => 'Local broadcast dispatch completed.']);
     }
 
