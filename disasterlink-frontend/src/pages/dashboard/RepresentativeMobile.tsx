@@ -33,6 +33,7 @@ export default function RepresentativeMobile() {
   const [activeTab, setActiveTab] = useState("home");
   const [userLoc, setUserLoc] = useState<[number, number]>([10.1866, 122.8587]);
   const [incident, setIncident] = useState<any | null>(null);
+  const [isModalMapExpanded, setIsModalMapExpanded] = useState(false);
   const notifiedIncidentIds = useRef<Set<number>>(new Set());
   
   // Report Form States
@@ -229,6 +230,21 @@ export default function RepresentativeMobile() {
       });
     };
   }, [status, resolvedIds, user]); 
+
+  const updateIncidentStatus = async (newStatus: string) => {
+    if (!incident) return;
+    try {
+      await axiosInstance.put(`/incidents/${incident.id}`, { status: newStatus });
+      setResolvedIds(prev => [...prev, incident.id]);
+      setStatus("Available");
+      setIncident(null);
+      setIsModalMapExpanded(false);
+      showToast(`Incident marked as: ${newStatus}`, "success");
+    } catch (error) {
+      console.error("Failed to update status", error);
+      showToast("Failed to update incident status. Ensure you have connection.", "alert");
+    }
+  };
 
   const showToast = (msg: string, type: 'success' | 'info' | 'warning' | 'alert' = 'info') => {
     setToast({ msg, type });
@@ -612,7 +628,7 @@ export default function RepresentativeMobile() {
                 
                 {/* Incident Map Pin */}
                 {incident?.latitude && incident?.longitude && (
-                  <div className="h-40 w-full relative shrink-0 border-b border-zinc-800">
+                  <div className={`${isModalMapExpanded ? 'h-[300px]' : 'h-36'} w-full relative shrink-0 border-b border-zinc-800 transition-all duration-300`}>
                     <MapContainer 
                       center={[Number(incident.latitude), Number(incident.longitude)]} 
                       zoom={16} 
@@ -631,6 +647,12 @@ export default function RepresentativeMobile() {
                         end={[Number(incident.latitude), Number(incident.longitude)]} 
                       />
                     </MapContainer>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setIsModalMapExpanded(!isModalMapExpanded); }}
+                      className="absolute bottom-2 right-2 z-[400] bg-black/60 backdrop-blur-md p-2 rounded-full text-white shadow-lg hover:bg-black/80 transition-colors border border-zinc-700"
+                    >
+                      <MapIcon className="h-4 w-4" />
+                    </button>
                   </div>
                 )}
                 
@@ -673,37 +695,37 @@ export default function RepresentativeMobile() {
               </div>
 
                 {status === "Dispatched" ? (
-                  <div className="flex flex-col gap-3 mt-4 shrink-0 relative z-10 pb-4">
+                  <div className="flex flex-col gap-2 mt-3 shrink-0 relative z-10 pb-4">
                     <button 
                       onClick={() => setStatus("Verified")}
-                      className="bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white font-black text-sm uppercase tracking-widest py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-blue-500/30 transition-all"
+                      className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all"
                     >
-                      <CheckCircle className="h-5 w-5" /> Verify Arrival
+                      <CheckCircle className="h-4 w-4" /> Verify Arrival
                     </button>
                     <button 
                       onClick={() => updateIncidentStatus("Direct to LDRRMO")}
-                      className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-black text-sm uppercase tracking-widest py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-red-600/30 transition-all"
+                      className="bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all"
                     >
-                      <AlertTriangle className="h-5 w-5" /> CRITICAL: ESCALATE MDRRMO
+                      <AlertTriangle className="h-4 w-4" /> CRITICAL: ESCALATE MDRRMO
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-3 mt-4 shrink-0 relative z-10 pb-4">
+                  <div className="flex flex-col gap-2 mt-3 shrink-0 relative z-10 pb-4">
                     <button 
                       onClick={() => updateIncidentStatus("Verified / Escalated to Kap")}
-                      className="bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl flex items-center justify-center shadow-md transition-all"
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest py-3 rounded-xl flex items-center justify-center shadow-md transition-all"
                     >
                       ESCALATE TO KAP
                     </button>
                     <button 
                       onClick={() => updateIncidentStatus("Direct to LDRRMO")}
-                      className="bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl flex items-center justify-center shadow-md transition-all"
+                      className="bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest py-3 rounded-xl flex items-center justify-center shadow-md transition-all"
                     >
                       ESCALATE TO DRRM
                     </button>
                     <button 
                       onClick={() => updateIncidentStatus("Resolved / Cleared")}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl flex items-center justify-center shadow-md transition-all"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest py-3 rounded-xl flex items-center justify-center shadow-md transition-all"
                     >
                       MARK ADDRESSED/DONE
                     </button>
