@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapContainer, TileLayer, Marker, Circle, useMap } from "react-leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";
+import { Map as MapIcon, LogOut } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -74,6 +75,11 @@ export default function ResponderMobile() {
   const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' });
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
+
+  // ==========================================
+  // MAP EXPANSION
+  // ==========================================
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   // ==========================================
   // REAL-TIME GPS TRACKING & KEEP AWAKE
@@ -453,10 +459,19 @@ export default function ResponderMobile() {
               className="flex-1 flex flex-col relative pb-32"
             >
               {/* Dynamic Map Header */}
-              <div className="w-full h-[300px] bg-zinc-900 relative z-0">
+              {isMapExpanded && (
+                <button 
+                  onClick={() => setIsMapExpanded(false)} 
+                  className="absolute top-safe-top mt-4 left-4 z-[400] bg-zinc-900/80 backdrop-blur-md p-3 rounded-full text-white border border-zinc-700 shadow-xl pointer-events-auto"
+                >
+                  <LogOut className="h-5 w-5 rotate-180" />
+                </button>
+              )}
+              <div className={`bg-zinc-900 relative z-0 transition-all ${isMapExpanded ? 'fixed inset-0 z-[100] h-[100dvh] w-full' : 'w-full h-[300px]'}`}>
                 <MapContainer 
                   center={incident.latitude && incident.longitude ? [parseFloat(incident.latitude), parseFloat(incident.longitude)] : responderLocation} 
-                  zoom={16} zoomControl={false} scrollWheelZoom={false} dragging={false} className="h-full w-full"
+                  zoom={16} zoomControl={false} scrollWheelZoom={isMapExpanded} dragging={isMapExpanded} className="h-full w-full"
+                  key={`full-map-${incident?.id}-${isMapExpanded ? 'expanded' : 'collapsed'}`}
                 >
                   <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
                   <MapUpdater center={incident.latitude && incident.longitude ? [parseFloat(incident.latitude), parseFloat(incident.longitude)] : responderLocation} />
@@ -471,16 +486,28 @@ export default function ResponderMobile() {
                     <RealtimeRouter 
                       start={responderLocation} 
                       end={[parseFloat(incident.latitude), parseFloat(incident.longitude)]} 
+                      lineColor="#ef4444"
                     />
                   )}
+
+                  <div className="leaflet-bottom leaflet-right mb-4 mr-4">
+                    {!isMapExpanded && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setIsMapExpanded(true); }}
+                        className="bg-red-600 p-3 rounded-full shadow-lg text-white mb-2 relative z-[400] pointer-events-auto"
+                      >
+                        <MapIcon className="h-5 w-5" />
+                      </button>
+                    )}
+                  </div>
                 </MapContainer>
                 
                 {/* Gradient fade into the card */}
-                <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-zinc-950 to-transparent z-10 pointer-events-none"></div>
+                {!isMapExpanded && <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-zinc-950 to-transparent z-10 pointer-events-none"></div>}
               </div>
 
               {/* Main Information Card (Overlapping the Map) */}
-              <div className="z-10 -mt-10 px-4">
+              <div className={`z-10 px-4 ${isMapExpanded ? 'hidden' : '-mt-10'}`}>
                 <Card className="bg-zinc-950/90 backdrop-blur-xl border border-zinc-800 shadow-2xl rounded-3xl overflow-hidden">
                   
                   {/* Optional Image Evidence */}

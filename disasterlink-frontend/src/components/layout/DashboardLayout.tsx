@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../context/AuthContext";
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
 // Inner Loader for Dashboard Pane Transitions
 const DashboardLoader = () => (
@@ -56,6 +57,9 @@ export default function DashboardLayout() {
     }
     return new Set();
   });
+
+  // Admin SOS Popup State
+  const [adminSOS, setAdminSOS] = useState<any | null>(null);
 
   useEffect(() => {
     localStorage.setItem('readNotificationIds', JSON.stringify(Array.from(readIds)));
@@ -112,7 +116,37 @@ export default function DashboardLayout() {
 
     fetchLiveNotifications();
     const interval = setInterval(fetchLiveNotifications, 10000);
-    return () => clearInterval(interval);
+    
+    // Listen for new incidents or updates directed to LDRRMO
+    const handleNewSOS = (e: any) => {
+      const incident = e.detail;
+      const isSOS = incident.incident_type === 'SOS EMERGENCY PING' || incident.severity_level === 'Critical' || incident.status === 'Direct to LDRRMO';
+      
+      if (isSOS) {
+        setAdminSOS(incident);
+        try {
+          const audio = new Audio('/siren.mp3');
+          audio.play().catch(() => {});
+          
+          const text = `URGENT. SOS from Barangay ${incident.reporting_barangay}, Purok ${incident.purok || 'Unknown'}. ${incident.incident_type}`;
+          
+          // Try Capacitor TTS, fallback to Web Speech API
+          TextToSpeech.speak({ text, lang: 'en-US', rate: 0.9 }).catch(() => {
+            if ('speechSynthesis' in window) {
+              const msg = new SpeechSynthesisUtterance(text);
+              window.speechSynthesis.speak(msg);
+            }
+          });
+        } catch(err) {}
+      }
+    };
+    
+    window.addEventListener('new_sos_alert', handleNewSOS);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('new_sos_alert', handleNewSOS);
+    };
   }, [readIds]);
 
   // Handle clicking outside the notification dropdown to close it
@@ -366,6 +400,54 @@ export default function DashboardLayout() {
           </Suspense>
         </main>
       </div>
+
+      {/* ADMIN SOS ALERT POPUP */}
+      <AnimatePresence>
+        {adminSOS && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-red-950/90 backdrop-blur-md" 
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 50 }}
+              className="bg-red-600 w-full max-w-md rounded-3xl shadow-[0_0_100px_rgba(220,38,38,0.5)] overflow-hidden relative z-10 border-4 border-red-500"
+            >
+              <div className="bg-red-950/50 p-6 text-center animate-pulse">
+                <AlertTriangle className="h-20 w-20 text-white mx-auto mb-4 animate-bounce" />
+                <h2 className="text-2xl font-black text-white uppercase tracking-widest">CRITICAL SOS ALERT</h2>
+              </div>
+              
+              <div className="p-8 text-center bg-zinc-950/40 space-y-4">
+                <div className="bg-red-950/80 p-4 rounded-xl border border-red-500/50">
+                  <p className="text-red-400 text-xs font-black uppercase tracking-widest mb-1">Incident Type</p>
+                  <p className="text-white text-lg font-bold">{adminSOS.incident_type}</p>
+                </div>
+                
+                <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                  <p className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1">Origin Location</p>
+                  <p className="text-zinc-100 text-base font-bold">Barangay {adminSOS.reporting_barangay}, Purok {adminSOS.purok || 'Unknown'}</p>
+                </div>
+                
+                <button 
+                  onClick={() => {
+                    setAdminSOS(null);
+                    navigate('/reports');
+                  }}
+                  className="w-full mt-4 bg-white text-red-600 font-black uppercase tracking-widest py-5 rounded-xl hover:bg-zinc-100 active:scale-95 transition-all shadow-xl"
+                >
+                  Acknowledge & View Report
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

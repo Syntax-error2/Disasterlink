@@ -245,24 +245,31 @@ export default function KapMobile() {
         {activeTab === "evacuation" && (
           <div className="space-y-4 animate-in fade-in duration-300">
             <h2 className="font-black text-xl flex items-center gap-2"><Tent className="h-5 w-5 text-emerald-500"/> Evacuation Centers</h2>
-            {centers.map(center => (
-              <Card key={center.id} className="border-0 shadow-md bg-white dark:bg-[#15151a] overflow-hidden relative">
-                <div className={`absolute top-0 left-0 w-1 h-full ${center.status === 'Active' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                <CardContent className="p-4 pl-5">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-base">{center.name}</h3>
-                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${center.status === 'Active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>{center.status}</span>
-                  </div>
-                  <p className="text-xs text-zinc-500 flex items-center gap-1 mt-1"><MapPin className="h-3 w-3"/> {center.location}</p>
-                  <div className="mt-4 flex gap-4">
-                    <div>
-                      <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Occupants</p>
-                      <p className="font-black text-lg">{center.current_occupants} <span className="text-zinc-500 text-sm font-normal">/ {center.capacity}</span></p>
+            {centers.length === 0 ? (
+              <div className="text-center p-8 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-800">
+                <Tent className="h-8 w-8 text-emerald-500 mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-bold text-zinc-400">No active evacuation centers.</p>
+              </div>
+            ) : (
+              centers.map(center => (
+                <Card key={center.id} className="border-0 shadow-md bg-white dark:bg-[#15151a] overflow-hidden relative">
+                  <div className={`absolute top-0 left-0 w-1 h-full ${center.status === 'Active' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                  <CardContent className="p-4 pl-5">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-bold text-base">{center.name}</h3>
+                      <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${center.status === 'Active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>{center.status}</span>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <p className="text-xs text-zinc-500 flex items-center gap-1 mt-1"><MapPin className="h-3 w-3"/> {center.location}</p>
+                    <div className="mt-4 flex gap-4">
+                      <div>
+                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Occupants</p>
+                        <p className="font-black text-lg">{center.current_occupants} <span className="text-zinc-500 text-sm font-normal">/ {center.capacity}</span></p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         )}
 
@@ -270,17 +277,24 @@ export default function KapMobile() {
         {activeTab === "personnel" && (
           <div className="space-y-4 animate-in fade-in duration-300">
             <h2 className="font-black text-xl flex items-center gap-2"><Users className="h-5 w-5 text-purple-500"/> Tanods / Responders</h2>
-            {personnel.map(p => (
-              <div key={p.id} className="flex items-center gap-3 p-3 bg-white dark:bg-[#15151a] rounded-lg shadow-sm">
-                <div className="h-10 w-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600 dark:text-purple-400 font-bold text-lg">
-                  {p.name.charAt(0)}
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm">{p.name}</h3>
-                  <p className="text-xs text-zinc-500">Purok {p.purok} • {p.phone}</p>
-                </div>
+            {personnel.length === 0 ? (
+              <div className="text-center p-8 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-800">
+                <Users className="h-8 w-8 text-purple-500 mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-bold text-zinc-400">No active personnel assigned yet.</p>
               </div>
-            ))}
+            ) : (
+              personnel.map(p => (
+                <div key={p.id} className="flex items-center gap-3 p-3 bg-white dark:bg-[#15151a] rounded-lg shadow-sm">
+                  <div className="h-10 w-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600 dark:text-purple-400 font-bold text-lg">
+                    {p.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm">{p.name}</h3>
+                    <p className="text-xs text-zinc-500">Purok {p.purok} • {p.phone}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </main>

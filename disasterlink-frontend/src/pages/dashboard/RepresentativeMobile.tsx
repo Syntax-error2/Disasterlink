@@ -18,6 +18,11 @@ import "leaflet/dist/leaflet.css";
 import RealtimeRouter from "../../components/RealtimeRouter";
 
 const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6 w-6 bg-red-600 rounded-full border-2 border-white flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.8)] animate-pulse"></div>`, iconSize: [24, 24] });
+const repIcon = L.divIcon({
+  className: "bg-transparent",
+  html: `<div class="relative flex h-8 w-8 items-center justify-center"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span><span class="relative inline-flex rounded-full h-5 w-5 bg-blue-600 border-2 border-white shadow-xl"></span></div>`,
+  iconSize: [32, 32],
+});
 
 export default function RepresentativeMobile() {
   const { logout, user } = useAuth();
@@ -34,7 +39,7 @@ export default function RepresentativeMobile() {
   const [reportDesc, setReportDesc] = useState("");
   const [reportImage, setReportImage] = useState<string | null>(null);
   const [verifyImage, setVerifyImage] = useState<string | null>(null);
-  const [status, setStatus] = useState<"Available" | "Dispatched">("Available");
+  const [status, setStatus] = useState<"Available" | "Dispatched" | "Verified">("Available");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
   const [resolvedIds, setResolvedIds] = useState<string[]>([]);
@@ -470,19 +475,28 @@ export default function RepresentativeMobile() {
                       </div>
                     </div>
                   )}
-                  <div className="flex-1 w-full relative z-0">
+                  {isMapExpanded && (
+                    <button 
+                      onClick={() => setIsMapExpanded(false)} 
+                      className="absolute top-safe-top mt-4 left-4 z-[400] bg-zinc-900/80 backdrop-blur-md p-3 rounded-full text-white border border-zinc-700 shadow-xl"
+                    >
+                      <LogOut className="h-5 w-5 rotate-180" />
+                    </button>
+                  )}
+                  <div className={`w-full relative z-0 ${isMapExpanded ? 'fixed inset-0 z-50 h-[100dvh]' : 'flex-1 h-full'}`}>
                     <MapContainer 
                       center={userLoc} 
                       zoom={16} 
                       zoomControl={false} 
                       className="h-full w-full bg-zinc-950"
-                      key={`full-map-${userLoc[0]}-${userLoc[1]}`}
+                      key={`full-map-${userLoc[0]}-${userLoc[1]}-${isMapExpanded ? 'expanded' : 'collapsed'}`}
                     >
                       <TileLayer
                         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                       />
                       <Circle center={userLoc} radius={800} pathOptions={{ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.1 }} />
+                      <Marker position={userLoc} icon={repIcon} />
                       
                       {activeLocalIncidents.map((inc: any) => inc.latitude && inc.longitude ? (
                         <Marker 
@@ -500,6 +514,17 @@ export default function RepresentativeMobile() {
                           </Popup>
                         </Marker>
                       ) : null)}
+
+                      <div className="leaflet-bottom leaflet-right mb-[90px] mr-4">
+                        {!isMapExpanded && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setIsMapExpanded(true); }}
+                            className="bg-blue-600 p-3 rounded-full shadow-lg text-white mb-2 relative z-[400] pointer-events-auto"
+                          >
+                            <MapIcon className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
                     </MapContainer>
                   </div>
                 </div>
@@ -551,6 +576,13 @@ export default function RepresentativeMobile() {
             </motion.div>
           ) : (
             <motion.div key="dispatch" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[100] bg-red-950 p-6 pt-12 pb-safe flex flex-col overflow-hidden">
+              <button 
+                onClick={() => setStatus("Available")} 
+                className="absolute top-safe-top mt-4 left-4 z-[110] bg-red-900/50 hover:bg-red-800 p-3 rounded-full text-white/80 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+              
               <div className="absolute inset-0 bg-red-600/5 mix-blend-overlay pointer-events-none"></div>
               
               <div className="flex justify-center mb-4 relative shrink-0">
@@ -588,6 +620,7 @@ export default function RepresentativeMobile() {
                         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                       />
                       <Marker position={[Number(incident.latitude), Number(incident.longitude)]} icon={evacIcon} />
+                      <Marker position={userLoc} icon={repIcon} />
                       <RealtimeRouter 
                         start={userLoc} 
                         end={[Number(incident.latitude), Number(incident.longitude)]} 
@@ -634,18 +667,44 @@ export default function RepresentativeMobile() {
                 </div>
               </div>
 
-              {/* Action Controls */}
-              <div className="space-y-3 relative z-10 shrink-0">
-                <button onClick={() => escalateIncident('kap')} disabled={isSubmitting} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 active:scale-95 disabled:opacity-70 text-white font-black tracking-wide py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg border border-blue-400/30">
-                  {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
-                  VERIFY & ESCALATE (KAP)
-                </button>
-                <button onClick={() => escalateIncident('mdrrmo')} disabled={isSubmitting} className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 active:scale-95 disabled:opacity-70 text-white font-black tracking-wide py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_0_25px_rgba(220,38,38,0.4)] border border-red-400/30">
-                  {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <AlertTriangle className="h-5 w-5" />}
-                  CRITICAL: ESCALATE MDRRMO
-                </button>
-              </div>
-            </motion.div>
+                {status === "Dispatched" ? (
+                  <div className="flex flex-col gap-3 mt-4 shrink-0 relative z-10 pb-4">
+                    <button 
+                      onClick={() => setStatus("Verified")}
+                      className="bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white font-black text-sm uppercase tracking-widest py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-blue-500/30 transition-all"
+                    >
+                      <CheckCircle className="h-5 w-5" /> Verify Arrival
+                    </button>
+                    <button 
+                      onClick={() => updateIncidentStatus("Direct to LDRRMO")}
+                      className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-black text-sm uppercase tracking-widest py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-red-600/30 transition-all"
+                    >
+                      <AlertTriangle className="h-5 w-5" /> CRITICAL: ESCALATE MDRRMO
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 mt-4 shrink-0 relative z-10 pb-4">
+                    <button 
+                      onClick={() => updateIncidentStatus("Verified / Escalated to Kap")}
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl flex items-center justify-center shadow-md transition-all"
+                    >
+                      ESCALATE TO KAP
+                    </button>
+                    <button 
+                      onClick={() => updateIncidentStatus("Direct to LDRRMO")}
+                      className="bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl flex items-center justify-center shadow-md transition-all"
+                    >
+                      ESCALATE TO DRRM
+                    </button>
+                    <button 
+                      onClick={() => updateIncidentStatus("Resolved / Cleared")}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl flex items-center justify-center shadow-md transition-all"
+                    >
+                      MARK ADDRESSED/DONE
+                    </button>
+                  </div>
+                )}
+              </motion.div>
           )}
         </AnimatePresence>
       </main>

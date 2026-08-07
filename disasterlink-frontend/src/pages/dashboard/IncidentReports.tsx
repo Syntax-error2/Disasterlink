@@ -402,14 +402,12 @@ export default function IncidentReports() {
                         {r.severity_level}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm font-bold text-blue-500">{r.status}</TableCell>
+                    <TableCell className="text-sm font-bold text-blue-500">
+                      {r.status === 'Direct to LDRRMO' ? 'Directed to LDRRMO' : r.status}
+                    </TableCell>
                     <TableCell className="text-right px-6">
                       {!r.status.includes("Dispatched") && !r.status.includes("Resolved") ? (
                         <div className="flex justify-end gap-2">
-
-                          <Button onClick={() => handleUpdateStatus(r.id, "Direct to LDRRMO")} size="sm" variant="outline" className="h-8 text-xs font-bold shadow-sm flex items-center gap-1.5 border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 dark:text-red-400">
-                            <ShieldAlert className="h-3.5 w-3.5" /> Direct to LDRRMO
-                          </Button>
                           <Button onClick={() => handleOpenDispatch(r)} size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs font-bold shadow-md flex items-center gap-1.5">
                             <ShieldAlert className="h-3.5 w-3.5" /> Deploy Responder
                           </Button>

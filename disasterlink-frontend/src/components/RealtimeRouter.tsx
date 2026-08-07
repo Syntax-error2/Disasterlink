@@ -8,9 +8,10 @@ interface RealtimeRouterProps {
   start: [number, number] | null;
   end: [number, number] | null;
   showInstructions?: boolean;
+  lineColor?: string;
 }
 
-export default function RealtimeRouter({ start, end, showInstructions = false }: RealtimeRouterProps) {
+export default function RealtimeRouter({ start, end, showInstructions = false, lineColor = '#3b82f6' }: RealtimeRouterProps) {
   const map = useMap();
 
   useEffect(() => {
@@ -29,7 +30,7 @@ export default function RealtimeRouter({ start, end, showInstructions = false }:
       show: showInstructions,
       createMarker: function() { return null; }, // Hide default waypoint markers
       lineOptions: {
-        styles: [{ color: '#3b82f6', weight: 6, opacity: 0.8 }],
+        styles: [{ color: lineColor, weight: 6, opacity: 0.8 }],
         extendToWaypoints: true,
         missingRouteTolerance: 0
       }
