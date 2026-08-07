@@ -116,4 +116,18 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/personnel/representatives', [UserController::class, 'getRepresentatives'])->middleware('role:barangay_captain,admin');
     Route::post('/personnel/representatives', [UserController::class, 'createRepresentative'])->middleware('role:barangay_captain,admin');
     Route::delete('/personnel/representatives/{id}', [UserController::class, 'deleteRepresentative'])->middleware('role:barangay_captain,admin');
+
+    // ==========================================
+    // ADMIN USER MANAGEMENT
+    // ==========================================
+    Route::get('/admin/users', [\App\Http\Controllers\AdminUserController::class, 'index'])->middleware('role:admin,superadmin');
+    Route::post('/admin/users', [\App\Http\Controllers\AdminUserController::class, 'store'])->middleware('role:admin,superadmin');
+
+    // ==========================================
+    // DEPLOYMENT TEAMS
+    // ==========================================
+    Route::get('/teams', [\App\Http\Controllers\TeamController::class, 'index'])->middleware('role:admin,superadmin');
+    Route::post('/teams', [\App\Http\Controllers\TeamController::class, 'store'])->middleware('role:admin,superadmin');
+    Route::put('/teams/{id}', [\App\Http\Controllers\TeamController::class, 'update'])->middleware('role:admin,superadmin');
+    Route::delete('/teams/{id}', [\App\Http\Controllers\TeamController::class, 'destroy'])->middleware('role:admin,superadmin');
 });
