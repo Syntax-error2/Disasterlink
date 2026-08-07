@@ -1,6 +1,31 @@
 import { useState, useEffect } from "react";
-import { Users, Server, Activity, Plus } from "lucide-react";
+import { Users, Server, Activity, Plus, MapPin } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
 import axiosInstance from "../../lib/axios";
+
+// Custom marker for LGUs
+const lguIcon = L.divIcon({
+  className: "bg-transparent",
+  html: `<div class="h-5 w-5 bg-emerald-500 rounded-full border-2 border-black flex items-center justify-center shadow-[0_0_10px_rgba(16,185,129,0.7)]"><div class="h-2 w-2 bg-white rounded-full"></div></div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
+});
+
+// Component to handle map zooming to fit all markers
+function MapBoundsUpdater({ lgus }: { lgus: Lgu[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (lgus.length > 0) {
+      const bounds = L.latLngBounds(lgus.map(lgu => [
+        Number(lgu.latitude) || 10.1866, 
+        Number(lgu.longitude) || 122.8587
+      ]));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+    }
+  }, [lgus, map]);
+  return null;
+}
 
 interface Lgu {
   id: number;
@@ -9,6 +34,8 @@ interface Lgu {
   subscription_status: string;
   users_count: number;
   incident_reports_count: number;
+  latitude: string;
+  longitude: string;
 }
 
 export default function SuperAdmin() {
@@ -95,6 +122,65 @@ export default function SuperAdmin() {
             </div>
             <p className="text-4xl font-black text-emerald-500">100%</p>
           </div>
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-zinc-400 font-bold">Total Processed</h3>
+              <Activity className="w-6 h-6 text-red-500" />
+            </div>
+            <p className="text-4xl font-black">
+              {lgus.reduce((sum, lgu) => sum + (lgu.incident_reports_count || 0), 0)}
+            </p>
+          </div>
+        </div>
+
+        {/* Global Network Map */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex flex-col">
+          <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950">
+             <div className="flex items-center space-x-2">
+                <MapPin className="w-5 h-5 text-zinc-400" />
+                <h3 className="font-bold text-white tracking-wide">Global LGU Network</h3>
+             </div>
+             <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">LIVE TRACKING</span>
+          </div>
+          <div className="h-[350px] w-full bg-black relative z-0">
+             <MapContainer 
+                center={[10.1866, 122.8587]} 
+                zoom={6} 
+                scrollWheelZoom={false} 
+                className="h-full w-full"
+             >
+                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                <MapBoundsUpdater lgus={lgus} />
+                
+                {lgus.map((lgu) => {
+                  const lat = Number(lgu.latitude);
+                  const lng = Number(lgu.longitude);
+                  if (isNaN(lat) || isNaN(lng)) return null;
+                  
+                  return (
+                    <Marker key={lgu.id} position={[lat, lng]} icon={lguIcon}>
+                      <Popup className="custom-popup min-w-[200px]">
+                        <div className="font-black text-emerald-600 mb-1 flex items-center gap-2">
+                          <Server className="h-3 w-3" />
+                          {lgu.name}
+                        </div>
+                        <div className="text-xs text-zinc-600 font-mono mb-2">{lgu.subdomain}.disasterlink.com</div>
+                        <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-zinc-200">
+                          <div className="text-center">
+                             <div className="text-[10px] uppercase font-bold text-zinc-400">Users</div>
+                             <div className="text-sm font-black text-zinc-800">{lgu.users_count}</div>
+                          </div>
+                          <div className="text-center">
+                             <div className="text-[10px] uppercase font-bold text-zinc-400">Incidents</div>
+                             <div className="text-sm font-black text-zinc-800">{lgu.incident_reports_count}</div>
+                          </div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  );
+                })}
+             </MapContainer>
+          </div>
         </div>
 
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
@@ -115,8 +201,12 @@ export default function SuperAdmin() {
                   <td className="px-6 py-4 font-bold">{lgu.name}</td>
                   <td className="px-6 py-4 text-zinc-400">{lgu.subdomain}.disasterlink.com</td>
                   <td className="px-6 py-4">
-                    <span className="px-2 py-1 rounded-md text-xs font-bold bg-emerald-950/50 text-emerald-400 border border-emerald-900/50">
-                      {lgu.subscription_status.toUpperCase()}
+                    <span className={`px-2 py-1 rounded text-[10px] uppercase font-black ${
+                      lgu.subscription_status === 'active' || lgu.subscription_status === 'ACTIVE' 
+                        ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
+                        : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                    }`}>
+                      {lgu.subscription_status}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-zinc-400">{(lgu as any).next_payment_date || 'N/A'}</td>
