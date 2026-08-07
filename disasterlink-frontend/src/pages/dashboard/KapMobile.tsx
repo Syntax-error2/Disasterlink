@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, CheckCircle, ShieldAlert, Radio, AlertTriangle, Users, Tent, Navigation, LogOut, ShieldCheck } from "lucide-react";
+import { MapPin, CheckCircle, ShieldAlert, Radio, AlertTriangle, Users, Tent, Navigation, LogOut, ShieldCheck, Plus, X } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -21,13 +21,26 @@ export default function KapMobile() {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [toast, setToast] = useState<{msg: string, type: string} | null>(null);
 
+  const [showAddEvac, setShowAddEvac] = useState(false);
+  const [evacForm, setEvacForm] = useState({ name: '', location: '', capacity: '' });
+  
+  const [showAddTanod, setShowAddTanod] = useState(false);
+  const [tanodForm, setTanodForm] = useState({ name: '', phone: '', purok: '' });
+
+  const normalize = (str: string) => {
+    if (!str) return "";
+    return str.toLowerCase().replace(/brgy\.?/g, '').replace(/barangay/g, '').replace(/sta\.?/g, 'santa').replace(/sto\.?/g, 'santo').replace(/[^a-z0-9]/g, '');
+  };
+
   const fetchIncidents = async () => {
     try {
       const res = await axiosInstance.get('/incidents');
-      // Filter for the kap's barangay
-      const local = res.data.filter((r: any) => 
-        r.reporting_barangay?.toLowerCase().includes(user?.assigned_barangay?.toLowerCase() || '')
-      );
+      // Filter for the kap's barangay using normalized string
+      const local = res.data.filter((r: any) => {
+        const s1 = normalize(r.reporting_barangay);
+        const s2 = normalize(user?.assigned_barangay);
+        return s1 && s2 && (s1.includes(s2) || s2.includes(s1));
+      });
       setReports(local);
     } catch (e) {
       console.error(e);
@@ -48,9 +61,49 @@ export default function KapMobile() {
     } catch (e) {}
   };
 
-  const showToast = (msg: string, type: 'success' | 'alert' = 'success') => {
-    setToast({ msg, type });
+  const showToast = (msg: string, type: string = 'info') => {
+    setToast({msg, type});
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleAddEvac = async () => {
+    try {
+      await axiosInstance.post('/evacuation-centers', {
+        name: evacForm.name,
+        location: evacForm.location || user?.assigned_barangay || "Unknown",
+        capacity: Number(evacForm.capacity || 100),
+        status: 'Active',
+        lgu_id: user?.lgu?.id,
+        lat: 10.1866,
+        lng: 122.8587
+      });
+      showToast('Evacuation center added', 'success');
+      setShowAddEvac(false);
+      setEvacForm({ name: '', location: '', capacity: '' });
+      fetchCenters();
+    } catch (e) {
+      showToast('Failed to add center', 'error');
+    }
+  };
+
+  const handleAddTanod = async () => {
+    try {
+      await axiosInstance.post('/superadmin/users', {
+        name: tanodForm.name,
+        phone: tanodForm.phone || "09123456789",
+        role: 'Responder',
+        assigned_barangay: user?.assigned_barangay,
+        lgu_id: user?.lgu?.id,
+        password: 'password123',
+        email: `${tanodForm.name.replace(/\s/g, '').toLowerCase()}@tanod.com`
+      });
+      showToast('Tanod added successfully', 'success');
+      setShowAddTanod(false);
+      setTanodForm({ name: '', phone: '', purok: '' });
+      fetchPersonnel();
+    } catch (e) {
+      showToast('Failed to add tanod', 'error');
+    }
   };
 
   const triggerAlert = (incident: any) => {
@@ -89,8 +142,12 @@ export default function KapMobile() {
           if (e.type === 'created' || e.type === 'updated') {
             await fetchIncidents();
             // Try to find the incident from the event if it matches Kap's barangay
-            if (e.type === 'created' && e.incident && e.incident.reporting_barangay?.toLowerCase().includes(user?.assigned_barangay?.toLowerCase() || '')) {
-              triggerAlert(e.incident);
+            if (e.type === 'created' && e.incident) {
+              const s1 = normalize(e.incident.reporting_barangay);
+              const s2 = normalize(user?.assigned_barangay);
+              if (s1 && s2 && (s1.includes(s2) || s2.includes(s1))) {
+                triggerAlert(e.incident);
+              }
             }
           }
         });
@@ -244,7 +301,22 @@ export default function KapMobile() {
         {/* EVACUATION TAB */}
         {activeTab === "evacuation" && (
           <div className="space-y-4 animate-in fade-in duration-300">
-            <h2 className="font-black text-xl flex items-center gap-2"><Tent className="h-5 w-5 text-emerald-500"/> Evacuation Centers</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="font-black text-xl flex items-center gap-2"><Tent className="h-5 w-5 text-emerald-500"/> Evacuation Centers</h2>
+              <button onClick={() => setShowAddEvac(true)} className="bg-emerald-500 text-white p-2 rounded-full shadow-md"><Plus className="h-4 w-4" /></button>
+            </div>
+            
+            {showAddEvac && (
+              <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl space-y-3 shadow-lg relative">
+                <button onClick={() => setShowAddEvac(false)} className="absolute top-2 right-2 text-zinc-400 hover:text-white"><X className="h-4 w-4" /></button>
+                <h3 className="text-white font-bold text-sm">Add New Center</h3>
+                <input type="text" placeholder="Center Name" className="w-full bg-zinc-800 text-white rounded p-2 text-sm" value={evacForm.name} onChange={e => setEvacForm({...evacForm, name: e.target.value})} />
+                <input type="text" placeholder="Location Details" className="w-full bg-zinc-800 text-white rounded p-2 text-sm" value={evacForm.location} onChange={e => setEvacForm({...evacForm, location: e.target.value})} />
+                <input type="number" placeholder="Capacity" className="w-full bg-zinc-800 text-white rounded p-2 text-sm" value={evacForm.capacity} onChange={e => setEvacForm({...evacForm, capacity: e.target.value})} />
+                <button onClick={handleAddEvac} className="w-full bg-emerald-600 text-white rounded py-2 text-sm font-bold shadow-md">Save Evac Center</button>
+              </div>
+            )}
+
             {centers.length === 0 ? (
               <div className="text-center p-8 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-800">
                 <Tent className="h-8 w-8 text-emerald-500 mx-auto mb-2 opacity-50" />
@@ -276,7 +348,22 @@ export default function KapMobile() {
         {/* PERSONNEL TAB */}
         {activeTab === "personnel" && (
           <div className="space-y-4 animate-in fade-in duration-300">
-            <h2 className="font-black text-xl flex items-center gap-2"><Users className="h-5 w-5 text-purple-500"/> Tanods / Responders</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="font-black text-xl flex items-center gap-2"><Users className="h-5 w-5 text-purple-500"/> Tanods / Responders</h2>
+              <button onClick={() => setShowAddTanod(true)} className="bg-purple-500 text-white p-2 rounded-full shadow-md"><Plus className="h-4 w-4" /></button>
+            </div>
+            
+            {showAddTanod && (
+              <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl space-y-3 shadow-lg relative">
+                <button onClick={() => setShowAddTanod(false)} className="absolute top-2 right-2 text-zinc-400 hover:text-white"><X className="h-4 w-4" /></button>
+                <h3 className="text-white font-bold text-sm">Add New Tanod</h3>
+                <input type="text" placeholder="Full Name" className="w-full bg-zinc-800 text-white rounded p-2 text-sm" value={tanodForm.name} onChange={e => setTanodForm({...tanodForm, name: e.target.value})} />
+                <input type="text" placeholder="Phone Number" className="w-full bg-zinc-800 text-white rounded p-2 text-sm" value={tanodForm.phone} onChange={e => setTanodForm({...tanodForm, phone: e.target.value})} />
+                <input type="text" placeholder="Purok (Optional)" className="w-full bg-zinc-800 text-white rounded p-2 text-sm" value={tanodForm.purok} onChange={e => setTanodForm({...tanodForm, purok: e.target.value})} />
+                <button onClick={handleAddTanod} className="w-full bg-purple-600 text-white rounded py-2 text-sm font-bold shadow-md">Create Tanod Profile</button>
+              </div>
+            )}
+
             {personnel.length === 0 ? (
               <div className="text-center p-8 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-800">
                 <Users className="h-8 w-8 text-purple-500 mx-auto mb-2 opacity-50" />

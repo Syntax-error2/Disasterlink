@@ -8,7 +8,7 @@ import {
   Home, Map as MapIcon, PlusCircle, Users, AlertTriangle, CloudRain, 
   Navigation, PhoneCall, ShieldCheck, Camera, Send, Heart, 
   MessageSquare, CheckCircle, Flame, Waves, Wind, Filter, Info, Loader2, Clock, Activity, MapPin, Thermometer, Droplets, Gauge, X, Trash2,
-  LogOut, User as UserIcon
+  LogOut, User as UserIcon, ChevronRight
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { formatDistanceToNow } from 'date-fns';
@@ -128,7 +128,17 @@ export default function CommunityPortal() {
 
   useEffect(() => {
     const userKey = "my_report_ids_" + (((activeUser as any)?.id) || (activeUser?.email) || 'guest');
-    const myIds = JSON.parse(localStorage.getItem(userKey) || "[]");
+    let myIds = JSON.parse(localStorage.getItem(userKey) || "[]");
+    
+    // Merge guest IDs so past reports are never lost when logging in
+    if (userKey !== "my_report_ids_guest") {
+      const guestIds = JSON.parse(localStorage.getItem("my_report_ids_guest") || "[]");
+      myIds = Array.from(new Set([...myIds, ...guestIds]));
+      // Update local storage with merged IDs for persistence
+      if (guestIds.length > 0) {
+        localStorage.setItem(userKey, JSON.stringify(myIds));
+      }
+    }
     
     // My Reports
     const myActiveReports = (globalIncidents || []).filter((inc: any) => myIds.includes(inc.id));
@@ -819,6 +829,14 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
                     report.status.includes("Resolved") ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : 
                     "bg-amber-500/10 text-amber-500 border border-amber-500/30"
                   }`}>
+                    {report.status === "Active" ? <Activity className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />} {report.status}
+                  </div>
+                  
+                  <div className="absolute right-4 bottom-4">
+                    <button className="bg-zinc-800 text-zinc-300 p-2 rounded-full hover:bg-zinc-700 hover:text-white transition-colors shadow-sm">
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
                     {report.status.includes("Dispatch") ? <Activity className="h-3 w-3 animate-pulse" /> : 
                      report.status.includes("Resolved") ? <CheckCircle className="h-3 w-3" /> : 
                      <ShieldCheck className="h-3 w-3" />}
