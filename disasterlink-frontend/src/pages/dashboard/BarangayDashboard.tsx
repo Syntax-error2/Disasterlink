@@ -476,6 +476,7 @@ export default function BarangayDashboard() {
                     report.status === 'Dismissed' ? 'text-red-500' : 
                     report.status === 'Barangay Responding' ? 'text-blue-500' : 
                     report.status === 'Needs LGU Backup' ? 'text-red-600 font-bold animate-pulse' :
+                    report.status === 'Direct to LDRRMO' ? 'text-red-600 font-bold border border-red-500 px-1 rounded bg-red-100' :
                     'text-emerald-500'
                   }>{report.status}</span></span>
                   
@@ -486,6 +487,7 @@ export default function BarangayDashboard() {
                       </button>
                       <div className="flex gap-2">
                         <button onClick={() => handleVerifyReport(report.id, 'Verified')} className="flex-1 text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50 px-3 py-1 rounded">Verify</button>
+                        <button onClick={() => handleVerifyReport(report.id, 'Direct to LDRRMO')} className="flex-1 text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 px-3 py-1 rounded font-bold">LDRRMO</button>
                         <button onClick={() => handleVerifyReport(report.id, 'Dismissed')} className="flex-1 text-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 px-3 py-1 rounded">Dismiss</button>
                       </div>
                     </div>

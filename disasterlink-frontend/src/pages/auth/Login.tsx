@@ -97,7 +97,9 @@ export default function Login() {
           } else if (userRole === 'admin' || userRole === 'mdrrmo_staff') {
             navigate("/"); // Send to Master Dashboard
           } else if (userRole === 'barangay_captain') {
-            navigate("/barangay-command"); // Send to Localized Dashboard
+            const isMobile = window.innerWidth < 768;
+            navigate(isMobile ? "/kap-mobile" : "/barangay-command"); // Send to Localized Dashboard or Mobile App
+
           } else if (userRole === 'responder') {
             if (user?.barangay || user?.assigned_barangay) {
               navigate("/representative-dashboard");

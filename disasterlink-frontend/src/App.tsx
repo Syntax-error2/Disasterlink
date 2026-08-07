@@ -94,6 +94,7 @@ export default function App() {
               <Route path="/responder-dispatch" element={<ProtectedRoute allowedRoles={['responder']}><ResponderMobile /></ProtectedRoute>} />
               <Route path="/representative-dashboard" element={<ProtectedRoute allowedRoles={['responder']}><RepresentativeMobile /></ProtectedRoute>} />
               <Route path="/portal" element={<ProtectedRoute allowedRoles={['resident', 'citizen']}><CommunityPortal /></ProtectedRoute>} />
+              <Route path="/kap-mobile" element={<ProtectedRoute allowedRoles={['barangay_captain']}><KapMobile /></ProtectedRoute>} />
 
               {/* Admin & Barangay Dashboard Routes (With Sidebar) */}
               <Route element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'mdrrmo_staff', 'barangay_captain']}><DashboardLayout /></ProtectedRoute>}>
