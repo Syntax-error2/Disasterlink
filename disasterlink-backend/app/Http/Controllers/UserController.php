@@ -20,12 +20,15 @@ class UserController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $barangay = $user->role === 'barangay_captain' ? $user->barangay : $request->query('barangay');
+        $barangay = $user->role === 'barangay_captain' ? ($user->assigned_barangay ?? $user->barangay) : $request->query('barangay');
 
         $query = User::where('role', 'responder');
         
         if ($barangay) {
-            $query->where('barangay', $barangay);
+            $query->where(function($q) use ($barangay) {
+                $q->where('barangay', $barangay)
+                  ->orWhere('assigned_barangay', $barangay);
+            });
         }
 
         $representatives = $query->get(['id', 'name', 'email', 'phone', 'barangay', 'purok', 'account_status']);

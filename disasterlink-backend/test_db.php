@@ -1,16 +1,18 @@
 <?php
-$host = '153.92.15.1';
-$db   = 'u566394116_disasterlink';
-$user = 'u566394116_disasteradmin';
-$pass = 'Deblamas@01';
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
 
 try {
-    echo "Connecting to MySQL...\n";
-    $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass, [
-        PDO::ATTR_TIMEOUT => 5,
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+    $inc = App\Models\IncidentReport::create([
+        'reporting_barangay' => 'Test',
+        'incident_type' => 'Test',
+        'severity_level' => 'High',
+        'latitude' => '10.1',
+        'longitude' => '120.1'
     ]);
-    echo "Connection OK!\n";
+    echo "SUCCESS: " . $inc->id;
 } catch (\Exception $e) {
-    echo "Connection Failed: " . $e->getMessage() . "\n";
+    echo "ERROR: " . $e->getMessage();
 }

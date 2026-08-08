@@ -141,7 +141,10 @@ export default function CommunityPortal() {
     }
     
     // My Reports
-    const myActiveReports = (globalIncidents || []).filter((inc: any) => myIds.map(String).includes(String(inc.id)));
+    const myActiveReports = (globalIncidents || []).filter((inc: any) => 
+      myIds.map(String).includes(String(inc.id)) || 
+      (activeUser && (activeUser as any).id && String(inc.user_id) === String((activeUser as any).id))
+    );
     setMyReports(myActiveReports);
 
     // Proximity 50m SOS Alerts
