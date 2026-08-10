@@ -136,8 +136,8 @@ class AuthController extends Controller
 
         // Enforce strict Subdomain / Tenant isolation
         $requestSubdomain = $request->input('subdomain');
-        // Superadmins can log in anywhere, but standard users are locked to their LGU
-        if ($user->role !== 'superadmin' && $user->lgu && $user->lgu->subdomain !== $requestSubdomain) {
+        // Superadmins can log in anywhere, but standard users are locked to their LGU (if a subdomain is explicitly requested)
+        if (!empty($requestSubdomain) && $user->role !== 'superadmin' && $user->lgu && $user->lgu->subdomain !== $requestSubdomain) {
             return response()->json([
                 'message' => 'Unauthorized. This account belongs to a different LGU portal.'
             ], 403);

@@ -4,6 +4,7 @@ import { ShieldCheck, Mail, Lock, Activity, MapPin, Loader2, Server, AlertCircle
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import axiosInstance from "../../lib/axios";
+import { Capacitor } from '@capacitor/core';
 
 export default function Login() {
   // Enhanced State Management for the Boot Sequence
@@ -25,9 +26,10 @@ export default function Login() {
 
   // Extract Subdomain for SaaS Branding
   const hostname = window.location.hostname;
+  const isNative = Capacitor.isNativePlatform();
   const isLocalDev = hostname === "localhost" || hostname === "127.0.0.1" || hostname.includes(".devtunnels.ms") || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes("vercel.app");
   
-  const currentSubdomain = isLocalDev ? selectedLgu : hostname.split('.')[0];
+  const currentSubdomain = isLocalDev && !isNative ? selectedLgu : (isNative ? "" : hostname.split('.')[0]);
 
   useEffect(() => {
     // Fetch LGUs for dropdown
@@ -234,7 +236,7 @@ export default function Login() {
                     </div>
                   )}
 
-                  {isLocalDev && (
+                  {isLocalDev && !isNative && (
                     <div className="space-y-1.5 group">
                       <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300 transition-colors group-focus-within:text-red-600 dark:group-focus-within:text-red-400">
                         Select City / Municipality Node
