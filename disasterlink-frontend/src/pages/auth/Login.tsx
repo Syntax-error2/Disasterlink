@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShieldCheck, Mail, Lock, Activity, MapPin, Loader2, Server, AlertCircle, CheckCircle, Terminal, Settings } from "lucide-react";
+import { ShieldCheck, Mail, Lock, Activity, MapPin, Loader2, Server, AlertCircle, CheckCircle, Terminal, Settings, Building2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import axiosInstance from "../../lib/axios";
@@ -11,6 +11,8 @@ export default function Login() {
   const [bootText, setBootText] = useState("Verifying credentials...");
   const [errorMsg, setErrorMsg] = useState("");
   const [tenant, setTenant] = useState<any>(null);
+  const [lgus, setLgus] = useState<any[]>([]);
+  const [selectedLgu, setSelectedLgu] = useState("");
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
 
@@ -23,25 +25,37 @@ export default function Login() {
 
   // Extract Subdomain for SaaS Branding
   const hostname = window.location.hostname;
-  // Default to binalbagan for local dev, local IPs, and VS Code Dev Tunnels
   const isLocalDev = hostname === "localhost" || hostname === "127.0.0.1" || hostname.includes(".devtunnels.ms") || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes("vercel.app");
-  const currentSubdomain = isLocalDev 
-    ? "binalbagan" 
-    : hostname.split('.')[0];
+  
+  const currentSubdomain = isLocalDev ? selectedLgu : hostname.split('.')[0];
 
   useEffect(() => {
-    const tenantUrl = (axiosInstance.defaults.baseURL || '') + `/tenant-config/${currentSubdomain}`;
-    fetch(tenantUrl)
-      .then(res => {
-        if (!res.ok) throw new Error("Tenant not found");
-        return res.json();
-      })
-      .then(data => {
-        const tenantData = data.data || data;
-        setTenant(tenantData);
-      })
-      .catch(err => console.log("Generic SaaS Mode Active", err));
-  }, [currentSubdomain]);
+    // Fetch LGUs for dropdown
+    if (isLocalDev) {
+      axiosInstance.get('/lgus')
+        .then(res => setLgus(res.data))
+        .catch(err => console.error("Failed to fetch LGUs", err));
+    }
+
+    if (currentSubdomain) {
+      const tenantUrl = (axiosInstance.defaults.baseURL || '') + `/tenant-config/${currentSubdomain}`;
+      fetch(tenantUrl)
+        .then(res => {
+          if (!res.ok) throw new Error("Tenant not found");
+          return res.json();
+        })
+        .then(data => {
+          const tenantData = data.data || data;
+          setTenant(tenantData);
+        })
+        .catch(err => {
+          console.log("Generic SaaS Mode Active", err);
+          setTenant(null);
+        });
+    } else {
+      setTenant(null);
+    }
+  }, [currentSubdomain, isLocalDev]);
 
   // Real Laravel API Network Request
   const handleLogin = async (e: React.FormEvent) => {
@@ -217,6 +231,29 @@ export default function Login() {
                     <div className="p-3 text-sm text-red-600 bg-red-100 border border-red-200 rounded-lg dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 flex items-center gap-2 animate-in fade-in">
                       <AlertCircle className="h-4 w-4 shrink-0" />
                       {errorMsg}
+                    </div>
+                  )}
+
+                  {isLocalDev && (
+                    <div className="space-y-1.5 group">
+                      <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300 transition-colors group-focus-within:text-red-600 dark:group-focus-within:text-red-400">
+                        Select City / Municipality Node
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-3 h-5 w-5 text-zinc-400 transition-colors group-focus-within:text-red-500" />
+                        <select 
+                          value={selectedLgu} 
+                          onChange={(e) => setSelectedLgu(e.target.value)} 
+                          className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-[#111115] border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-50 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-sm appearance-none" 
+                          required 
+                          disabled={loginState === 'authenticating'}
+                        >
+                          <option value="" disabled>Select a Node...</option>
+                          {lgus.map(lgu => (
+                            <option key={lgu.id} value={lgu.subdomain}>{lgu.name}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   )}
                   
