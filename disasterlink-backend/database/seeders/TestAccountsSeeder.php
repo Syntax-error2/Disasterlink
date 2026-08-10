@@ -54,6 +54,56 @@ class TestAccountsSeeder extends Seeder
             'assigned_barangay' => 'Poblacion',
             'contact_number' => '09123456784',
             'account_status' => 'active',
+            'lgu_id' => 1,
+        ]);
+
+        // CABANATUAN TEST ACCOUNTS
+        User::create([
+            'name' => 'Cabanatuan Admin',
+            'email' => 'admin@cabanatuan.gov.ph',
+            'password' => $password,
+            'role' => 'admin',
+            'department' => 'MDRRMO Cabanatuan',
+            'assigned_barangay' => 'Command Center',
+            'contact_number' => '09123456790',
+            'account_status' => 'active',
+            'lgu_id' => 2,
+        ]);
+
+        User::create([
+            'name' => 'Cabanatuan Responder',
+            'email' => 'responder@cabanatuan.gov.ph',
+            'password' => $password,
+            'role' => 'responder',
+            'department' => 'Rescue Unit',
+            'assigned_barangay' => 'Bantug Norte',
+            'contact_number' => '09123456791',
+            'account_status' => 'active',
+            'lgu_id' => 2,
+        ]);
+
+        User::create([
+            'name' => 'Kapitan Cabanatuan',
+            'email' => 'kapitan@cabanatuan.gov.ph',
+            'password' => $password,
+            'role' => 'barangay_captain',
+            'department' => 'Barangay Council',
+            'assigned_barangay' => 'Sangitan East',
+            'contact_number' => '09123456792',
+            'account_status' => 'active',
+            'lgu_id' => 2,
+        ]);
+
+        User::create([
+            'name' => 'Cabanatuan Citizen',
+            'email' => 'citizen@cabanatuan.gov.ph',
+            'password' => $password,
+            'role' => 'resident',
+            'department' => 'Resident',
+            'assigned_barangay' => 'Sangitan East',
+            'contact_number' => '09123456793',
+            'account_status' => 'active',
+            'lgu_id' => 2,
         ]);
     }
 }
