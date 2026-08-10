@@ -9,8 +9,11 @@ class BroadcastController extends Controller
 {
     public function get()
     {
+        $lguId = auth()->check() ? auth()->user()->lgu_id : 'guest';
+        $cacheKey = "active_broadcast_{$lguId}";
+
         // First check cache for immediate broadcasts
-        $cached = Cache::get('active_broadcast');
+        $cached = Cache::get($cacheKey);
         if (is_array($cached) && isset($cached['message'])) {
             return response()->json([
                 'broadcast' => $cached['message'],
@@ -19,7 +22,15 @@ class BroadcastController extends Controller
         }
         
         // Fallback to database
-        $latest = \App\Models\Broadcast::orderBy('created_at', 'desc')->first();
+        $latest = \App\Models\Broadcast::where(function ($q) use ($lguId) {
+                if ($lguId !== 'guest') {
+                    $q->where('lgu_id', $lguId)->orWhereNull('lgu_id');
+                } else {
+                    $q->whereNull('lgu_id');
+                }
+            })
+            ->orderBy('created_at', 'desc')
+            ->first();
         
         if ($latest && $latest->created_at->diffInMinutes(now()) < 60) {
             return response()->json([
@@ -48,7 +59,8 @@ class BroadcastController extends Controller
             'status' => 'DELIVERED',
         ]);
         
-        Cache::put('active_broadcast', ['id' => $broadcast->id, 'message' => $message], now()->addMinutes(60));
+        $lguId = auth()->check() ? auth()->user()->lgu_id : 'guest';
+        Cache::put("active_broadcast_{$lguId}", ['id' => $broadcast->id, 'message' => $message], now()->addMinutes(60));
         
         // 1. FIRE REAL-TIME PUSHER EVENT (Instant overlay for active users)
         event(new \App\Events\EmergencyBroadcastEvent($broadcast));
@@ -153,7 +165,8 @@ class BroadcastController extends Controller
 
     public function clear()
     {
-        Cache::forget('active_broadcast');
+        $lguId = auth()->check() ? auth()->user()->lgu_id : 'guest';
+        Cache::forget("active_broadcast_{$lguId}");
         return response()->json(['success' => true]);
     }
 }

@@ -10,7 +10,14 @@ class CommunityPostController extends Controller
     public function index()
     {
         try {
-            $posts = CommunityPost::orderBy('created_at', 'desc')->cursorPaginate(30)->through(function ($post) {
+            $lguId = auth()->check() ? auth()->user()->lgu_id : null;
+            $query = CommunityPost::orderBy('created_at', 'desc');
+            
+            if ($lguId) {
+                $query->where('lgu_id', $lguId);
+            }
+            
+            $posts = $query->cursorPaginate(30)->through(function ($post) {
                 if ($post->image_path) {
                     $post->image_url = asset('storage/' . $post->image_path);
                 }
@@ -48,6 +55,7 @@ class CommunityPostController extends Controller
             }
 
             $post = CommunityPost::create([
+                'lgu_id'       => auth()->check() ? auth()->user()->lgu_id : null,
                 'author'       => $request->input('author', 'Anonymous'),
                 'content'      => $request->input('content'),
                 'verified'     => filter_var($request->input('verified', false), FILTER_VALIDATE_BOOLEAN),

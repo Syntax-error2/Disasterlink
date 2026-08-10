@@ -18,9 +18,16 @@ class IncidentReportController extends Controller
     {
         try {
             $lguId = auth()->check() ? auth()->user()->lgu_id : 'guest';
-            $incidents = \Illuminate\Support\Facades\Cache::remember('incidents_lgu_' . $lguId, 600, function () {
+            $incidents = \Illuminate\Support\Facades\Cache::remember('incidents_lgu_' . $lguId, 600, function () use ($lguId) {
                 // Select specific columns to dramatically reduce JSON payload size and speed up rendering
-                return IncidentReport::with('user:id,name,phone')->select(['id', 'user_id', 'reporting_barangay', 'incident_type', 'severity_level', 'exact_location', 'latitude', 'longitude', 'status', 'created_at', 'verifications', 'image_path'])->orderBy('created_at', 'desc')->take(500)->get()->toArray();
+                $query = IncidentReport::with('user:id,name,phone')
+                    ->select(['id', 'user_id', 'reporting_barangay', 'incident_type', 'severity_level', 'exact_location', 'latitude', 'longitude', 'status', 'created_at', 'verifications', 'image_path']);
+                
+                if ($lguId !== 'guest' && $lguId !== null) {
+                    $query->where('lgu_id', $lguId);
+                }
+                
+                return $query->orderBy('created_at', 'desc')->take(500)->get()->toArray();
             });
             return response()->json($incidents, 200);
         } catch (\Exception $e) {
