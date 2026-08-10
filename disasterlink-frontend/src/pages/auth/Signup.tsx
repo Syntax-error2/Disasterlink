@@ -150,7 +150,21 @@ export default function Signup() {
 
             <input type="hidden" name="role" value="resident" />
 
-            <input type="hidden" name="lgu_subdomain" value={selectedLgu} />
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">Select City / Municipality</label>
+              <div className="relative group">
+                <Building2 className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors z-10" />
+                <select name="lgu_subdomain" value={selectedLgu} onChange={(e) => setSelectedLgu(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner appearance-none" required disabled={loading}>
+                  <option value="" className="bg-zinc-900 text-zinc-400">Select City/Municipality...</option>
+                  {lgus.map(lgu => (
+                    <option key={lgu.id} value={lgu.subdomain} className="bg-zinc-900 text-white py-2">{lgu.name}</option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-3.5 pointer-events-none">
+                  <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -161,15 +175,10 @@ export default function Signup() {
                     name="barangay" 
                     className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner appearance-none" 
                     required 
-                    disabled={loading}
-                    onChange={(e) => {
-                      const brgy = e.target.value;
-                      const foundLgu = Object.keys(LGUsBarangays).find(lgu => LGUsBarangays[lgu].includes(brgy));
-                      if (foundLgu) setSelectedLgu(foundLgu);
-                    }}
+                    disabled={loading || !selectedLgu}
                   >
                     <option value="" className="bg-zinc-900 text-zinc-400">Select Barangay...</option>
-                    {Object.values(LGUsBarangays).flat().sort().map(brgy => (
+                    {availableBarangays.map(brgy => (
                       <option key={brgy} value={brgy} className="bg-zinc-900 text-white py-2">{brgy}</option>
                     ))}
                   </select>
