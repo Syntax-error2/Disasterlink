@@ -153,7 +153,7 @@ export default function Signup() {
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">Select City / Municipality</label>
               <div className="relative group">
-                <Building2 className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors z-10" />
+                <Building2 className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors z-10 pointer-events-none" />
                 <select name="lgu_subdomain" value={selectedLgu} onChange={(e) => setSelectedLgu(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner appearance-none" required disabled={loading}>
                   <option value="" className="bg-zinc-900 text-zinc-400">Select City/Municipality...</option>
                   {lgus.map(lgu => (
@@ -170,7 +170,7 @@ export default function Signup() {
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">Barangay</label>
                 <div className="relative group">
-                  <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors z-10" />
+                  <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors z-10 pointer-events-none" />
                   <select 
                     name="barangay" 
                     className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner appearance-none" 
