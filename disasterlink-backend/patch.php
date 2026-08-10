@@ -1,10 +1,20 @@
 <?php
-$file = 'domains/darkgoldenrod-anteater-579870.hostingersite.com/public_html/app/Http/Controllers/BroadcastController.php';
-$content = file_get_contents($file);
-$search = '$messaging = \Kreait\Laravel\Firebase\Facades\Firebase::messaging();';
-$replace = '$factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(''firebase_credentials.json''));
-                $messaging = $factory->createMessaging();';
-$newContent = str_replace($search, $replace, $content);
-file_put_contents($file, $newContent);
-echo 'Patched successfully.';
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
 
+use Illuminate\Support\Facades\DB;
+
+try {
+    // Check if column exists
+    $columns = DB::select("SHOW COLUMNS FROM users LIKE 'fcm_token'");
+    if (empty($columns)) {
+        DB::statement("ALTER TABLE users ADD COLUMN fcm_token VARCHAR(255) NULL AFTER remember_token");
+        echo "Successfully added fcm_token column to users table.\n";
+    } else {
+        echo "fcm_token column already exists.\n";
+    }
+} catch (\Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+}

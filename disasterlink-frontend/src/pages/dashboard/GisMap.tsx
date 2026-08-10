@@ -257,11 +257,11 @@ export default function GisDashboard() {
                   <p className="text-[10px] font-bold text-red-400 mt-1 uppercase tracking-wider">Note: Global alert state remains active for 60 minutes.</p>
                 </div>
               </div>
-              <textarea placeholder="Enter emergency message..." className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-100 min-h-[100px] mb-4 outline-none focus:border-red-500 transition-colors" defaultValue={`EMERGENCY ALERT: Pre-emptive evacuation is now in effect for all low-lying areas in Binalbagan. Please proceed to designated Evacuation Centers immediately.`}></textarea>
+              <textarea placeholder="Enter emergency message..." className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-100 min-h-[100px] mb-4 outline-none focus:border-red-500 transition-colors" defaultValue={`EMERGENCY ALERT: Pre-emptive evacuation is now in effect for all low-lying areas in the municipality. Please proceed to designated Evacuation Centers immediately.`}></textarea>
               <button 
                 onClick={async () => { 
                   try {
-                    await axiosInstance.post("/broadcast", { message: "EMERGENCY ALERT: Pre-emptive evacuation is now in effect for all low-lying areas in Binalbagan. Please proceed to designated Evacuation Centers immediately." });
+                    await axiosInstance.post("/broadcast", { message: "EMERGENCY ALERT: Pre-emptive evacuation is now in effect for all low-lying areas in the municipality. Please proceed to designated Evacuation Centers immediately." });
                     setIsAlertModalOpen(false); 
                     showToast("Alert broadcast successfully deployed to all citizen devices via API and SMS Gateway.", "success"); 
                   } catch(e: any) {
@@ -288,7 +288,7 @@ export default function GisDashboard() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            System Live &bull; Binalbagan Node &bull; {currentTime}
+            System Live &bull; LGU Node &bull; {currentTime}
           </p>
         </div>
         <div className="flex gap-2">

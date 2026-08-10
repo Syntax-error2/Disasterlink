@@ -42,7 +42,7 @@ export default function TermsPrivacyModal() {
               <p><strong className="text-zinc-200">1. Data Collection & Privacy:</strong> By using DisasterLink, you consent to the collection of location data, device information, and incident reports solely for emergency response and disaster management purposes.</p>
               <p><strong className="text-zinc-200">2. Real-Time Tracking:</strong> If you are a responder, your location will be actively tracked during dispatch to coordinate rescue efforts efficiently.</p>
               <p><strong className="text-zinc-200">3. Content Moderation:</strong> You agree not to post malicious content, spam, or abusive material in the Community Feed. Violators will be banned.</p>
-              <p><strong className="text-zinc-200">4. Misuse of Emergency Services:</strong> Submitting false SOS alerts or fake incident reports is strictly prohibited and may result in legal action by the Binalbagan LGU.</p>
+              <p><strong className="text-zinc-200">4. Misuse of Emergency Services:</strong> Submitting false SOS alerts or fake incident reports is strictly prohibited and may result in legal action by the Local Government Unit.</p>
             </div>
 
             <p className="text-xs text-zinc-500 pt-2">By clicking "I Accept", you acknowledge that you have read and agree to our full Terms of Service and Privacy Policy.</p>

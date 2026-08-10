@@ -20,9 +20,9 @@ Route::middleware('throttle:auth')->group(function () {
     Route::post('/register/send-otp', [AuthController::class, 'sendOtp']);
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
-    
-
 });
+
+Route::get('/lgus', [AuthController::class, 'getLgus'])->middleware('throttle:api');
 Route::get('/tenant-config/{subdomain}', [AuthController::class, 'tenantConfig'])->middleware('throttle:api');
 
 Route::get('/telemetry', [App\Http\Controllers\TelemetryController::class, 'index']);

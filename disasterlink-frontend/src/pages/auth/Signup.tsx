@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShieldCheck, Mail, Lock, User, Briefcase, Loader2, AlertCircle, MapPin, Home, Phone } from "lucide-react";
+import { ShieldCheck, Mail, Lock, User, Briefcase, Loader2, AlertCircle, MapPin, Home, Phone, Building2 } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../context/AuthContext";
+import { LGUsBarangays } from "../../lib/barangays";
 
 export default function Signup() {
   const [loading, setLoading] = useState(false);
@@ -10,6 +11,9 @@ export default function Signup() {
   const [step, setStep] = useState<1 | 2>(1);
   const [formData, setFormData] = useState<any>(null);
   const [otp, setOtp] = useState("");
+  const [lgus, setLgus] = useState<any[]>([]);
+  const [selectedLgu, setSelectedLgu] = useState("");
+  const [availableBarangays, setAvailableBarangays] = useState<string[]>([]);
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
@@ -17,7 +21,26 @@ export default function Signup() {
     if (isAuthenticated) {
       navigate("/", { replace: true });
     }
+    
+    // Fetch LGUs
+    const fetchLgus = async () => {
+      try {
+        const response = await axiosInstance.get('/lgus');
+        setLgus(response.data);
+      } catch (err) {
+        console.error("Failed to fetch LGUs", err);
+      }
+    };
+    fetchLgus();
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (selectedLgu && LGUsBarangays[selectedLgu]) {
+      setAvailableBarangays(LGUsBarangays[selectedLgu]);
+    } else {
+      setAvailableBarangays([]);
+    }
+  }, [selectedLgu]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,29 +150,29 @@ export default function Signup() {
 
             <input type="hidden" name="role" value="resident" />
 
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">Select City / Municipality</label>
+              <div className="relative group">
+                <Building2 className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors" />
+                <select name="lgu_subdomain" value={selectedLgu} onChange={(e) => setSelectedLgu(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner appearance-none" required disabled={loading}>
+                  <option value="" disabled>Select City/Municipality...</option>
+                  {lgus.map(lgu => (
+                    <option key={lgu.id} value={lgu.subdomain}>{lgu.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">Barangay</label>
                 <div className="relative group">
                   <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors" />
-                  <select name="barangay" className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner appearance-none" required disabled={loading}>
+                  <select name="barangay" className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner appearance-none" required disabled={loading || !selectedLgu}>
                     <option value="" disabled selected>Select...</option>
-                    <option value="Amontay">Amontay</option>
-                    <option value="Bagroy">Bagroy</option>
-                    <option value="Bi-ao">Bi-ao</option>
-                    <option value="Canmoros">Canmoros</option>
-                    <option value="Enclaro">Enclaro</option>
-                    <option value="Marina">Marina</option>
-                    <option value="Paglaum">Paglaum</option>
-                    <option value="Payao">Payao</option>
-                    <option value="Progreso">Progreso</option>
-                    <option value="San Jose">San Jose</option>
-                    <option value="San Juan">San Juan</option>
-                    <option value="San Pedro">San Pedro</option>
-                    <option value="San Teodoro">San Teodoro</option>
-                    <option value="San Vicente">San Vicente</option>
-                    <option value="Santo Rosario">Santo Rosario</option>
-                    <option value="Santol">Santol</option>
+                    {availableBarangays.map(brgy => (
+                      <option key={brgy} value={brgy}>{brgy}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -168,7 +191,7 @@ export default function Signup() {
                 <label className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">Email Address</label>
                 <div className="relative group">
                   <Mail className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500 group-focus-within:text-red-500 transition-colors" />
-                  <input type="email" name="email" placeholder="name@binalbagan.gov.ph" className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner" required disabled={loading} />
+                  <input type="email" name="email" placeholder={selectedLgu ? `name@${selectedLgu}.gov.ph` : "name@example.gov.ph"} className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner" required disabled={loading} />
                 </div>
               </div>
 

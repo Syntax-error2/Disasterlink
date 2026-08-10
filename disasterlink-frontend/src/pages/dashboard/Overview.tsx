@@ -319,7 +319,7 @@ export default function Overview() {
               <form onSubmit={submitEvacuationCenter} className="p-6 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Center Name</label>
-                  <input type="text" required value={evacForm.name} onChange={e => setEvacForm({...evacForm, name: e.target.value})} placeholder="e.g. Binalbagan Covered Court" className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-xl text-sm" />
+                  <input type="text" required value={evacForm.name} onChange={e => setEvacForm({...evacForm, name: e.target.value})} placeholder="e.g. City Covered Court" className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-xl text-sm" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Barangay / Area Name</label>
@@ -342,7 +342,7 @@ export default function Overview() {
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), searchLocation())}
-                          placeholder="Search area (e.g. Binalbagan Plaza)" 
+                          placeholder="Search area (e.g. City Plaza)" 
                           className="w-full bg-white dark:bg-zinc-900/95 backdrop-blur border border-zinc-200 dark:border-zinc-700 py-2 pl-9 pr-3 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all shadow-sm"
                         />
                       </div>
@@ -390,7 +390,7 @@ export default function Overview() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">LGU Command Center</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Real-time disaster intelligence for Binalbagan and surrounding municipalities.</p>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Real-time disaster intelligence for the local government unit.</p>
         </div>
         <div className="flex items-center gap-3">
           <button 

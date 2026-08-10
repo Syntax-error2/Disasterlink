@@ -12,8 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('incident_reports', function (Blueprint $table) {
-            $table->index('created_at');
-            $table->index('status');
             $table->index('reporting_barangay');
             $table->index('severity_level');
         });

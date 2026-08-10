@@ -28,11 +28,11 @@ const HAZARD_MATRIX = [
   { name: "PAGASA Heat Index", level: "Warning", color: "bg-orange-500", percent: 70 },
 ];
 
-const binalbaganCoords: [number, number] = [10.1866, 122.8587];
+const defaultCoords: [number, number] = [10.1866, 122.8587];
 
 // --- MODULAR COMPONENTS ---
 
-const WeatherMap = () => (
+const WeatherMap = ({ lat, lng }: { lat: number, lng: number }) => (
   <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 overflow-hidden col-span-1 lg:col-span-2 relative h-[500px] p-0 flex flex-col">
     <div className="absolute top-4 left-4 z-[400] bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-lg flex items-center gap-2">
       <MapIcon className="h-4 w-4 text-red-500" />
@@ -42,7 +42,7 @@ const WeatherMap = () => (
       <iframe 
         width="100%" 
         height="100%" 
-        src="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=11&overlay=wind&product=ecmwf&level=surface&lat=10.1866&lon=122.8587&detailLat=10.1866&detailLon=122.8587&marker=true" 
+        src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=11&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lng}&detailLat=${lat}&detailLon=${lng}&marker=true`}
         frameBorder="0"
         title="Windy Live Radar"
         className="absolute inset-0"
@@ -263,9 +263,9 @@ const VolcanoTracker = ({ volcanoData }: { volcanoData: any }) => {
 
 export default function LiveWeather() {
   const { user } = useAuth();
-  const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
-  const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
-  const binalbaganCoords: [number, number] = [isNaN(lat) ? 10.1866 : lat, isNaN(lng) ? 122.8587 : lng];
+  const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : defaultCoords[0];
+  const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : defaultCoords[1];
+  const activeCoords: [number, number] = [isNaN(lat) ? defaultCoords[0] : lat, isNaN(lng) ? defaultCoords[1] : lng];
 
   const [activeTab, setActiveTab] = useState<"radar" | "forecast">("radar");
   const [mapLayer, setMapLayer] = useState<"satellite" | "streets" | "dark">("dark");
@@ -713,7 +713,7 @@ export default function LiveWeather() {
       {/* MIDDLE SECTION 1: MAP & CYCLONE */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <WeatherMap />
+          <WeatherMap lat={activeCoords[0]} lng={activeCoords[1]} />
         </div>
         <CycloneTracker cycloneData={cycloneData} pagasaData={pagasaData} />
       </div>

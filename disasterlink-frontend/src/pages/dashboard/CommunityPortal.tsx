@@ -747,7 +747,7 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
       <div className="grid grid-cols-3 gap-3">
         <button 
           onClick={() => {
-            showToast(`Connecting to ${user?.barangay || 'Binalbagan'} Hotline...`, "info");
+            showToast(`Connecting to ${user?.barangay || 'LGU'} Hotline...`, "info");
             const hotlines: Record<string, string> = {
               "San Jose": "0917-111-2222",
               "San Teodoro": "0917-222-3333",

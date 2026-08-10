@@ -157,7 +157,7 @@ export default function Login() {
             Command<br/>Center Portal
           </h1>
           <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
-            Secure access to real-time meteorological intelligence, emergency dispatching, and spatial tracking for the Binalbagan LGU.
+            Secure access to real-time meteorological intelligence, emergency dispatching, and spatial tracking for the {tenant ? tenant.name : 'Local Government Unit'}.
           </p>
           
           <div className="inline-flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 shadow-xl">
@@ -166,7 +166,7 @@ export default function Login() {
               <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
             </div>
             <span className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-              <MapPin className="h-4 w-4" /> Western Visayas Node
+              <MapPin className="h-4 w-4" /> {tenant ? tenant.name : 'Central Node'}
             </span>
             <div className="w-px h-4 bg-white/20 mx-2"></div>
             <span className="text-sm font-medium text-zinc-300 flex items-center gap-2">
@@ -229,7 +229,7 @@ export default function Login() {
                       <input 
                         type="email" 
                         name="email"
-                        placeholder="user@binalbagan.gov.ph" 
+                        placeholder="user@example.gov.ph" 
                         className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-[#111115] border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-50 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-sm"
                         required
                         disabled={loginState === 'authenticating'}

@@ -30,6 +30,13 @@ class AuthController extends Controller
             'theme' => 'default' // Future expansion for colors
         ]);
     }
+
+    // Fetch All Active LGUs
+    public function getLgus()
+    {
+        $lgus = Lgu::where('subscription_status', 'active')->select('id', 'name', 'subdomain', 'latitude', 'longitude')->get();
+        return response()->json($lgus);
+    }
     // Generate and Email OTP
     public function sendOtp(Request $request)
     {
