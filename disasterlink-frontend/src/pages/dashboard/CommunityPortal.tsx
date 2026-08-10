@@ -11,6 +11,7 @@ import {
   LogOut, User as UserIcon, ChevronRight
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { LGUsBarangays } from "../../lib/barangays";
 import { formatDistanceToNow } from 'date-fns';
 import imageCompression from 'browser-image-compression';
 import { Geolocation } from '@capacitor/geolocation';
@@ -38,12 +39,16 @@ declare global {
   }
 }
 
-const getActiveUser = () => {
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+const getActiveUser = (user?: any) => {
+  const storedUser = user || JSON.parse(localStorage.getItem("user") || "{}");
+  const lguSubdomain = storedUser?.lgu?.subdomain || 'binalbagan';
+  const lguBarangays = LGUsBarangays[lguSubdomain] || LGUsBarangays['binalbagan'] || ['San Teodoro'];
+  const defaultBarangay = lguBarangays[0] || 'Unknown';
+  
   return { 
     name: storedUser.name || "Juan Dela Cruz", 
     email: storedUser.email || "",
-    brgy: storedUser.barangay || storedUser.assigned_barangay || "Brgy. San Teodoro", 
+    brgy: storedUser.barangay || storedUser.assigned_barangay || `Brgy. ${defaultBarangay}`, 
     purok: storedUser.purok || storedUser.sitio || "Unknown Location" 
   };
 };
@@ -72,7 +77,7 @@ export default function CommunityPortal() {
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'info' | 'error' } | null>(null);
   const [activeBroadcast, setActiveBroadcast] = useState<string | null>(null);
 
-  const [activeUser, setActiveUser] = useState(getActiveUser());
+  const [activeUser, setActiveUser] = useState(getActiveUser(user));
   const [userStatus, setUserStatus] = useState("Unknown");
   const [alerts, setAlerts] = useState<any[]>([]);
   const [evacCenters, setEvacCenters] = useState<any[]>([]);
@@ -272,7 +277,7 @@ export default function CommunityPortal() {
   };
 
   useEffect(() => {
-    setActiveUser(getActiveUser());
+    setActiveUser(getActiveUser(user));
     setAlerts([]);
     setEvacCenters([]);
     setFamilyMembers([]);

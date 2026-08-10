@@ -10,6 +10,8 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-lea
 import L from "leaflet";
 import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../context/AuthContext";
+import { LGUsBarangays } from "../../lib/barangays";
+
 function LocationPicker({ position, setPosition }: { position: [number, number] | null, setPosition: (p: [number, number]) => void }) {
   useMapEvents({
     click(e) {
@@ -73,6 +75,9 @@ export default function Overview() {
   const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
   const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
   const MAP_CENTER: [number, number] = [isNaN(lat) ? 10.1866 : lat, isNaN(lng) ? 122.8587 : lng];
+
+  const lguSubdomain = user?.lgu?.subdomain || 'binalbagan';
+  const barangays = LGUsBarangays[lguSubdomain] || LGUsBarangays['binalbagan'] || ['San Teodoro'];
 
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -323,7 +328,7 @@ export default function Overview() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Barangay / Area Name</label>
-                  <input type="text" required value={evacForm.location} onChange={e => setEvacForm({...evacForm, location: e.target.value})} placeholder="e.g. Brgy. San Teodoro" className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-xl text-sm" />
+                  <input type="text" required value={evacForm.location} onChange={e => setEvacForm({...evacForm, location: e.target.value})} placeholder={`e.g. Brgy. ${barangays[0] || 'San Teodoro'}`} className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-xl text-sm" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex justify-between items-center">

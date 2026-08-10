@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";
 import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../context/AuthContext";
+import { LGUsBarangays } from "../../lib/barangays";
 // --- TYPES & CONSTANTS ---
 interface WeatherData {
   current: { temperature_2m: number; apparent_temperature: number; relative_humidity_2m: number; wind_speed_10m: number; surface_pressure: number; precipitation_probability?: number; precipitation?: number; };
@@ -267,6 +268,9 @@ export default function LiveWeather() {
   const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : defaultCoords[1];
   const activeCoords: [number, number] = [isNaN(lat) ? defaultCoords[0] : lat, isNaN(lng) ? defaultCoords[1] : lng];
 
+  const lguSubdomain = user?.lgu?.subdomain || 'binalbagan';
+  const barangays = LGUsBarangays[lguSubdomain] || LGUsBarangays['binalbagan'];
+
   const [activeTab, setActiveTab] = useState<"radar" | "forecast">("radar");
   const [mapLayer, setMapLayer] = useState<"satellite" | "streets" | "dark">("dark");
   const [weather, setWeather] = useState<WeatherData | null>(() => {
@@ -340,7 +344,7 @@ export default function LiveWeather() {
       let classes = { bg: 'bg-emerald-50 dark:bg-emerald-500/10', border: 'border-emerald-200 dark:border-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400' };
 
       if (totalRain24h > 50) {
-          recText = "High flood probability in low-lying areas (Purok 4, Riverside) within the next 12 hours. Pre-emptive evacuation sequence recommended.";
+          recText = "High flood probability in low-lying areas within the next 12 hours. Pre-emptive evacuation sequence recommended.";
           classes = { bg: 'bg-red-50 dark:bg-red-500/10', border: 'border-red-200 dark:border-red-500/20', text: 'text-red-600 dark:text-red-400' };
       } else if (wind > 60) {
           recText = "High risk of wind damage to light structures. Secure loose objects and advise residents to stay indoors.";
@@ -581,9 +585,7 @@ export default function LiveWeather() {
                   <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Target Audience</label>
                   <select value={broadcastTarget} onChange={(e) => setBroadcastTarget(e.target.value)} className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-red-500">
                     <option value="all">Entire Municipality (All Barangays)</option>
-                    <option value="Brgy. San Teodoro">Brgy. San Teodoro Only</option>
-                    <option value="Brgy. Payao">Brgy. Payao Only</option>
-                    <option value="Brgy. Progreso">Brgy. Progreso Only</option>
+                    {barangays.map(b => <option key={b} value={`Brgy. ${b}`}>Brgy. {b} Only</option>)}
                   </select>
                 </div>
                 <div>

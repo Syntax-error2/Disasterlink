@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Send, Radio, Smartphone, CheckCircle2, Loader2, Megaphone, Activity, AlertTriangle } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../../context/AuthContext";
+import { LGUsBarangays } from "../../lib/barangays";
 
 export default function EmergencyAlerts() {
   const [targetArea, setTargetArea] = useState("All Barangays (Municipality Wide)");
@@ -13,6 +15,10 @@ export default function EmergencyAlerts() {
   const [history, setHistory] = useState<any[]>([]);
   const [isDispatching, setIsDispatching] = useState(false);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
+
+  const { user } = useAuth();
+  const lguSubdomain = user?.lgu?.subdomain || 'binalbagan';
+  const barangays = LGUsBarangays[lguSubdomain] || LGUsBarangays['binalbagan'];
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -108,11 +114,10 @@ export default function EmergencyAlerts() {
                   onChange={(e) => setTargetArea(e.target.value)}
                   className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-sm font-bold text-zinc-900 dark:text-zinc-50 outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all cursor-pointer shadow-sm"
                 >
-                  <option>All Barangays (Municipality Wide)</option>
-                  <option>Brgy. San Teodoro Only</option>
-                  <option>Brgy. Payao Only</option>
-                  <option>Identified Low-Lying Zones</option>
-                  <option>Coastal Areas</option>
+                  <option value="All Barangays (Municipality Wide)">All Barangays (Municipality Wide)</option>
+                  {barangays.map(b => <option key={b} value={`Brgy. ${b} Only`}>Brgy. {b} Only</option>)}
+                  <option value="Identified Low-Lying Zones">Identified Low-Lying Zones</option>
+                  <option value="Coastal Areas">Coastal Areas</option>
                 </select>
               </div>
               <div className="space-y-1.5">

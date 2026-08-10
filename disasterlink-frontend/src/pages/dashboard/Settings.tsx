@@ -6,10 +6,16 @@ import { useTheme } from "@/components/theme-provider";
 import { User, Bell, Palette, Shield, Save, Smartphone, Mail, Key, MonitorSmartphone, LogOut, Loader2, CheckCircle } from "lucide-react";
 import axiosInstance from "../../lib/axios";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../../context/AuthContext";
+import { LGUsBarangays } from "../../lib/barangays";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
+  
+  const lguSubdomain = user?.lgu?.subdomain || 'binalbagan';
+  const barangays = LGUsBarangays[lguSubdomain] || LGUsBarangays['binalbagan'];
 
   const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' });
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -108,24 +114,23 @@ export default function Settings() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300">Full Name</label>
-                    <Input defaultValue="LGU Admin" className="bg-zinc-50 dark:bg-zinc-900/50" />
+                    <Input defaultValue={user?.name || "LGU Admin"} className="bg-zinc-50 dark:bg-zinc-900/50" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300">Official Email</label>
-                    <Input defaultValue="admin@binalbagan.gov.ph" className="bg-zinc-50 dark:bg-zinc-900/50" disabled />
+                    <Input defaultValue={user?.email || "admin@binalbagan.gov.ph"} className="bg-zinc-50 dark:bg-zinc-900/50" disabled />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300">Department</label>
-                    <Input defaultValue="MDRRMO Office" className="bg-zinc-50 dark:bg-zinc-900/50" />
+                    <Input defaultValue={user?.role === 'responder' ? 'Emergency Response Team' : 'MDRRMO Office'} className="bg-zinc-50 dark:bg-zinc-900/50" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-zinc-900 dark:text-zinc-300">Assigned Barangay (Optional)</label>
-                    <select className="w-full h-10 px-3 py-2 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-md text-sm text-zinc-900 dark:text-zinc-50 outline-none focus:ring-1 focus:ring-red-500">
+                    <select className="w-full h-10 px-3 py-2 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-md text-sm text-zinc-900 dark:text-zinc-50 outline-none focus:ring-1 focus:ring-red-500" defaultValue={user?.barangay || "All (Municipality Wide)"}>
                       <option>All (Municipality Wide)</option>
-                      <option>Brgy. Payao</option>
-                      <option>Brgy. San Teodoro</option>
+                      {barangays.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
                 </div>
