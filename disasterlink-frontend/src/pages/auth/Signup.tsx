@@ -26,9 +26,17 @@ export default function Signup() {
     const fetchLgus = async () => {
       try {
         const response = await axiosInstance.get('/lgus');
-        setLgus(response.data);
+        if (response.data && response.data.length > 0) {
+          setLgus(response.data);
+        } else {
+          throw new Error('Empty LGU list returned from API');
+        }
       } catch (err) {
-        console.error("Failed to fetch LGUs", err);
+        console.error("Failed to fetch LGUs from API. Using local fallback.", err);
+        setLgus([
+          { id: 1, name: 'Binalbagan (Main Node)', subdomain: 'binalbagan' },
+          { id: 2, name: 'Cabanatuan (Test Node)', subdomain: 'cabanatuan' }
+        ]);
       }
     };
     fetchLgus();
