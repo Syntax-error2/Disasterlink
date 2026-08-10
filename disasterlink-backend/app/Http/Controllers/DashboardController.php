@@ -10,15 +10,15 @@ class DashboardController extends Controller
 {
     public function stats()
     {
-        $totalUsers = User::count();
-        $totalBarangays = User::whereNotNull('barangay')
-            ->orWhereNotNull('assigned_barangay')
-            ->distinct()
-            ->count('barangay');
-            
-        // Because of the schema, we might need a custom distinct query to grab both columns safely, or just count distinct barangay
-        // Let's do a simpler approach: get all users and extract unique barangays in PHP for safety since it's a small app
-        $users = User::all();
+        $authUser = auth()->user();
+        $query = User::query();
+        
+        if ($authUser && $authUser->role !== 'superadmin' && $authUser->lgu_id) {
+            $query->where('lgu_id', $authUser->lgu_id);
+        }
+        
+        $totalUsers = $query->count();
+        $users = $query->get();
         $barangayCounts = [];
         
         foreach($users as $user) {
