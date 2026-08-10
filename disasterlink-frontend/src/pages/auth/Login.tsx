@@ -28,7 +28,7 @@ export default function Login() {
   const isLocalDev = hostname === "localhost" || hostname === "127.0.0.1" || hostname.includes(".devtunnels.ms") || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes("vercel.app");
   
   // We no longer rely on frontend explicit subdomains for smart routing; backend will infer it
-  const currentSubdomain = isNative || isLocalDev ? "" : hostname.split('.')[0];
+  const currentSubdomain = isNative || isLocalDev || hostname === 'app' || hostname === 'capacitor' ? "" : hostname.split('.')[0];
 
   useEffect(() => {
 
