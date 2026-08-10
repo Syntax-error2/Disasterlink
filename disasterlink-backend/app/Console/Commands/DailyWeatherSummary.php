@@ -45,73 +45,74 @@ class DailyWeatherSummary extends Command
             return Command::SUCCESS;
         }
 
-        $this->info("Fetching daily weather digest for Binalbagan...");
+        $lgus = \App\Models\Lgu::all();
+        $factory = (new Factory)->withServiceAccount(base_path('firebase_credentials.json'));
+        $messaging = $factory->createMessaging();
 
-        // Coordinates for Binalbagan
-        $latitude = 10.1911;
-        $longitude = 122.8601;
+        foreach ($lgus as $lgu) {
+            $latitude = $lgu->latitude;
+            $longitude = $lgu->longitude;
+            $this->info("Fetching daily weather digest for {$lgu->name}...");
 
-        try {
-            // We fetch the current weather and daily max for tomorrow
-            $response = Http::timeout(10)->get("https://api.open-meteo.com/v1/forecast", [
-                'latitude' => $latitude,
-                'longitude' => $longitude,
-                'current' => ['temperature_2m', 'precipitation_probability', 'weather_code'],
-                'daily' => ['temperature_2m_max', 'apparent_temperature_max', 'precipitation_sum'],
-                'timezone' => 'Asia/Manila',
-                'forecast_days' => 2
-            ]);
+            try {
+                $response = Http::timeout(10)->get("https://api.open-meteo.com/v1/forecast", [
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                    'current' => ['temperature_2m', 'precipitation_probability', 'weather_code'],
+                    'daily' => ['temperature_2m_max', 'apparent_temperature_max', 'precipitation_sum'],
+                    'timezone' => 'Asia/Manila',
+                    'forecast_days' => 2
+                ]);
 
-            if ($response->successful()) {
-                $data = $response->json();
-                
-                $tonightRain = $data['current']['precipitation_probability'] ?? 0;
-                $tomorrowMaxTemp = $data['daily']['temperature_2m_max'][1] ?? null;
-                $tomorrowRainSum = $data['daily']['precipitation_sum'][1] ?? 0;
-                
-                // Open-Meteo's apparent_temperature_max uses the Rothfusz Heat Index formula, exactly what PAGASA uses!
-                $heatIndex = $data['daily']['apparent_temperature_max'][1] ?? ($tomorrowMaxTemp ? round($tomorrowMaxTemp + 3.0) : null); 
-                if ($heatIndex) {
-                    $heatIndex = round($heatIndex);
-                }
-
-                $tonightText = $tonightRain > 30 ? "Expect scattered rain tonight ({$tonightRain}% chance)." : "Clear skies expected tonight.";
-                $tomorrowText = $tomorrowRainSum > 5.0 ? "Rain expected tomorrow." : "Generally dry tomorrow.";
-                $heatText = $heatIndex ? "PAGASA Heat Index: {$heatIndex}°C." : "";
-
-                $messageText = "🌙 {$tonightText} {$tomorrowText} {$heatText}";
-
-                $tokens = \App\Models\User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
-                
-                if (!empty($tokens)) {
-                    $factory = (new Factory)->withServiceAccount(base_path('firebase_credentials.json'));
-                    $messaging = $factory->createMessaging();
-                    $notification = Notification::create('🌤️ Daily Weather Digest', $messageText);
+                if ($response->successful()) {
+                    $data = $response->json();
                     
-                    $config = AndroidConfig::fromArray([
-                        'priority' => 'normal',
-                        'notification' => [
-                            'channel_id' => 'general_announcements', // Different channel so it doesn't sound like an emergency!
-                            'sound' => 'default',
-                        ],
-                    ]);
-
-                    $cloudMessage = CloudMessage::new()
-                        ->withNotification($notification)
-                        ->withAndroidConfig($config);
+                    $tonightRain = $data['current']['precipitation_probability'] ?? 0;
+                    $tomorrowMaxTemp = $data['daily']['temperature_2m_max'][1] ?? null;
+                    $tomorrowRainSum = $data['daily']['precipitation_sum'][1] ?? 0;
                     
-                    $messaging->sendMulticast($cloudMessage, $tokens);
-                    $this->info("Daily Digest pushed to " . count($tokens) . " devices: " . $messageText);
-                    \Illuminate\Support\Facades\Cache::put($cacheKey, true, now()->addDays(1));
+                    $heatIndex = $data['daily']['apparent_temperature_max'][1] ?? ($tomorrowMaxTemp ? round($tomorrowMaxTemp + 3.0) : null); 
+                    if ($heatIndex) {
+                        $heatIndex = round($heatIndex);
+                    }
+
+                    $tonightText = $tonightRain > 30 ? "Expect scattered rain tonight ({$tonightRain}% chance)." : "Clear skies expected tonight.";
+                    $tomorrowText = $tomorrowRainSum > 5.0 ? "Rain expected tomorrow." : "Generally dry tomorrow.";
+                    $heatText = $heatIndex ? "PAGASA Heat Index: {$heatIndex}°C." : "";
+
+                    $messageText = "🌙 {$tonightText} {$tomorrowText} {$heatText}";
+
+                    $tokens = \App\Models\User::where('lgu_id', $lgu->id)->whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
+                    
+                    if (!empty($tokens)) {
+                        $notification = Notification::create("🌤️ Daily Weather Digest - {$lgu->name}", $messageText);
+                        
+                        $config = AndroidConfig::fromArray([
+                            'priority' => 'normal',
+                            'notification' => [
+                                'channel_id' => 'general_announcements',
+                                'sound' => 'default',
+                            ],
+                        ]);
+
+                        $cloudMessage = CloudMessage::new()
+                            ->withNotification($notification)
+                            ->withAndroidConfig($config);
+                        
+                        $messaging->sendMulticast($cloudMessage, $tokens);
+                        $this->info("Daily Digest pushed to " . count($tokens) . " devices in {$lgu->name}.");
+                    } else {
+                        $this->info("No FCM tokens found for {$lgu->name}.");
+                    }
                 } else {
-                    $this->info("No FCM tokens found.");
+                    $this->error("Failed to fetch Open-Meteo data for {$lgu->name}.");
                 }
-            } else {
-                $this->error("Failed to fetch Open-Meteo data.");
+            } catch (\Exception $e) {
+                $this->error("Error sending Daily Digest for {$lgu->name}: " . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            $this->error("Error sending Daily Digest: " . $e->getMessage());
         }
+
+        \Illuminate\Support\Facades\Cache::put($cacheKey, true, now()->addDays(1));
 
         return Command::SUCCESS;
     }

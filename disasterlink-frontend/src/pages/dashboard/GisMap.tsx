@@ -154,7 +154,9 @@ export default function GisDashboard() {
 
     const fetchAiPredictions = async () => {
       try {
-        const res = await axiosInstance.get("/ai/predictions");
+        // We need to fetch telemetry once for the weather cache, then we can fetch AI predictions
+        await axiosInstance.get(`/telemetry?lat=${MAP_CENTER[0]}&lng=${MAP_CENTER[1]}`);
+        const res = await axiosInstance.get(`/ai/predictions?lat=${MAP_CENTER[0]}&lng=${MAP_CENTER[1]}`);
         setAiPredictions(res.data);
       } catch (e) {}
     };

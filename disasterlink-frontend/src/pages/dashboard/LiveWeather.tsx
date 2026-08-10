@@ -369,7 +369,7 @@ export default function LiveWeather() {
       // Clear stale session cache so we never show old/simulated data
       sessionStorage.removeItem('lw_weather_cache');
       sessionStorage.removeItem('lw_pagasa_cache');
-      const response = await axiosInstance.get("/telemetry");
+      const response = await axiosInstance.get(`/telemetry?lat=${lat}&lng=${lng}`);
       const rootData = response.data;
       
       if (rootData.error) throw new Error(rootData.error);

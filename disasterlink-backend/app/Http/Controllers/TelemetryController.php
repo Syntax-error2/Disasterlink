@@ -7,15 +7,20 @@ use Illuminate\Support\Facades\Http;
 
 class TelemetryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $lat = $request->query('lat', '10.1866');
+        $lng = $request->query('lng', '122.8587');
+        
+        $cacheKey = "telemetry_weather_{$lat}_{$lng}";
+
         // ── Weather (Open-Meteo) cached 5 min ───────────────────────────────
         $weather = null;
         try {
-            $weather = \Illuminate\Support\Facades\Cache::remember('telemetry_weather', 300, function () {
+            $weather = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($lat, $lng) {
                 $res = Http::timeout(8)->get(
                     "https://api.open-meteo.com/v1/forecast"
-                    . "?latitude=10.1866&longitude=122.8587"
+                    . "?latitude={$lat}&longitude={$lng}"
                     . "&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,precipitation_probability,precipitation"
                     . "&hourly=precipitation,precipitation_probability"
                     . "&timezone=Asia%2FManila&forecast_days=2"
@@ -108,13 +113,16 @@ class TelemetryController extends Controller
         ], 200);
     }
 
-    public function aiPredictions()
+    public function aiPredictions(Request $request)
     {
+        $lat = $request->query('lat', '10.1866');
+        $lng = $request->query('lng', '122.8587');
+        $cacheKey = "telemetry_weather_{$lat}_{$lng}";
         $predictions = [];
         
         try {
             // Check weather telemetry for dynamic risk modeling
-            $weather = \Illuminate\Support\Facades\Cache::get('telemetry_weather');
+            $weather = \Illuminate\Support\Facades\Cache::get($cacheKey);
             $prob = $weather['current']['precipitation_probability'] ?? 0;
             $wind = $weather['current']['wind_speed_10m'] ?? 0;
 
