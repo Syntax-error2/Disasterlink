@@ -460,23 +460,11 @@ export default function CommunityPortal() {
       reporting_user: activeUser.name
     };
 
-    if (isOffline) {
-      const offlineIncidents = JSON.parse(localStorage.getItem("offline_incidents") || "[]");
-      offlineIncidents.push(payload);
-      localStorage.setItem("offline_incidents", JSON.stringify(offlineIncidents));
-      
-      const message = `SOS EMERGENCY: ${exactLocationText}. Lat:${lat.toFixed(4)} Lng:${lng.toFixed(4)}. Name: ${activeUser.name}`;
-      
-      setTimeout(() => {
-        setIsSOSActive(false);
-        showToast("Offline: Emergency saved locally. Initiating SMS Fallback...", "error");
-        window.location.href = `sms:09392321066?body=${encodeURIComponent(message)}`;
-      }, 1000);
-      return;
-    }
-
     try {
+      // With our new global OfflineSyncManager, axiosInstance will automatically queue this
+      // request in IndexedDB if navigator.onLine is false, and return a mock success response!
       const response = await axiosInstance.post("/incidents", payload);
+      
       if (response.data && response.data.id) {
         const userKey = "my_report_ids_" + (((activeUser as any)?.id) || (activeUser?.email) || 'guest');
         const existingIds = JSON.parse(localStorage.getItem(userKey) || "[]");
@@ -484,17 +472,25 @@ export default function CommunityPortal() {
           existingIds.push(response.data.id);
           localStorage.setItem(userKey, JSON.stringify(existingIds));
         }
-        // Force update the UI list immediately
         fetchMyReports();
       }
+      
+      setTimeout(() => {
+        setIsSOSActive(false);
+        if (response.data?.offline) {
+           showToast("No Signal: SOS queued locally! It will auto-sync when connection restores.", "error");
+        } else {
+           showToast("Emergency Dispatch Notified. Admin alerted.", "success");
+        }
+      }, 4000);
+      
     } catch (error) {
       console.warn("Failed to transmit SOS to backend", error);
+      setTimeout(() => {
+        setIsSOSActive(false);
+        showToast("SOS Transmission Failed. Please try again.", "error");
+      }, 4000);
     }
-
-    setTimeout(() => {
-      setIsSOSActive(false);
-      showToast("Emergency Dispatch Notified. Admin alerted.", "success");
-    }, 4000);
   };
 
   return (
@@ -1229,14 +1225,18 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
       const response = await axiosInstance.post("/incidents", payload);
       const responseData = response.data;
 
-      if (responseData.id) {
-        const userKey = "my_report_ids_" + (user?.id || user?.email || 'guest');
+      if (responseData && responseData.id) {
+        const userKey = "my_report_ids_" + ((user as any)?.id || user?.email || 'guest');
         const existingIds = JSON.parse(localStorage.getItem(userKey) || "[]");
         existingIds.push(responseData.id);
         localStorage.setItem(userKey, JSON.stringify(existingIds));
       }
 
-      showToast("Report officially submitted to the Command Center!", "success");
+      if (responseData?.offline) {
+         showToast("No Signal: Report queued locally! It will auto-sync when connection restores.", "error");
+      } else {
+         showToast("Report officially submitted to the Command Center!", "success");
+      }
       
       setSelectedCat(null); setDesc(""); setAiResult(null); setImagePreview(null); setSelectedFile(null);
       refreshMyReports(); 
@@ -1244,24 +1244,7 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
       
     } catch (error: any) {
       console.warn("API Error:", error);
-      
-      if (isOffline || error.message === 'Network Error') {
-        const offlineIncidents = JSON.parse(localStorage.getItem("offline_incidents") || "[]");
-        offlineIncidents.push(payload);
-        localStorage.setItem("offline_incidents", JSON.stringify(offlineIncidents));
-        
-        const message = `REPORT: ${selectedCat}. Details: ${desc}. Lat:${location?.lat||0} Lng:${location?.lng||0}`;
-        showToast("Offline: Report saved locally. Initiating SMS Fallback...", "error");
-        
-        setTimeout(() => {
-          setSelectedCat(null); setDesc(""); setAiResult(null); setImagePreview(null); setSelectedFile(null);
-          refreshMyReports(); 
-          setActiveTab("home");
-          window.location.href = `sms:09392321066?body=${encodeURIComponent(message)}`;
-        }, 1500);
-      } else {
-        showToast(`Error saving: Verify Laravel backend is running.`, "error");
-      }
+      showToast(`Error saving report. Please try again.`, "error");
     } finally {
       setSubmitting(false);
     }

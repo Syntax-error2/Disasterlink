@@ -73,12 +73,14 @@ import { PushNotificationManager } from "./components/PushNotificationManager";
 import { IncidentsProvider } from "./context/IncidentsContext";
 import TermsPrivacyModal from "./components/TermsPrivacyModal";
 import GlobalEmergencySiren from "./components/GlobalEmergencySiren";
+import { OfflineSyncManager } from "./components/OfflineSyncManager";
 
 export default function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="disasterlink-theme">
       <AuthProvider>
         <IncidentsProvider>
+          <OfflineSyncManager />
           <PushNotificationManager />
           <TermsPrivacyModal />
           <GlobalEmergencySiren />

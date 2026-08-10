@@ -40,10 +40,30 @@ axiosInstance.interceptors.request.use((config) => {
     return config;
 });
 
-// Interceptor for 401 Unauthorized to auto-logout
+import { enqueueOfflineRequest } from './offlineQueue';
+
+// Interceptor for 401 Unauthorized to auto-logout and Offline Queueing
 axiosInstance.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
+        // If offline and making a mutating request, queue it
+        if (!navigator.onLine && error.config && ['post', 'put', 'delete', 'patch'].includes(error.config.method?.toLowerCase() || '')) {
+            await enqueueOfflineRequest({
+                method: error.config.method,
+                url: error.config.url,
+                data: error.config.data ? JSON.parse(error.config.data) : null,
+                headers: error.config.headers
+            });
+            // Return a mock success response so the UI doesn't crash
+            return Promise.resolve({ 
+                data: { offline: true, message: 'Saved offline. Will sync when connection is restored.' }, 
+                status: 200, 
+                statusText: 'OK',
+                headers: {},
+                config: error.config
+            });
+        }
+
         if (error.response && error.response.status === 401) {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user');

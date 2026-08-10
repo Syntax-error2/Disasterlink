@@ -69,6 +69,35 @@ export default defineConfig({
             },
           },
           {
+            urlPattern: /^https:\/\/router\.project-osrm\.org\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'osrm-routing',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/darkgoldenrod-anteater-579870\.hostingersite\.com\/api\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'disasterlink-api-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days fallback
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
             urlPattern: /^https:\/\/api\.open-meteo\.com\/.*/i,
             handler: 'NetworkFirst',
             options: {
