@@ -23,12 +23,15 @@ export default function Login() {
   }, [isAuthenticated, loginState, navigate]);
 
   // Extract Subdomain for SaaS Branding
-  const hostname = window.location.hostname;
+  const hostname = window.location.hostname || "";
   const isNative = Capacitor.isNativePlatform();
   const isLocalDev = hostname === "localhost" || hostname === "127.0.0.1" || hostname.includes(".devtunnels.ms") || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes("vercel.app");
   
+  // Bulletproof fallback: If the hostname doesn't have a dot, it cannot be a valid SaaS domain (like cabanatuan.disasterlink.com)
+  const isInvalidDomain = !hostname.includes('.');
+  
   // We no longer rely on frontend explicit subdomains for smart routing; backend will infer it
-  const currentSubdomain = isNative || isLocalDev || hostname === 'app' || hostname === 'capacitor' ? "" : hostname.split('.')[0];
+  const currentSubdomain = (isNative || isLocalDev || isInvalidDomain) ? "" : hostname.split('.')[0];
 
   useEffect(() => {
 
