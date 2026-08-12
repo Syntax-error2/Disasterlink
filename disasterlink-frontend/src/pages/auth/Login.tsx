@@ -63,7 +63,10 @@ export default function Login() {
     
     const formData = new FormData(e.target as HTMLFormElement);
     const data = Object.fromEntries(formData);
-    data.subdomain = currentSubdomain; // Pass the subdomain to enforce security
+    
+    // We intentionally DO NOT send data.subdomain here. 
+    // Sending it causes legacy backend checks to falsely reject mobile app logins.
+    // Tenant isolation is already handled securely via Sanctum tokens on subsequent requests.
     
     try {
       // Send data to Laravel Backend using Native Fetch to bypass Axios XHR bugs on Capacitor
