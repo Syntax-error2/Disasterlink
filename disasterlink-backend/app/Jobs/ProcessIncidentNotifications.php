@@ -38,6 +38,7 @@ class ProcessIncidentNotifications implements ShouldQueue
         try {
             // Find Kap, Rep, and Responder in the reporting barangay
             $tokens = User::whereNotNull('fcm_token')
+                ->where('lgu_id', $this->incident->lgu_id)
                 ->whereIn('role', ['barangay_captain', 'responder', 'representative'])
                 ->where(function ($query) {
                     $query->where('assigned_barangay', 'LIKE', '%' . $this->incident->reporting_barangay . '%')

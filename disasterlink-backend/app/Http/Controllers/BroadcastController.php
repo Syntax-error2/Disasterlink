@@ -67,7 +67,11 @@ class BroadcastController extends Controller
         
         // 2. FIREBASE PUSH NOTIFICATIONS
         try {
-            $tokens = \App\Models\User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
+            $tokens = \App\Models\User::whereNotNull('fcm_token')
+                ->when(auth()->check(), function ($query) {
+                    $query->where('lgu_id', auth()->user()->lgu_id);
+                })
+                ->pluck('fcm_token')->toArray();
             
             if (!empty($tokens)) {
                 $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
@@ -128,6 +132,7 @@ class BroadcastController extends Controller
         // Firebase Push Notifications for Local Broadcast
         try {
             $tokens = \App\Models\User::whereNotNull('fcm_token')
+                ->where('lgu_id', auth()->user()->lgu_id)
                 ->where(function ($query) use ($barangay) {
                     $query->where('barangay', 'LIKE', '%' . $barangay . '%')
                           ->orWhere('assigned_barangay', 'LIKE', '%' . $barangay . '%');

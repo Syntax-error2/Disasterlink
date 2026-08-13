@@ -21,6 +21,7 @@ class TestAccountsSeeder extends Seeder
             'assigned_barangay' => 'Poblacion',
             'contact_number' => '09123456781',
             'account_status' => 'active',
+            'lgu_id' => 1,
         ]);
 
         User::create([
@@ -32,6 +33,7 @@ class TestAccountsSeeder extends Seeder
             'assigned_barangay' => 'Command Center',
             'contact_number' => '09123456782',
             'account_status' => 'active',
+            'lgu_id' => 1,
         ]);
 
         User::create([
@@ -43,6 +45,7 @@ class TestAccountsSeeder extends Seeder
             'assigned_barangay' => 'San Jose',
             'contact_number' => '09123456783',
             'account_status' => 'active',
+            'lgu_id' => 1,
         ]);
         
         User::create([

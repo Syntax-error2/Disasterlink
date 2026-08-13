@@ -15,6 +15,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call([
+            LguSeeder::class,
+            TestAccountsSeeder::class,
+        ]);
+
         User::create([
             'name' => 'Command Center Admin',
             'email' => 'admin@disasterlink.gov.ph',
@@ -24,6 +29,7 @@ class DatabaseSeeder extends Seeder
             'assigned_barangay' => 'Command Center',
             'contact_number' => '09123456789',
             'account_status' => 'active',
+            'lgu_id' => 1,
         ]);
     }
 }
