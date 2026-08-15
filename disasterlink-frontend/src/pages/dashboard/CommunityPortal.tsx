@@ -173,8 +173,6 @@ export default function CommunityPortal() {
     setMyReports(myActiveReports.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
   }, [globalIncidents, activeUser]);
 
-  const infrastructureNodes = getInfrastructureNodes(user?.lgu?.subdomain || 'binalbagan', infrastructureIcons);
-
   useEffect(() => {
     // Proximity 50m SOS Alerts
     if (globalIncidents) {
@@ -988,6 +986,8 @@ function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTarge
   const lat = user?.lgu?.latitude ? Number(user.lgu.latitude) : 10.1866;
   const lng = user?.lgu?.longitude ? Number(user.lgu.longitude) : 122.8587;
   const MAP_CENTER: [number, number] = [isNaN(lat) ? 10.1866 : lat, isNaN(lng) ? 122.8587 : lng];
+  
+  const infrastructureNodes = getInfrastructureNodes(user?.lgu?.subdomain || 'binalbagan', infrastructureIcons);
 
   const [center, setCenter] = useState<[number, number]>(MAP_CENTER);
   const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
