@@ -165,6 +165,11 @@ export default function KapMobile() {
   };
 
   useEffect(() => {
+    // Request push notification permissions on mount for Capacitor
+    try {
+      LocalNotifications.requestPermissions().catch(() => {});
+    } catch(e) {}
+
     fetchIncidents();
     fetchCenters();
     fetchPersonnel();

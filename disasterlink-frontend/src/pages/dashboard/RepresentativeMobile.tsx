@@ -101,6 +101,9 @@ export default function RepresentativeMobile() {
       } catch (e) {}
     };
     keepScreenAwake();
+    try {
+      LocalNotifications.requestPermissions().catch(() => {});
+    } catch(e) {}
     return () => { KeepAwake.allowSleep().catch(() => {}); };
   }, []);
 

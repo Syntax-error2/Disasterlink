@@ -318,6 +318,9 @@ export default function CommunityPortal() {
       } catch (e) {
         console.error("Location permission denied", e);
       }
+      try {
+        LocalNotifications.requestPermissions().catch(() => {});
+      } catch(e) {}
     };
     requestLocationPermission();
     setFamilyMembers([]);

@@ -95,6 +95,10 @@ export default function ResponderMobile() {
     };
     keepScreenAwake();
 
+    try {
+      LocalNotifications.requestPermissions().catch(() => {});
+    } catch(e) {}
+
     return () => {
       KeepAwake.allowSleep().catch(() => {});
     };
