@@ -17,6 +17,7 @@ import axiosInstance from "../../lib/axios";
 import echo from "../../lib/echo";
 
 import { useAuth } from "../../context/AuthContext";
+import { FALLBACK_EVAC_CENTERS, EVAC_CENTER_ICON } from "../../lib/evacCenters";
 
 // ==========================================
 // 2. CUSTOM GIS ICONS (GLOWING & ANIMATED)
@@ -40,7 +41,7 @@ const icons = {
   critical: createIcon("bg-red-600", "bg-red-500", `<svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`),
   high: createIcon("bg-orange-500", "bg-orange-400", `<svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`),
   medium: createIcon("bg-amber-500", "bg-amber-400", `<svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`),
-  evac: createIcon("bg-emerald-500", "bg-emerald-400", `<svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>`),
+  evac: EVAC_CENTER_ICON,
   responder: createIcon("bg-blue-500", "bg-blue-400", `<svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`),
   bfp: createIcon("bg-orange-600", "bg-orange-500", `<svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>`),
   infirmary: createIcon("bg-red-500", "bg-red-400", `<svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg>`),
@@ -141,12 +142,7 @@ export default function GisDashboard() {
         const response = await axiosInstance.get("/evacuation-centers");
         let rawData = response.data;
         if (!rawData || rawData.length === 0) {
-           rawData = [
-             { id: 1, name: 'Binalbagan Central School Evac Center', lat: 10.198305, lng: 122.862121, capacity: 500, current_occupants: 150, status: 'Open', food_level: 'Adequate', water_level: 'Low', medicine_level: 'Adequate', lgu_id: 1 },
-             { id: 2, name: 'Binalbagan Catholic College Gym', lat: 10.1970, lng: 122.8610, capacity: 1000, current_occupants: 0, status: 'Standby', food_level: 'High', water_level: 'High', medicine_level: 'High', lgu_id: 1 },
-             { id: 3, name: 'Cabanatuan City Central School Evac Center', lat: 15.4851, lng: 120.9734, capacity: 800, current_occupants: 100, status: 'Open', food_level: 'High', water_level: 'Adequate', medicine_level: 'Low', lgu_id: 2 },
-             { id: 4, name: 'Nueva Ecija High School Gym', lat: 15.4820, lng: 120.9750, capacity: 1200, current_occupants: 0, status: 'Standby', food_level: 'High', water_level: 'High', medicine_level: 'High', lgu_id: 2 }
-           ];
+           rawData = FALLBACK_EVAC_CENTERS;
         }
         const withCoords = rawData.map((ec: any) => ({
           ...ec,

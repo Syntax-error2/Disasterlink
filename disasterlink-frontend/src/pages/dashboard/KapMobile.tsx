@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { FALLBACK_EVAC_CENTERS } from '../../lib/evacCenters';
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, CheckCircle, ShieldAlert, Radio, AlertTriangle, Users, Tent, Navigation, LogOut, ShieldCheck, Plus, X } from "lucide-react";
 import axiosInstance from "../../lib/axios";
@@ -75,7 +76,11 @@ export default function KapMobile() {
   const fetchCenters = async () => {
     try {
       const res = await axiosInstance.get('/evacuation-centers');
-      setCenters(res.data);
+      let fetched = res.data;
+      if (!fetched || fetched.length === 0) {
+        fetched = FALLBACK_EVAC_CENTERS;
+      }
+      setCenters(fetched);
     } catch (e) {}
   };
 

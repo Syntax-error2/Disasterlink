@@ -17,7 +17,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import RealtimeRouter from "../../components/RealtimeRouter";
 
-const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6 w-6 bg-red-600 rounded-full border-2 border-white flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.8)] animate-pulse"></div>`, iconSize: [24, 24] });
+const incidentAlertIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6 w-6 bg-red-600 rounded-full border-2 border-white flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.8)] animate-pulse"></div>`, iconSize: [24, 24] });
 const repIcon = L.divIcon({
   className: "bg-transparent",
   html: `<div class="relative flex h-8 w-8 items-center justify-center"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span><span class="relative inline-flex rounded-full h-5 w-5 bg-blue-600 border-2 border-white shadow-xl"></span></div>`,
@@ -523,7 +523,7 @@ export default function RepresentativeMobile() {
                         <Marker 
                           key={inc.id} 
                           position={[Number(inc.latitude), Number(inc.longitude)]} 
-                          icon={evacIcon}
+                          icon={incidentAlertIcon}
                         >
                           <Popup className="custom-popup min-w-[200px]">
                             <div className="font-bold text-red-600 mb-1">{inc.incident_type}</div>
@@ -640,7 +640,7 @@ export default function RepresentativeMobile() {
                         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                       />
-                      <Marker position={[Number(incident.latitude), Number(incident.longitude)]} icon={evacIcon} />
+                      <Marker position={[Number(incident.latitude), Number(incident.longitude)]} icon={incidentAlertIcon} />
                       <Marker position={userLoc} icon={repIcon} />
                       <RealtimeRouter 
                         start={userLoc} 

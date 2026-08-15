@@ -11,6 +11,7 @@ import {
   LogOut, User as UserIcon, ChevronRight
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { FALLBACK_EVAC_CENTERS, EVAC_CENTER_ICON } from '../../lib/evacCenters';
 import { LGUsBarangays } from "../../lib/barangays";
 import { formatDistanceToNow } from 'date-fns';
 import imageCompression from 'browser-image-compression';
@@ -61,7 +62,7 @@ const Avatar = ({ name, size = "10" }: { name: string, size?: string }) => {
 };
 
 const userIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-4 w-4 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-pulse"></div>`, iconSize: [16, 16] });
-const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6 w-6 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center shadow-lg"><svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></div>`, iconSize: [24, 24] });
+const evacIcon = EVAC_CENTER_ICON;
 
 const infrastructureIcons = {
   bfp: L.divIcon({
@@ -258,12 +259,7 @@ export default function CommunityPortal() {
       const response = await axiosInstance.get('/evacuation-centers');
       let rawData = response.data;
       if (!rawData || rawData.length === 0) {
-           rawData = [
-             { id: 1, name: 'Binalbagan Central School Evac Center', lat: 10.198305, lng: 122.862121, capacity: 500, current_occupants: 150, status: 'Open', food_level: 'Adequate', water_level: 'Low', medicine_level: 'Adequate', lgu_id: 1 },
-             { id: 2, name: 'Binalbagan Catholic College Gym', lat: 10.1970, lng: 122.8610, capacity: 1000, current_occupants: 0, status: 'Standby', food_level: 'High', water_level: 'High', medicine_level: 'High', lgu_id: 1 },
-             { id: 3, name: 'Cabanatuan City Central School Evac Center', lat: 15.4851, lng: 120.9734, capacity: 800, current_occupants: 100, status: 'Open', food_level: 'High', water_level: 'Adequate', medicine_level: 'Low', lgu_id: 2 },
-             { id: 4, name: 'Nueva Ecija High School Gym', lat: 15.4820, lng: 120.9750, capacity: 1200, current_occupants: 0, status: 'Standby', food_level: 'High', water_level: 'High', medicine_level: 'High', lgu_id: 2 }
-           ];
+           rawData = FALLBACK_EVAC_CENTERS;
       }
       const mapped = rawData.map((ec: any) => ({
         ...ec,

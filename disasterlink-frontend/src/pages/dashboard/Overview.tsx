@@ -31,6 +31,7 @@ import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../context/AuthContext";
 import { LGUsBarangays } from "../../lib/barangays";
 import { getInfrastructureNodes } from "../../lib/infrastructureNodes";
+import { FALLBACK_EVAC_CENTERS, EVAC_CENTER_ICON } from "../../lib/evacCenters";
 
 // --- CUSTOM MAP COMPONENTS ---
 function MapUpdater({ center }: { center: [number, number] | null }) {
@@ -210,12 +211,7 @@ export default function Overview() {
         const evacRes = await axiosInstance.get("/evacuation-centers");
         let fetchedEvacs = evacRes.data;
         if (!fetchedEvacs || fetchedEvacs.length === 0) {
-           fetchedEvacs = [
-             { id: 1, name: 'Binalbagan Central School Evac Center', lat: 10.198305, lng: 122.862121, capacity: 500, current_occupants: 150, status: 'Open', food_level: 'Adequate', water_level: 'Low', medicine_level: 'Adequate', lgu_id: 1 },
-             { id: 2, name: 'Binalbagan Catholic College Gym', lat: 10.1970, lng: 122.8610, capacity: 1000, current_occupants: 0, status: 'Standby', food_level: 'High', water_level: 'High', medicine_level: 'High', lgu_id: 1 },
-             { id: 3, name: 'Cabanatuan City Central School Evac Center', lat: 15.4851, lng: 120.9734, capacity: 800, current_occupants: 100, status: 'Open', food_level: 'High', water_level: 'Adequate', medicine_level: 'Low', lgu_id: 2 },
-             { id: 4, name: 'Nueva Ecija High School Gym', lat: 15.4820, lng: 120.9750, capacity: 1200, current_occupants: 0, status: 'Standby', food_level: 'High', water_level: 'High', medicine_level: 'High', lgu_id: 2 }
-           ];
+           fetchedEvacs = FALLBACK_EVAC_CENTERS;
         }
         setEvacCentersData(fetchedEvacs);
       } catch (err) {}
@@ -479,7 +475,7 @@ export default function Overview() {
               {evacCentersData.map(evac => {
                 if (mapFilter !== 'All' && mapFilter !== 'Evac Center') return null;
                 return evac.lat && evac.lng && (
-                   <Marker key={`evac-${evac.id}`} position={[evac.lat, evac.lng]} icon={icons.evac} />
+                   <Marker key={`evac-${evac.id}`} position={[evac.lat, evac.lng]} icon={EVAC_CENTER_ICON} />
                 );
               })}
 
