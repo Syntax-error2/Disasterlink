@@ -86,9 +86,9 @@ export default function GisDashboard() {
   };
 
   const infrastructureNodes = [
-    { id: 'node-ldrrmo', name: 'LDRRMO Command Center', type: 'ldrrmo', lat: 10.1960, lng: 122.8600, desc: 'Central Command & Dispatch', icon: icons.ldrrmo },
-    { id: 'node-bfp', name: 'Bureau of Fire Protection (BFP)', type: 'bfp', lat: 10.1974, lng: 122.8650, desc: 'Fire & Rescue Station', icon: icons.bfp },
-    { id: 'node-infirmary', name: 'Municipal Infirmary', type: 'infirmary', lat: 10.1953, lng: 122.8625, desc: 'Primary Medical Facility', icon: icons.infirmary },
+    { id: 'node-ldrrmo', name: 'LDRRMO Command Center', type: 'ldrrmo', lat: 10.1938985, lng: 122.8586074, desc: 'Central Command & Dispatch', icon: icons.ldrrmo },
+    { id: 'node-bfp', name: 'Bureau of Fire Protection (BFP)', type: 'bfp', lat: 10.1943826, lng: 122.8597694, desc: 'Fire & Rescue Station', icon: icons.bfp },
+    { id: 'node-infirmary', name: 'Municipal Infirmary', type: 'infirmary', lat: 10.1948501, lng: 122.8597670, desc: 'Primary Medical Facility', icon: icons.infirmary },
   ];
 
   useEffect(() => {

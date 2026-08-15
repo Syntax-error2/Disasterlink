@@ -287,9 +287,9 @@ export default function Overview() {
   });
 
   const infrastructureNodes = [
-    { id: 'node-ldrrmo', name: 'LDRRMO Command Center', lat: 10.1960, lng: 122.8600, icon: icons.ldrrmo },
-    { id: 'node-bfp', name: 'Binalbagan Fire Station', lat: 10.1974, lng: 122.8650, icon: icons.bfp },
-    { id: 'node-infirmary', name: 'Binalbagan Infirmary', lat: 10.1953, lng: 122.8625, icon: icons.infirmary },
+    { id: 'node-ldrrmo', name: 'LDRRMO Command Center', lat: 10.1938985, lng: 122.8586074, icon: icons.ldrrmo },
+    { id: 'node-bfp', name: 'Binalbagan Fire Station', lat: 10.1943826, lng: 122.8597694, icon: icons.bfp },
+    { id: 'node-infirmary', name: 'Binalbagan Infirmary', lat: 10.1948501, lng: 122.8597670, icon: icons.infirmary },
   ];
 
   return (
