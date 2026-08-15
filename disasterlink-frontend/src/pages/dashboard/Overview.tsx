@@ -120,13 +120,7 @@ export default function Overview() {
   // ANALYTICS MOCKS / DERIVATIVES
   const [trendData, setTrendData] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  const [teams, setTeams] = useState<any[]>([
-    { id: 1, name: "Rescue Team 01", status: "Available", location: "" },
-    { id: 2, name: "Medical Team", status: "Available", location: "" },
-    { id: 3, name: "Rescue Team 02", status: "Responding", location: "Purok 2" },
-    { id: 4, name: "Rescue Team 03", status: "Offline", location: "" },
-    { id: 5, name: "Logistics Team", status: "Available", location: "" },
-  ]);
+  const [teams, setTeams] = useState<any[]>([]);
 
   const fetchDashboardData = async () => {
     setIsRefreshing(true);
@@ -154,17 +148,32 @@ export default function Overview() {
       }));
       setRecentActivity(activity);
 
-      // Process Trends (24h mock based on data)
-      const trends = [
-        { time: '12 AM', reported: Math.floor(Math.random() * 5), resolved: Math.floor(Math.random() * 3), critical: 0 },
-        { time: '4 AM', reported: Math.floor(Math.random() * 8), resolved: Math.floor(Math.random() * 5), critical: 1 },
-        { time: '8 AM', reported: Math.floor(Math.random() * 15), resolved: Math.floor(Math.random() * 10), critical: 2 },
-        { time: '12 PM', reported: Math.floor(Math.random() * 20), resolved: Math.floor(Math.random() * 18), critical: 3 },
-        { time: '4 PM', reported: Math.floor(Math.random() * 25), resolved: Math.floor(Math.random() * 22), critical: 1 },
-        { time: '8 PM', reported: Math.floor(Math.random() * 10), resolved: Math.floor(Math.random() * 15), critical: 0 },
-        { time: '12 AM', reported: Math.floor(Math.random() * 5), resolved: Math.floor(Math.random() * 8), critical: 0 },
-      ];
-      setTrendData(trends);
+      // Process Trends dynamically (Group last 24h into 4h intervals)
+      const now = new Date();
+      const generatedTrends = [];
+      for (let i = 6; i >= 0; i--) {
+        const intervalEnd = new Date(now.getTime() - i * 4 * 60 * 60 * 1000);
+        const intervalStart = new Date(intervalEnd.getTime() - 4 * 60 * 60 * 1000);
+        
+        const inInterval = dbIncidents.filter((inc: any) => {
+          const t = new Date(inc.created_at).getTime();
+          return t >= intervalStart.getTime() && t <= intervalEnd.getTime();
+        });
+        
+        generatedTrends.push({
+          time: intervalEnd.toLocaleTimeString([], { hour: '2-digit' }),
+          reported: inInterval.length,
+          resolved: inInterval.filter((inc: any) => inc.status === 'Resolved').length,
+          critical: inInterval.filter((inc: any) => inc.severity_level === 'Critical').length
+        });
+      }
+      setTrendData(generatedTrends);
+
+      // 2. Fetch Real Teams
+      try {
+        const teamsRes = await axiosInstance.get('/teams');
+        setTeams(teamsRes.data);
+      } catch (err) {}
 
       // 2. Stats
       try {
@@ -349,16 +358,16 @@ export default function Overview() {
         </div>
 
         {/* COMMUNITY THREAT LEVEL (Span 4) */}
-        <div className="xl:col-span-4 bg-[#15181D] border border-[#292D34] rounded-2xl p-6 flex flex-col relative overflow-hidden">
+        <div className="xl:col-span-4 bg-[#15181D] border border-[#292D34] rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden">
            {/* Ambient Glow */}
            <div className={`absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none ${
               threatLevel === 'LOW' ? 'bg-green-500' : threatLevel === 'MODERATE' ? 'bg-amber-500' : 'bg-red-500'
            }`}></div>
            
-           <h3 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-6">Community Threat Level</h3>
+           <h3 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Community Threat Level</h3>
            
-           <div className="flex items-center gap-5 mb-8">
-             <div className={`h-16 w-16 rounded-2xl ${threatBg} flex items-center justify-center border border-current/20 shadow-lg`}>
+           <div className="flex items-center gap-5 mt-auto mb-auto">
+             <div className={`h-16 w-16 rounded-2xl ${threatBg} flex items-center justify-center border border-current/20 shadow-lg shrink-0`}>
                <ThreatIcon className={`h-8 w-8 ${threatColor}`} />
              </div>
              <div>
@@ -367,31 +376,6 @@ export default function Overview() {
                  {threatLevel === 'LOW' ? 'No active threats detected' : 'Elevated emergency awareness required'}
                </p>
              </div>
-           </div>
-
-           <div className="space-y-3 mt-auto">
-             <div className="flex justify-between items-center text-sm">
-               <span className="text-zinc-500 font-medium">Weather</span>
-               <span className={weatherData.condition.includes('Rain') || weatherData.condition.includes('Storm') ? 'text-amber-500 font-bold' : 'text-green-500 font-bold'}>
-                 {weatherData.condition}
-               </span>
-             </div>
-             <div className="flex justify-between items-center text-sm">
-               <span className="text-zinc-500 font-medium">Active Incidents</span>
-               <span className={activeEmergencies > 0 ? 'text-red-500 font-bold' : 'text-white font-bold'}>{activeEmergencies}</span>
-             </div>
-             <div className="flex justify-between items-center text-sm">
-               <span className="text-zinc-500 font-medium">SOS Alerts</span>
-               <span className={activeEmergencies > 0 ? 'text-red-500 font-bold' : 'text-white font-bold'}>{activeEmergencies}</span>
-             </div>
-             <div className="flex justify-between items-center text-sm">
-               <span className="text-zinc-500 font-medium">Pending Reports</span>
-               <span className={pendingReports > 0 ? 'text-amber-500 font-bold' : 'text-white font-bold'}>{pendingReports}</span>
-             </div>
-           </div>
-           
-           <div className="mt-6 pt-4 border-t border-[#292D34] text-[10px] text-zinc-600 font-mono">
-             Last assessed: {new Date().toLocaleTimeString()}
            </div>
         </div>
       </div>
