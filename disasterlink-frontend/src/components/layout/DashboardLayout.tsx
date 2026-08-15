@@ -186,22 +186,17 @@ export default function DashboardLayout() {
     { name: "Dashboard", path: "/", icon: LayoutDashboard },
     { name: "Live Map", path: "/map", icon: MapPinned },
     { name: "Incidents", path: "/reports", icon: AlertTriangle },
-    { name: "Emergency Dispatch", path: "/reports", icon: Ambulance },
     { name: "Alerts", path: "/alerts", icon: BellRing },
   ];
 
   const monitoringNav = [
     { name: "Weather Intelligence", path: "/weather", icon: CloudRain },
-    { name: "Citizen Reports", path: "/reports", icon: FileText },
-    { name: "Evacuation Centers", path: "/map", icon: Home },
     { name: "Response Teams", path: "/admin/teams", icon: Users },
   ];
 
   const managementNav = [
-    { name: "Personnel", path: "/admin/users", icon: ShieldCheck },
-    { name: "Citizens", path: "/admin/users", icon: UserCircle },
+    { name: "User Management", path: "/admin/users", icon: ShieldCheck },
     { name: "System Settings", path: "/settings", icon: Settings },
-    { name: "Audit Logs", path: "/settings", icon: FileKey },
   ];
 
   const unreadCount = notifications.filter(n => !n.read).length;
