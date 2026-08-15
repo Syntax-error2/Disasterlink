@@ -521,39 +521,48 @@ export default function GisDashboard() {
             {activeLayers.evac && evacCenters.map(evac => (
               <Marker key={evac.id} position={[evac.lat, evac.lng]} icon={icons.evac}>
                 <Popup>
-                  <div className="p-1">
-                    <h3 className="font-bold text-sm text-zinc-900 m-0 mb-1">{evac.name}</h3>
-                    <div className="w-full bg-zinc-200 rounded-full h-1.5 mb-1 mt-2">
-                      <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${evac.capacity}%` }}></div>
-                    </div>
-                    <p className="text-[10px] text-zinc-500 m-0 text-right">{evac.capacity}% Full</p>
-                    
-                    <div className="mt-2 border-t border-zinc-200 pt-2 space-y-1">
-                      <div className="flex justify-between items-center text-[9px] font-bold text-zinc-600">
-                        <span>FOOD</span>
-                        <span className={evac.food_level < 30 ? 'text-red-500' : ''}>{evac.food_level || 0}%</span>
-                      </div>
-                      <div className="w-full bg-zinc-200 rounded-full h-1">
-                        <div className={`h-1 rounded-full ${evac.food_level < 30 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${evac.food_level || 0}%` }}></div>
-                      </div>
+                  {(() => {
+                    const percentFull = evac.capacity > 0 ? Math.min(100, Math.round((evac.current_occupants / evac.capacity) * 100)) : 0;
+                    const getResourcePercent = (lvl: string) => lvl === 'High' ? 100 : lvl === 'Adequate' ? 60 : lvl === 'Low' ? 20 : 0;
+                    const foodP = getResourcePercent(evac.food_level);
+                    const waterP = getResourcePercent(evac.water_level);
+                    const medsP = getResourcePercent(evac.medicine_level);
+                    return (
+                      <div className="p-1">
+                        <h3 className="font-bold text-sm text-zinc-900 m-0 mb-1">{evac.name}</h3>
+                        <div className="w-full bg-zinc-200 rounded-full h-1.5 mb-1 mt-2">
+                          <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${percentFull}%` }}></div>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 m-0 text-right">{percentFull}% Full ({evac.current_occupants}/{evac.capacity})</p>
+                        
+                        <div className="mt-2 border-t border-zinc-200 pt-2 space-y-1">
+                          <div className="flex justify-between items-center text-[9px] font-bold text-zinc-600">
+                            <span>FOOD</span>
+                            <span className={foodP < 30 ? 'text-red-500' : ''}>{evac.food_level}</span>
+                          </div>
+                          <div className="w-full bg-zinc-200 rounded-full h-1">
+                            <div className={`h-1 rounded-full ${foodP < 30 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${foodP}%` }}></div>
+                          </div>
 
-                      <div className="flex justify-between items-center text-[9px] font-bold text-zinc-600 mt-1">
-                        <span>WATER</span>
-                        <span className={evac.water_level < 30 ? 'text-red-500' : ''}>{evac.water_level || 0}%</span>
-                      </div>
-                      <div className="w-full bg-zinc-200 rounded-full h-1">
-                        <div className={`h-1 rounded-full ${evac.water_level < 30 ? 'bg-red-500' : 'bg-cyan-500'}`} style={{ width: `${evac.water_level || 0}%` }}></div>
-                      </div>
+                          <div className="flex justify-between items-center text-[9px] font-bold text-zinc-600 mt-1">
+                            <span>WATER</span>
+                            <span className={waterP < 30 ? 'text-red-500' : ''}>{evac.water_level}</span>
+                          </div>
+                          <div className="w-full bg-zinc-200 rounded-full h-1">
+                            <div className={`h-1 rounded-full ${waterP < 30 ? 'bg-red-500' : 'bg-cyan-500'}`} style={{ width: `${waterP}%` }}></div>
+                          </div>
 
-                      <div className="flex justify-between items-center text-[9px] font-bold text-zinc-600 mt-1">
-                        <span>MEDS</span>
-                        <span className={evac.medicine_level < 30 ? 'text-red-500' : ''}>{evac.medicine_level || 0}%</span>
+                          <div className="flex justify-between items-center text-[9px] font-bold text-zinc-600 mt-1">
+                            <span>MEDS</span>
+                            <span className={medsP < 30 ? 'text-red-500' : ''}>{evac.medicine_level}</span>
+                          </div>
+                          <div className="w-full bg-zinc-200 rounded-full h-1">
+                            <div className={`h-1 rounded-full ${medsP < 30 ? 'bg-red-500' : 'bg-purple-500'}`} style={{ width: `${medsP}%` }}></div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="w-full bg-zinc-200 rounded-full h-1">
-                        <div className={`h-1 rounded-full ${evac.medicine_level < 30 ? 'bg-red-500' : 'bg-purple-500'}`} style={{ width: `${evac.medicine_level || 0}%` }}></div>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </Popup>
               </Marker>
             ))}
