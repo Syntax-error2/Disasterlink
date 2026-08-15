@@ -55,6 +55,7 @@ export default function DashboardLayout() {
   const [user, setUser] = useState({ name: "Loading...", role: "guest", department: "Loading...", assigned_barangay: "all", lguName: "DisasterLink", location: "Philippines" });
   
   // States
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // For mobile overlay
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // For desktop collapse
