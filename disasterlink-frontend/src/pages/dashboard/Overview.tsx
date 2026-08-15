@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { 
   AlertTriangle, 
   ShieldCheck, 
+  ShieldAlert,
   CloudRain, 
   Users, 
   MapPin, 
@@ -19,7 +20,8 @@ import {
   RefreshCw,
   Info,
   Ambulance,
-  Home
+  Home,
+  FileText
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Circle } from "react-leaflet";
