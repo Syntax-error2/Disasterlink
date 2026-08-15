@@ -259,13 +259,25 @@ export default function CommunityPortal() {
       if (!rawData || rawData.length === 0) {
            rawData = FALLBACK_EVAC_CENTERS;
       }
-      const mapped = rawData.map((ec: any) => ({
-        ...ec,
-        lat: parseFloat(ec.lat) || (10.1866 + (Math.random() * 0.02 - 0.01)),
-        lng: parseFloat(ec.lng) || (122.8587 + (Math.random() * 0.02 - 0.01)),
-        capacity: ec.capacity || 1000,
-        current_occupants: ec.current_occupants || Math.floor(Math.random() * 800)
-      }));
+      const mapped = rawData.map((ec: any) => {
+        const ecLat = parseFloat(ec.lat) || (10.1866 + (Math.random() * 0.02 - 0.01));
+        const ecLng = parseFloat(ec.lng) || (122.8587 + (Math.random() * 0.02 - 0.01));
+        const capacity = ec.capacity || 1000;
+        const current_occupants = ec.current_occupants || Math.floor(Math.random() * 800);
+        const distance = getDistanceInMeters(lat, lng, ecLat, ecLng);
+        const percentage = Math.round((current_occupants / capacity) * 100);
+        
+        return {
+          ...ec,
+          lat: ecLat,
+          lng: ecLng,
+          capacity,
+          current_occupants,
+          capacity_percentage: percentage,
+          distance_meters: distance,
+          dist: distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km`
+        };
+      });
       setEvacCenters(mapped);
     } catch (e) {}
   };
@@ -880,29 +892,33 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
         </div>
       )}
 
-      {evacCenters && evacCenters.length > 0 && (
-        <div>
-          <h3 className="text-lg font-bold text-white mb-3">Nearest Safe Zone</h3>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-emerald-500/20 p-3 rounded-xl"><Home className="h-6 w-6 text-emerald-500" /></div>
-              <div>
-                <h4 className="font-bold text-sm text-zinc-100">{evacCenters[0].name}</h4>
-                <p className="text-xs text-zinc-400 mt-0.5">{evacCenters[0].dist} away • {evacCenters[0].capacity}% Capacity</p>
+      {(() => {
+        const nearestSafeZone = evacCenters?.filter((ec: any) => ec.capacity_percentage < 100).sort((a: any, b: any) => a.distance_meters - b.distance_meters)[0];
+        if (!nearestSafeZone) return null;
+        return (
+          <div>
+            <h3 className="text-lg font-bold text-white mb-3">Nearest Safe Zone</h3>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-emerald-500/20 p-3 rounded-xl"><Home className="h-6 w-6 text-emerald-500" /></div>
+                <div>
+                  <h4 className="font-bold text-sm text-zinc-100">{nearestSafeZone.name}</h4>
+                  <p className="text-xs text-zinc-400 mt-0.5">{nearestSafeZone.dist} away • {nearestSafeZone.capacity_percentage}% Capacity</p>
+                </div>
               </div>
+              <button onClick={() => {
+                showToast("Launching safe route navigation...", "info");
+                if(nearestSafeZone.lat && nearestSafeZone.lng) {
+                  setTargetRoute([nearestSafeZone.lat, nearestSafeZone.lng]);
+                  setActiveTab("map");
+                }
+              }} className="bg-zinc-800 hover:bg-zinc-700 active:scale-95 p-3 rounded-xl transition-all">
+                <Navigation className="h-5 w-5 text-blue-400" />
+              </button>
             </div>
-            <button onClick={() => {
-              showToast("Launching safe route navigation...", "info");
-              if(evacCenters[0].lat && evacCenters[0].lng) {
-                setTargetRoute([evacCenters[0].lat, evacCenters[0].lng]);
-                setActiveTab("map");
-              }
-            }} className="bg-zinc-800 hover:bg-zinc-700 active:scale-95 p-3 rounded-xl transition-all">
-              <Navigation className="h-5 w-5 text-blue-400" />
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {(!myReports || myReports.length === 0) && (!alerts || alerts.length === 0) && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 pt-2">
