@@ -63,7 +63,7 @@ export default function GisDashboard() {
 
   const [activeLayers, setActiveLayers] = useState({
     incidents: true,
-    evac: false,
+    evac: true,
     responders: false,
     floodRisk: false,
     weatherRadar: false,
