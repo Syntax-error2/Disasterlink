@@ -60,7 +60,15 @@ export default function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // For mobile overlay
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // For desktop collapse
   const [lastUpdated, setLastUpdated] = useState<string>("--:--");
+  const [autoRefresh, setAutoRefresh] = useState(() => localStorage.getItem('auto_refresh') !== 'false');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const toggleAutoRefresh = () => {
+    const newVal = !autoRefresh;
+    setAutoRefresh(newVal);
+    localStorage.setItem('auto_refresh', newVal.toString());
+    window.dispatchEvent(new Event('auto_refresh_changed'));
+  };
 
   const [readIds, setReadIds] = useState<Set<string | number>>(() => {
     const saved = localStorage.getItem('readNotificationIds');
@@ -127,7 +135,11 @@ export default function DashboardLayout() {
     };
 
     fetchLiveNotifications();
-    const interval = setInterval(fetchLiveNotifications, 10000);
+    
+    let interval: NodeJS.Timeout;
+    if (autoRefresh) {
+      interval = setInterval(fetchLiveNotifications, 10000);
+    }
     
     const handleNewSOS = (e: any) => {
       const incident = e.detail;
@@ -152,10 +164,10 @@ export default function DashboardLayout() {
     window.addEventListener('new_sos_alert', handleNewSOS);
 
     return () => {
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
       window.removeEventListener('new_sos_alert', handleNewSOS);
     };
-  }, [readIds]);
+  }, [readIds, autoRefresh]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -214,9 +226,6 @@ export default function DashboardLayout() {
         }`}
         title={isSidebarCollapsed ? item.name : undefined}
       >
-        {isActive && (
-          <motion.div layoutId="activeNavIndicator" className="absolute left-0 top-0 bottom-0 w-[3px] bg-red-500 rounded-r-full" />
-        )}
         <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-red-500' : 'text-zinc-500'}`} />
         {!isSidebarCollapsed && <span className="flex-1 truncate">{item.name}</span>}
         {isActive && !isSidebarCollapsed && <ChevronRight className="h-3 w-3 text-red-500/50 shrink-0" />}
@@ -347,7 +356,10 @@ export default function DashboardLayout() {
               <div className="flex flex-col text-right">
                 <span className="text-zinc-500 text-[10px] uppercase">Last updated: {lastUpdated}</span>
                 <span className="text-zinc-400 text-[10px] flex items-center gap-1 justify-end">
-                  Auto-refresh <div className="h-3 w-6 bg-emerald-500/20 border border-emerald-500/50 rounded-full flex items-center p-0.5"><div className="h-1.5 w-1.5 bg-emerald-500 rounded-full ml-auto"></div></div>
+                  Auto-refresh 
+                  <button onClick={toggleAutoRefresh} className={`h-3 w-6 rounded-full flex items-center p-0.5 border transition-colors ${autoRefresh ? 'bg-emerald-500/20 border-emerald-500/50' : 'bg-zinc-800 border-zinc-700'}`}>
+                    <div className={`h-1.5 w-1.5 rounded-full transition-all ${autoRefresh ? 'bg-emerald-500 ml-auto' : 'bg-zinc-500'}`}></div>
+                  </button>
                 </span>
               </div>
             </div>

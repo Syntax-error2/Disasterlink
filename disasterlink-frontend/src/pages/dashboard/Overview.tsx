@@ -104,6 +104,13 @@ export default function Overview() {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [mapFilter, setMapFilter] = useState("All");
+  const [autoRefresh, setAutoRefresh] = useState(() => localStorage.getItem('auto_refresh') !== 'false');
+
+  useEffect(() => {
+    const handleAutoRefreshChange = () => setAutoRefresh(localStorage.getItem('auto_refresh') !== 'false');
+    window.addEventListener('auto_refresh_changed', handleAutoRefreshChange);
+    return () => window.removeEventListener('auto_refresh_changed', handleAutoRefreshChange);
+  }, []);
 
   // DATA STATES
   const [rawIncidents, setRawIncidents] = useState<any[]>([]);
@@ -220,9 +227,12 @@ export default function Overview() {
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 15000);
+    let interval: NodeJS.Timeout;
+    if (autoRefresh) {
+      interval = setInterval(fetchDashboardData, 15000);
+    }
     return () => clearInterval(interval);
-  }, []);
+  }, [autoRefresh]);
 
   // THREAT LEVEL LOGIC
   let threatLevel = "LOW";
