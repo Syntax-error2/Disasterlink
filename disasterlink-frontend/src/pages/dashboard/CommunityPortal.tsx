@@ -23,6 +23,7 @@ import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import RealtimeRouter from "../../components/RealtimeRouter";
 import ErrorBoundary from "../../components/ErrorBoundary";
+import { getInfrastructureNodes } from "../../lib/infrastructureNodes";
 
 const responderIcon = L.divIcon({ 
   className: "bg-transparent", 
@@ -171,11 +172,7 @@ export default function CommunityPortal() {
     setMyReports(myActiveReports.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
   }, [globalIncidents, activeUser]);
 
-  const infrastructureNodes = [
-    { id: 'node-ldrrmo', name: 'LDRRMO Command Center', lat: 10.1938985, lng: 122.8586074, icon: infrastructureIcons.ldrrmo, desc: "Command & Dispatch" },
-    { id: 'node-bfp', name: 'Binalbagan Fire Station', lat: 10.1943826, lng: 122.8597694, icon: infrastructureIcons.bfp, desc: "Fire & Rescue Services" },
-    { id: 'node-infirmary', name: 'Binalbagan Infirmary', lat: 10.1948501, lng: 122.8597670, icon: infrastructureIcons.infirmary, desc: "Emergency Medical Facility" },
-  ];
+  const infrastructureNodes = getInfrastructureNodes(user?.lgu?.subdomain || 'binalbagan', infrastructureIcons);
 
   useEffect(() => {
     // Proximity 50m SOS Alerts

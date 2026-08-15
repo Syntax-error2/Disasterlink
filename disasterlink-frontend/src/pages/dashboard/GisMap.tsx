@@ -51,6 +51,7 @@ const icons = {
 // 3. MAIN DASHBOARD COMPONENT
 // ==========================================
 import { useIncidents } from "../../context/IncidentsContext";
+import { getInfrastructureNodes } from "../../lib/infrastructureNodes";
 
 export default function GisDashboard() {
   const { user } = useAuth();
@@ -85,11 +86,7 @@ export default function GisDashboard() {
     setTimeout(() => setToast(null), 5000);
   };
 
-  const infrastructureNodes = [
-    { id: 'node-ldrrmo', name: 'LDRRMO Command Center', type: 'ldrrmo', lat: 10.1938985, lng: 122.8586074, desc: 'Central Command & Dispatch', icon: icons.ldrrmo },
-    { id: 'node-bfp', name: 'Bureau of Fire Protection (BFP)', type: 'bfp', lat: 10.1943826, lng: 122.8597694, desc: 'Fire & Rescue Station', icon: icons.bfp },
-    { id: 'node-infirmary', name: 'Municipal Infirmary', type: 'infirmary', lat: 10.1948501, lng: 122.8597670, desc: 'Primary Medical Facility', icon: icons.infirmary },
-  ];
+  const infrastructureNodes = getInfrastructureNodes(user?.lgu?.subdomain || 'binalbagan', icons);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString()), 1000);

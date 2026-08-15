@@ -30,6 +30,7 @@ import L from "leaflet";
 import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../context/AuthContext";
 import { LGUsBarangays } from "../../lib/barangays";
+import { getInfrastructureNodes } from "../../lib/infrastructureNodes";
 
 // --- CUSTOM MAP COMPONENTS ---
 function MapUpdater({ center }: { center: [number, number] | null }) {
@@ -286,11 +287,7 @@ export default function Overview() {
     return false;
   });
 
-  const infrastructureNodes = [
-    { id: 'node-ldrrmo', name: 'LDRRMO Command Center', lat: 10.1938985, lng: 122.8586074, icon: icons.ldrrmo },
-    { id: 'node-bfp', name: 'Binalbagan Fire Station', lat: 10.1943826, lng: 122.8597694, icon: icons.bfp },
-    { id: 'node-infirmary', name: 'Binalbagan Infirmary', lat: 10.1948501, lng: 122.8597670, icon: icons.infirmary },
-  ];
+  const infrastructureNodes = getInfrastructureNodes(user?.lgu?.subdomain || 'binalbagan', icons);
 
   return (
     <div className="flex flex-col gap-6 pb-12 animate-in fade-in duration-500 text-zinc-100 font-sans">
