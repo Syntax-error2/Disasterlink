@@ -62,6 +62,24 @@ const Avatar = ({ name, size = "10" }: { name: string, size?: string }) => {
 const userIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-4 w-4 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-pulse"></div>`, iconSize: [16, 16] });
 const evacIcon = L.divIcon({ className: "bg-transparent", html: `<div class="h-6 w-6 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center shadow-lg"><svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></div>`, iconSize: [24, 24] });
 
+const infrastructureIcons = {
+  bfp: L.divIcon({
+    className: "bg-transparent",
+    html: `<div class="relative flex items-center justify-center h-8 w-8 rounded-full bg-orange-600 border-2 border-[#15181D] shadow-lg shadow-black/50 z-10"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg></div>`,
+    iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16]
+  }),
+  infirmary: L.divIcon({
+    className: "bg-transparent",
+    html: `<div class="relative flex items-center justify-center h-8 w-8 rounded-full bg-red-500 border-2 border-[#15181D] shadow-lg shadow-black/50 z-10"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg></div>`,
+    iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16]
+  }),
+  ldrrmo: L.divIcon({
+    className: "bg-transparent",
+    html: `<div class="relative flex items-center justify-center h-8 w-8 rounded-full bg-indigo-600 border-2 border-[#15181D] shadow-lg shadow-black/50 z-10"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg></div>`,
+    iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16]
+  }),
+};
+
 // ==========================================
 // 2. MAIN LAYOUT SHELL
 // ==========================================
@@ -145,15 +163,25 @@ export default function CommunityPortal() {
       }
     }
     
-    // My Reports
     const myActiveReports = (globalIncidents || []).filter((inc: any) => 
       myIds.map(String).includes(String(inc.id)) || 
-      (activeUser && (activeUser as any).id && String(inc.user_id) === String((activeUser as any).id))
+      inc.reporter === (activeUser as any)?.name ||
+      inc.email === (activeUser as any)?.email
     );
-    setMyReports(myActiveReports);
+    setMyReports(myActiveReports.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+  }, [globalIncidents, activeUser]);
 
+  const infrastructureNodes = [
+    { id: 'node-ldrrmo', name: 'LDRRMO Command Center', lat: 10.1938985, lng: 122.8586074, icon: infrastructureIcons.ldrrmo, desc: "Command & Dispatch" },
+    { id: 'node-bfp', name: 'Binalbagan Fire Station', lat: 10.1943826, lng: 122.8597694, icon: infrastructureIcons.bfp, desc: "Fire & Rescue Services" },
+    { id: 'node-infirmary', name: 'Binalbagan Infirmary', lat: 10.1948501, lng: 122.8597670, icon: infrastructureIcons.infirmary, desc: "Emergency Medical Facility" },
+  ];
+
+  useEffect(() => {
     // Proximity 50m SOS Alerts
     if (globalIncidents) {
+      const userKey = "my_report_ids_" + (((activeUser as any)?.id) || (activeUser?.email) || 'guest');
+      const myIds = JSON.parse(localStorage.getItem(userKey) || "[]");
       const activeSOS = globalIncidents.filter((inc: any) => inc.status !== 'Resolved' && inc.status !== 'Dismissed' && !myIds.includes(inc.id));
       
       const newProximityAlerts: any[] = [];
@@ -1078,6 +1106,19 @@ function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTarge
                  </Popup>
               </Marker>
             )})}
+            {infrastructureNodes.map((node:any) => (
+              <Marker key={node.id} position={[node.lat, node.lng]} icon={node.icon}>
+                 <Popup className="custom-popup">
+                    <div className="font-bold mb-1 text-zinc-900">{node.name}</div>
+                    <div className={`text-[10px] text-zinc-500 mb-2 font-semibold uppercase`}>{node.desc}</div>
+                    <button onClick={() => {
+                        showToast(`Routing to ${node.name}`);
+                        setTargetRoute([node.lat, node.lng]);
+                    }} className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full py-2 rounded transition-colors mt-2">Navigate Here</button>
+                 </Popup>
+              </Marker>
+            ))}
+
           </MapContainer>
         </div>
 
