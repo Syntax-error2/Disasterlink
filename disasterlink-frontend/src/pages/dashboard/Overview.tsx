@@ -314,7 +314,7 @@ export default function Overview() {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         
         {/* KPI CARDS (Span 8) */}
-        <div className="xl:col-span-8 grid grid-cols-2 lg:grid-cols-4 gap-6 self-start">
+        <div className="xl:col-span-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 self-start">
           {/* Active Emergencies */}
           <div className="bg-[#15181D] border border-[#292D34] rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden group">
             {activeEmergencies > 0 && <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-bl-full blur-2xl"></div>}
@@ -511,9 +511,9 @@ export default function Overview() {
         <div className="xl:col-span-4 bg-[#15181D] border border-[#292D34] rounded-2xl flex flex-col h-[500px]">
           <div className="p-5 border-b border-[#292D34] flex items-center justify-between">
             <h3 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em]">Active Emergency Queue</h3>
-            <button className="text-[10px] font-bold text-red-500 uppercase tracking-wider hover:text-red-400">View All</button>
+            <Link to="/reports" className="text-[10px] font-bold text-red-500 uppercase tracking-wider hover:text-red-400">View All</Link>
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+          <div className="flex-1 overflow-y-auto overflow-x-auto custom-scrollbar p-2">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr>
@@ -654,7 +654,7 @@ export default function Overview() {
         <div className="bg-[#15181D] border border-[#292D34] rounded-2xl p-5 flex flex-col">
           <div className="flex justify-between items-center mb-4">
              <h3 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em]">Response Teams</h3>
-             <button className="text-[10px] font-bold text-red-500 uppercase tracking-wider hover:text-red-400">View All</button>
+             <Link to="/admin/teams" className="text-[10px] font-bold text-red-500 uppercase tracking-wider hover:text-red-400">View All</Link>
           </div>
           
           <div className="flex-1 space-y-3">
@@ -680,7 +680,7 @@ export default function Overview() {
           </div>
 
           <div className="pt-4 border-t border-[#292D34] mt-auto flex justify-between items-center">
-             <span className="text-xs font-bold text-white"><span className="text-green-500">3 / 5</span> Teams Available</span>
+             <span className="text-xs font-bold text-white"><span className="text-green-500">{teams.filter(t => t.status === 'Available').length} / {teams.length}</span> Teams Available</span>
           </div>
         </div>
 
@@ -688,7 +688,7 @@ export default function Overview() {
         <div className="bg-[#15181D] border border-[#292D34] rounded-2xl p-5 flex flex-col">
           <div className="flex justify-between items-center mb-4">
              <h3 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em]">Recent Activity</h3>
-             <button className="text-[10px] font-bold text-red-500 uppercase tracking-wider hover:text-red-400">View All</button>
+             <Link to="/reports" className="text-[10px] font-bold text-red-500 uppercase tracking-wider hover:text-red-400">View All</Link>
           </div>
           
           <div className="flex-1 space-y-4 relative">

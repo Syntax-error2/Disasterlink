@@ -382,7 +382,7 @@ export default function DashboardLayout() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="fixed top-[72px] bottom-0 right-0 w-[380px] bg-[#111115] border-l border-[#292D34] shadow-2xl overflow-hidden z-50 flex flex-col"
+                    className="fixed top-[72px] bottom-0 right-0 w-full sm:w-[380px] bg-[#111115] border-l border-[#292D34] shadow-2xl overflow-hidden z-50 flex flex-col"
                   >
                     <div className="p-5 border-b border-[#292D34] bg-[#0B0D10]/50 flex items-center justify-between">
                       <div>

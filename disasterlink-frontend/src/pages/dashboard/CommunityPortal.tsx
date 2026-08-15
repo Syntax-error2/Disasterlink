@@ -885,7 +885,13 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
                 <p className="text-xs text-zinc-400 mt-0.5">{evacCenters[0].dist} away • {evacCenters[0].capacity}% Capacity</p>
               </div>
             </div>
-            <button onClick={() => showToast("Launching safe route navigation...", "info")} className="bg-zinc-800 hover:bg-zinc-700 active:scale-95 p-3 rounded-xl transition-all">
+            <button onClick={() => {
+              showToast("Launching safe route navigation...", "info");
+              if(evacCenters[0].lat && evacCenters[0].lng) {
+                setTargetRoute([evacCenters[0].lat, evacCenters[0].lng]);
+                setActiveTab("map");
+              }
+            }} className="bg-zinc-800 hover:bg-zinc-700 active:scale-95 p-3 rounded-xl transition-all">
               <Navigation className="h-5 w-5 text-blue-400" />
             </button>
           </div>
