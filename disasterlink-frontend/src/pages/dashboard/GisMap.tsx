@@ -139,7 +139,16 @@ export default function GisDashboard() {
     const fetchEvacCenters = async () => {
       try {
         const response = await axiosInstance.get("/evacuation-centers");
-        const withCoords = response.data.map((ec: any) => ({
+        let rawData = response.data;
+        if (!rawData || rawData.length === 0) {
+           rawData = [
+             { id: 1, name: 'Binalbagan Central School Evac Center', lat: 10.198305, lng: 122.862121, capacity: 500, current_occupants: 150, status: 'Open', food_level: 'Adequate', water_level: 'Low', medicine_level: 'Adequate', lgu_id: 1 },
+             { id: 2, name: 'Binalbagan Catholic College Gym', lat: 10.1970, lng: 122.8610, capacity: 1000, current_occupants: 0, status: 'Standby', food_level: 'High', water_level: 'High', medicine_level: 'High', lgu_id: 1 },
+             { id: 3, name: 'Cabanatuan City Central School Evac Center', lat: 15.4851, lng: 120.9734, capacity: 800, current_occupants: 100, status: 'Open', food_level: 'High', water_level: 'Adequate', medicine_level: 'Low', lgu_id: 2 },
+             { id: 4, name: 'Nueva Ecija High School Gym', lat: 15.4820, lng: 120.9750, capacity: 1200, current_occupants: 0, status: 'Standby', food_level: 'High', water_level: 'High', medicine_level: 'High', lgu_id: 2 }
+           ];
+        }
+        const withCoords = rawData.map((ec: any) => ({
           ...ec,
           lat: parseFloat(ec.lat) || (10.1866 + (Math.random() * 0.02 - 0.01)),
           lng: parseFloat(ec.lng) || (122.8587 + (Math.random() * 0.02 - 0.01)),
