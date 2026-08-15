@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { 
   AlertTriangle, 
   ShieldCheck, 
@@ -59,10 +60,25 @@ const createCustomIcon = (colorClass: string, isSOS = false) => {
 };
 
 const icons = {
-  sos: createCustomIcon('bg-red-500', true),
-  report: createCustomIcon('bg-blue-500'),
-  flood: createCustomIcon('bg-cyan-500'),
-  fire: createCustomIcon('bg-orange-500'),
+  sos: createCustomIcon("bg-red-500", true),
+  flood: createCustomIcon("bg-cyan-500"),
+  fire: createCustomIcon("bg-orange-500"),
+  report: createCustomIcon("bg-blue-500"),
+  bfp: L.divIcon({
+    className: "bg-transparent",
+    html: `<div class="relative flex items-center justify-center h-8 w-8 rounded-full bg-orange-600 border-2 border-[#15181D] shadow-lg shadow-black/50 z-10"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg></div>`,
+    iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16]
+  }),
+  infirmary: L.divIcon({
+    className: "bg-transparent",
+    html: `<div class="relative flex items-center justify-center h-8 w-8 rounded-full bg-red-500 border-2 border-[#15181D] shadow-lg shadow-black/50 z-10"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg></div>`,
+    iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16]
+  }),
+  ldrrmo: L.divIcon({
+    className: "bg-transparent",
+    html: `<div class="relative flex items-center justify-center h-8 w-8 rounded-full bg-indigo-600 border-2 border-[#15181D] shadow-lg shadow-black/50 z-10"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg></div>`,
+    iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16]
+  }),
   medical: createCustomIcon('bg-emerald-500'),
   evac: createCustomIcon('bg-purple-500'),
   team: createCustomIcon('bg-green-500'),
@@ -270,6 +286,12 @@ export default function Overview() {
     return false;
   });
 
+  const infrastructureNodes = [
+    { id: 'node-ldrrmo', name: 'LDRRMO Command Center', lat: 10.1960, lng: 122.8600, icon: icons.ldrrmo },
+    { id: 'node-bfp', name: 'Binalbagan Fire Station', lat: 10.1974, lng: 122.8650, icon: icons.bfp },
+    { id: 'node-infirmary', name: 'Binalbagan Infirmary', lat: 10.1953, lng: 122.8625, icon: icons.infirmary },
+  ];
+
   return (
     <div className="flex flex-col gap-6 pb-12 animate-in fade-in duration-500 text-zinc-100 font-sans">
       
@@ -316,7 +338,7 @@ export default function Overview() {
           </div>
 
           {/* Pending Reports */}
-          <div className="bg-[#15181D] border border-[#292D34] rounded-2xl p-5 flex flex-col justify-between">
+          <Link to="/reports" className="bg-[#15181D] border border-[#292D34] rounded-2xl p-5 flex flex-col justify-between hover:border-amber-500/30 transition-colors">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="p-2 rounded-lg bg-amber-500/10">
@@ -328,12 +350,12 @@ export default function Overview() {
             </div>
             <div className="mt-4 flex items-center justify-between">
               <p className="text-xs text-zinc-500">Reports awaiting action</p>
-              <button className="text-[10px] font-bold text-amber-500 uppercase tracking-wider hover:text-amber-400">View All</button>
+              <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">View All</span>
             </div>
-          </div>
+          </Link>
 
           {/* Citizens Monitored */}
-          <div className="bg-[#15181D] border border-[#292D34] rounded-2xl p-5 flex flex-col justify-between">
+          <Link to="/admin/users" className="bg-[#15181D] border border-[#292D34] rounded-2xl p-5 flex flex-col justify-between hover:border-blue-500/30 transition-colors">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="p-2 rounded-lg bg-blue-500/10">
@@ -345,12 +367,12 @@ export default function Overview() {
             </div>
             <div className="mt-4 flex items-center justify-between">
               <p className="text-xs text-zinc-500">Registered in system</p>
-              <button className="text-[10px] font-bold text-blue-500 uppercase tracking-wider hover:text-blue-400">View Users</button>
+              <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">View Users</span>
             </div>
-          </div>
+          </Link>
 
           {/* System Status */}
-          <div className="bg-[#15181D] border border-[#292D34] rounded-2xl p-5 flex flex-col justify-between">
+          <Link to="/settings" className="bg-[#15181D] border border-[#292D34] rounded-2xl p-5 flex flex-col justify-between hover:border-emerald-500/30 transition-colors">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="p-2 rounded-lg bg-emerald-500/10">
@@ -362,9 +384,9 @@ export default function Overview() {
             </div>
             <div className="mt-4 flex items-center justify-between">
               <p className="text-xs text-zinc-500">All systems running</p>
-              <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">All Good!</p>
+              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">All Good!</span>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* COMMUNITY THREAT LEVEL (Span 4) */}
@@ -454,6 +476,12 @@ export default function Overview() {
                    <Marker key={`evac-${evac.id}`} position={[evac.latitude, evac.longitude]} icon={icons.evac} />
                 )
               ))}
+
+              {/* Plot Infrastructure Nodes */}
+              {infrastructureNodes.map(node => (
+                <Marker key={node.id} position={[node.lat, node.lng]} icon={node.icon} />
+              ))}
+              
             </MapContainer>
 
             {/* BOTTOM FILTER PILLS */}
