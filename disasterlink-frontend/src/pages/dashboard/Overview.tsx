@@ -276,7 +276,7 @@ export default function Overview() {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         
         {/* KPI CARDS (Span 8) */}
-        <div className="xl:col-span-8 grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="xl:col-span-8 grid grid-cols-2 lg:grid-cols-4 gap-6 self-start">
           {/* Active Emergencies */}
           <div className="bg-[#15181D] border border-[#292D34] rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden group">
             {activeEmergencies > 0 && <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-bl-full blur-2xl"></div>}

@@ -55,9 +55,9 @@ export default function DashboardLayout() {
   const [user, setUser] = useState({ name: "Loading...", role: "guest", department: "Loading...", assigned_barangay: "all", lguName: "DisasterLink", location: "Philippines" });
   
   // States
-  const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // For mobile overlay
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // For desktop collapse
   const [lastUpdated, setLastUpdated] = useState<string>("--:--");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -173,22 +173,22 @@ export default function DashboardLayout() {
     { name: "Dashboard", path: "/", icon: LayoutDashboard },
     { name: "Live Map", path: "/map", icon: MapPinned },
     { name: "Incidents", path: "/reports", icon: AlertTriangle },
-    { name: "Emergency Dispatch", path: "/dispatch", icon: Ambulance }, // Might map to existing reports
+    { name: "Emergency Dispatch", path: "/reports", icon: Ambulance },
     { name: "Alerts", path: "/alerts", icon: BellRing },
   ];
 
   const monitoringNav = [
     { name: "Weather Intelligence", path: "/weather", icon: CloudRain },
-    { name: "Citizen Reports", path: "/reports?filter=citizen", icon: FileText },
-    { name: "Evacuation Centers", path: "/evacuation", icon: Home },
+    { name: "Citizen Reports", path: "/reports", icon: FileText },
+    { name: "Evacuation Centers", path: "/map", icon: Home },
     { name: "Response Teams", path: "/admin/teams", icon: Users },
   ];
 
   const managementNav = [
     { name: "Personnel", path: "/admin/users", icon: ShieldCheck },
-    { name: "Citizens", path: "/citizens", icon: UserCircle },
+    { name: "Citizens", path: "/admin/users", icon: UserCircle },
     { name: "System Settings", path: "/settings", icon: Settings },
-    { name: "Audit Logs", path: "/audit", icon: FileKey },
+    { name: "Audit Logs", path: "/settings", icon: FileKey },
   ];
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -206,18 +206,19 @@ export default function DashboardLayout() {
       <Link
         to={item.path}
         onClick={() => setIsSidebarOpen(false)}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all relative ${
+        className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-2.5 rounded-lg text-[13px] font-medium transition-all relative ${
           isActive
             ? "bg-red-500/10 text-white"
             : "text-zinc-400 hover:bg-zinc-800/40 hover:text-white"
         }`}
+        title={isSidebarCollapsed ? item.name : undefined}
       >
         {isActive && (
           <motion.div layoutId="activeNavIndicator" className="absolute left-0 top-0 bottom-0 w-[3px] bg-red-500 rounded-r-full" />
         )}
-        <Icon className={`h-4 w-4 ${isActive ? 'text-red-500' : 'text-zinc-500'}`} />
-        <span className="flex-1">{item.name}</span>
-        {isActive && <ChevronRight className="h-3 w-3 text-red-500/50" />}
+        <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-red-500' : 'text-zinc-500'}`} />
+        {!isSidebarCollapsed && <span className="flex-1 truncate">{item.name}</span>}
+        {isActive && !isSidebarCollapsed && <ChevronRight className="h-3 w-3 text-red-500/50 shrink-0" />}
       </Link>
     );
   };
@@ -237,26 +238,33 @@ export default function DashboardLayout() {
       </AnimatePresence>
 
       {/* COMMAND CENTER SIDEBAR */}
-      <aside className={`fixed md:relative z-50 w-[260px] h-full flex flex-col bg-[#111115] border-r border-[#292D34] transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      <aside className={`fixed md:relative z-50 h-full flex flex-col bg-[#111115] border-r border-[#292D34] transform transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0 w-[260px]' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[80px]' : 'md:w-[260px]'}`}>
         
         {/* LOGO AREA */}
-        <div className="h-[72px] flex items-center px-6 border-b border-[#292D34] shrink-0 bg-[#0B0D10]/50">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 bg-red-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(239,27,36,0.4)]">
-               <Activity className="h-5 w-5 text-white" />
+        <div className={`h-[72px] flex items-center border-b border-[#292D34] shrink-0 bg-[#0B0D10]/50 ${isSidebarCollapsed ? 'justify-center px-0' : 'px-6'}`}>
+          {!isSidebarCollapsed && (
+            <div className="flex items-center gap-3 flex-1 overflow-hidden">
+              <div className="h-8 w-8 shrink-0 bg-red-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(239,27,36,0.4)]">
+                 <Activity className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-black tracking-tight text-white truncate">DisasterLink</span>
             </div>
-            <span className="text-xl font-black tracking-tight text-white">DisasterLink</span>
-          </div>
+          )}
+          {isSidebarCollapsed && (
+            <div className="h-8 w-8 bg-red-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(239,27,36,0.4)]">
+              <Activity className="h-5 w-5 text-white" />
+            </div>
+          )}
           <button onClick={() => setIsSidebarOpen(false)} className="md:hidden ml-auto text-zinc-500 hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* NAVIGATION */}
-        <nav className="flex-1 flex flex-col gap-6 px-3 py-6 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 flex flex-col gap-6 px-3 py-6 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           
           <div className="space-y-1">
-            <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-3 px-4">Command</div>
+            {!isSidebarCollapsed && <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-3 px-4">Command</div>}
             {isAdmin && commandNav.map((item) => <NavItem key={item.name} item={item} />)}
             {isCaptain && (
               <NavItem item={{ name: "Local Command", path: "/barangay-command", icon: LayoutDashboard }} />
@@ -265,33 +273,41 @@ export default function DashboardLayout() {
 
           {isAdmin && (
             <div className="space-y-1">
-              <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-3 px-4">Monitoring</div>
+              {!isSidebarCollapsed && <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-3 px-4">Monitoring</div>}
               {monitoringNav.map((item) => <NavItem key={item.name} item={item} />)}
             </div>
           )}
 
           {isAdmin && (
             <div className="space-y-1">
-              <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-3 px-4">Management</div>
+              {!isSidebarCollapsed && <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-3 px-4">Management</div>}
               {managementNav.map((item) => <NavItem key={item.name} item={item} />)}
             </div>
           )}
         </nav>
 
         {/* BOTTOM IDENTITY */}
-        <div className="p-4 border-t border-[#292D34] bg-[#0B0D10]/30 shrink-0">
-          <div className="bg-[#15181D] border border-[#292D34] rounded-xl p-3 flex items-start gap-3 relative group">
-            <div className="bg-zinc-800 p-2 rounded-lg shrink-0">
-              <ShieldCheck className="h-5 w-5 text-zinc-400" />
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-xs font-bold text-white truncate">{user.lguName} Command</p>
-              <p className="text-[10px] text-zinc-500 truncate">{user.location}</p>
-            </div>
-            <button onClick={handleLogout} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-md hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition-colors" title="Logout">
-              <LogOut className="h-4 w-4" />
+        <div className={`p-4 border-t border-[#292D34] bg-[#0B0D10]/30 shrink-0 ${isSidebarCollapsed ? 'flex justify-center' : ''}`}>
+          {isSidebarCollapsed ? (
+            <button onClick={handleLogout} className="p-3 bg-[#15181D] border border-[#292D34] rounded-xl hover:bg-red-500/10 text-zinc-400 hover:text-red-500 transition-colors shadow-sm" title="Logout">
+              <LogOut className="h-5 w-5" />
             </button>
-          </div>
+          ) : (
+            <div className="bg-[#15181D] border border-[#292D34] rounded-xl p-3 flex items-center justify-between gap-2 group shadow-sm">
+              <div className="flex items-center gap-3 overflow-hidden flex-1">
+                <div className="bg-zinc-800 p-2 rounded-lg shrink-0">
+                  <ShieldCheck className="h-5 w-5 text-zinc-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-white truncate pr-2">{user.lguName} Command</p>
+                  <p className="text-[10px] text-zinc-500 truncate pr-2">{user.location}</p>
+                </div>
+              </div>
+              <button onClick={handleLogout} className="p-2 shrink-0 rounded-md hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition-colors" title="Logout">
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -302,7 +318,13 @@ export default function DashboardLayout() {
         <header className="h-[72px] border-b border-[#292D34] bg-[#111115]/80 backdrop-blur-xl flex items-center justify-between px-6 shrink-0 z-30">
           
           <div className="flex items-center gap-4 flex-1">
+            {/* Mobile Sidebar Toggle */}
             <button onClick={() => setIsSidebarOpen(true)} className="md:hidden text-zinc-400 hover:text-white p-2 bg-[#15181D] rounded-lg border border-[#292D34]">
+              <Menu className="h-5 w-5" />
+            </button>
+            
+            {/* Desktop Sidebar Toggle (Hamburger) */}
+            <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="hidden md:flex text-zinc-400 hover:text-white p-2 bg-[#15181D] rounded-lg border border-[#292D34] shadow-sm transition-colors hover:border-zinc-500">
               <Menu className="h-5 w-5" />
             </button>
             
