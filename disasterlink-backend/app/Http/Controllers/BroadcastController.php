@@ -63,7 +63,11 @@ class BroadcastController extends Controller
         Cache::put("active_broadcast_{$lguId}", ['id' => $broadcast->id, 'message' => $message], now()->addMinutes(60));
         
         // 1. FIRE REAL-TIME PUSHER EVENT (Instant overlay for active users)
-        event(new \App\Events\EmergencyBroadcastEvent($broadcast));
+        try {
+            event(new \App\Events\EmergencyBroadcastEvent($broadcast));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Pusher Broadcast Failed: ' . $e->getMessage());
+        }
         
         // 2. FIREBASE PUSH NOTIFICATIONS
         try {
@@ -127,7 +131,11 @@ class BroadcastController extends Controller
         ]);
         
         // Broadcast Event
-        event(new \App\Events\EmergencyBroadcastEvent($broadcast));
+        try {
+            event(new \App\Events\EmergencyBroadcastEvent($broadcast));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Local Pusher Broadcast Failed: ' . $e->getMessage());
+        }
         
         // Firebase Push Notifications for Local Broadcast
         try {

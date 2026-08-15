@@ -43,6 +43,11 @@ Route::get('/cron/monitor/{secret}', function ($secret) {
     return response()->json(['status' => 'ok', 'output' => trim($output)]);
 });
 
+Route::get('/cron/test-weather', function () {
+    \Illuminate\Support\Facades\Artisan::call('disasterlink:daily-weather-summary');
+    return response()->json(['output' => \Illuminate\Support\Facades\Artisan::output()]);
+});
+
 Route::get('/cron', function () { 
     $logPath = storage_path('logs/laravel.log');
     if (file_exists($logPath)) {
