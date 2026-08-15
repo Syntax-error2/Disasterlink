@@ -79,30 +79,33 @@
    3. DARK MODE (Deep Zinc, Sleek, Premium)
    ========================================= */
 .dark {
-  --background: oklch(0.14 0 0); /* Sleek Zinc 950 */
-  --foreground: oklch(0.98 0 0);
+  --background: #0B0D10;
+  --foreground: #F5F7FA;
   
-  --card: oklch(0.17 0 0); /* Subtle elevation */
-  --card-foreground: oklch(0.98 0 0);
+  --card: #15181D;
+  --card-foreground: #F5F7FA;
   
-  --popover: oklch(0.17 0 0);
-  --popover-foreground: oklch(0.98 0 0);
+  --popover: #15181D;
+  --popover-foreground: #F5F7FA;
   
-  --primary: oklch(0.60 0.2 25); /* Premium, slightly muted red */
-  --primary-foreground: oklch(0.99 0 0);
+  --primary: #EF1B24;
+  --primary-foreground: #ffffff;
   
-  --secondary: oklch(0.22 0 0);
-  --secondary-foreground: oklch(0.98 0 0);
+  --secondary: #101318;
+  --secondary-foreground: #F5F7FA;
   
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.70 0 0);
+  --muted: #101318;
+  --muted-foreground: #9AA1AA;
   
-  --accent: oklch(0.22 0 0);
-  --accent-foreground: oklch(0.98 0 0);
+  --accent: #101318;
+  --accent-foreground: #F5F7FA;
   
-  --border: oklch(0.24 0 0); /* Crisp, visible thin borders */
-  --input: oklch(0.24 0 0);
-  --ring: oklch(0.60 0.2 25);
+  --destructive: #FF3131;
+  --destructive-foreground: #ffffff;
+  
+  --border: #292D34;
+  --input: #292D34;
+  --ring: #EF1B24;
 }
 
 /* =========================================
