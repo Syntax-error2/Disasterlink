@@ -476,12 +476,12 @@ export default function Overview() {
                 );
               })}
               
-              {/* Plot Evac Centers */}
-              {evacCentersData.map(evac => (
-                evac.latitude && evac.longitude && (
-                   <Marker key={`evac-${evac.id}`} position={[evac.latitude, evac.longitude]} icon={icons.evac} />
-                )
-              ))}
+              {evacCentersData.map(evac => {
+                if (mapFilter !== 'All' && mapFilter !== 'Evac Center') return null;
+                return evac.lat && evac.lng && (
+                   <Marker key={`evac-${evac.id}`} position={[evac.lat, evac.lng]} icon={icons.evac} />
+                );
+              })}
 
               {/* Plot Infrastructure Nodes */}
               {infrastructureNodes.map(node => (
