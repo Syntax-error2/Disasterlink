@@ -96,7 +96,15 @@ class BroadcastController extends Controller
                     ->withNotification($notification)
                     ->withAndroidConfig($config);
                 
-                $messaging->sendMulticast($cloudMessage, $tokens);
+                $report = $messaging->sendMulticast($cloudMessage, $tokens);
+                \Illuminate\Support\Facades\Log::info('Firebase Push Report. Success: ' . $report->successes()->count() . ', Failures: ' . $report->failures()->count());
+                if ($report->failures()->count() > 0) {
+                    foreach ($report->failures() as $failure) {
+                        \Illuminate\Support\Facades\Log::error('Firebase Token Failure: ' . $failure->error()->getMessage());
+                    }
+                }
+            } else {
+                \Illuminate\Support\Facades\Log::warning('Firebase Push Skipped: No FCM tokens found for LGU.');
             }
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Firebase Push Failed: ' . $e->getMessage());

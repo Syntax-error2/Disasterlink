@@ -27,6 +27,17 @@ export function PushNotificationManager() {
             lights: true,
             lightColor: '#EF4444' // Red light
           });
+
+          await PushNotifications.createChannel({
+            id: 'general_announcements',
+            name: 'General Announcements',
+            description: 'Weather digests and general updates',
+            importance: 3, // Default importance
+            visibility: 1, // Show on lock screen
+            vibration: true,
+            lights: true,
+            lightColor: '#3B82F6' // Blue light
+          });
         } catch (e) {
           console.error("Failed to create push channel", e);
         }

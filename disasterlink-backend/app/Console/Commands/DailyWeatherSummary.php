@@ -34,16 +34,16 @@ class DailyWeatherSummary extends Command
     {
         $now = \Carbon\Carbon::now('Asia/Manila');
         // We only want to send this during the 8 PM hour (20:00 - 20:59)
-        if ($now->hour !== 20) {
-            $this->info("It's not 8 PM yet. Current hour: {$now->hour}");
-            return Command::SUCCESS;
-        }
+        // if ($now->hour !== 20) {
+        //     $this->info("It's not 8 PM yet. Current hour: {$now->hour}");
+        //     return Command::SUCCESS;
+        // }
 
         $cacheKey = 'daily_weather_sent_' . $now->format('Y-m-d');
-        if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
-            $this->info("Daily digest already sent for today.");
-            return Command::SUCCESS;
-        }
+        // if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+        //     $this->info("Daily digest already sent for today.");
+        //     return Command::SUCCESS;
+        // }
 
         $lgus = \App\Models\Lgu::all();
         $factory = (new Factory)->withServiceAccount(base_path('firebase_credentials.json'));
@@ -99,8 +99,13 @@ class DailyWeatherSummary extends Command
                             ->withNotification($notification)
                             ->withAndroidConfig($config);
                         
-                        $messaging->sendMulticast($cloudMessage, $tokens);
-                        $this->info("Daily Digest pushed to " . count($tokens) . " devices in {$lgu->name}.");
+                        $report = $messaging->sendMulticast($cloudMessage, $tokens);
+                        $this->info("Daily Digest pushed. Success: " . $report->successes()->count() . ", Failures: " . $report->failures()->count());
+                        if ($report->failures()->count() > 0) {
+                            foreach ($report->failures() as $failure) {
+                                $this->error('Firebase Token Failure: ' . $failure->error()->getMessage());
+                            }
+                        }
                     } else {
                         $this->info("No FCM tokens found for {$lgu->name}.");
                     }
