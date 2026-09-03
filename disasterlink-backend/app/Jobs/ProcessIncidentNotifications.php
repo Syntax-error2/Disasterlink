@@ -51,7 +51,7 @@ class ProcessIncidentNotifications implements ShouldQueue
                 $factory = (new Factory)->withServiceAccount(base_path('firebase_credentials.json'));
                 $messaging = $factory->createMessaging();
                 
-                $title = '🚨 NEW INCIDENT: ' . $this->incident->incident_type;
+                $title = 'NEW INCIDENT: ' . $this->incident->incident_type;
                 $body = 'Location: ' . $this->incident->exact_location;
 
                 $notification = Notification::create($title, $body);
@@ -68,10 +68,21 @@ class ProcessIncidentNotifications implements ShouldQueue
 
                 $cloudMessage = CloudMessage::new()
                     ->withNotification($notification)
-                    ->withAndroidConfig($config);
+                    ->withAndroidConfig($config)
+                    ->withData([
+                        'title' => $title,
+                        'body' => $body,
+                        'channel_id' => 'emergency_alerts'
+                    ]);
                 
-                $messaging->sendMulticast($cloudMessage, $tokens);
-                Log::info('FCM Incident Push Sent to ' . count($tokens) . ' responders.');
+                $report = $messaging->sendMulticast($cloudMessage, $tokens);
+                Log::info('FCM Incident Push Sent to ' . count($tokens) . ' responders. Success: ' . $report->successes()->count() . ', Failures: ' . $report->failures()->count());
+                
+                if ($report->failures()->count() > 0) {
+                    foreach ($report->failures() as $failure) {
+                        Log::error('Firebase Token Failure: ' . $failure->error()->getMessage());
+                    }
+                }
             }
         } catch (\Exception $e) {
             Log::error('FCM Incident Push Failed: ' . $e->getMessage());
