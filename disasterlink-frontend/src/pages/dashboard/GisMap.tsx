@@ -177,6 +177,13 @@ export default function GisDashboard() {
     fetchResponders();
     fetchAiPredictions();
     
+    // Real-time Fleet Tracking via WebSockets
+    const responderChannel = echo.channel('responders');
+    responderChannel.listen('.responder.moved', (e: any) => {
+      console.log('Real-time Responder Fleet Event:', e);
+      fetchResponders(); // Refresh the map markers immediately
+    });
+
     const handleSOS = (e: any) => {
       setIncomingSOS(e.detail);
       // Try to play an alert sound
@@ -189,6 +196,7 @@ export default function GisDashboard() {
 
     return () => {
        window.removeEventListener('new_sos_alert', handleSOS);
+       echo.leaveChannel('responders'); // Clean up websocket
     };
   }, []);
 

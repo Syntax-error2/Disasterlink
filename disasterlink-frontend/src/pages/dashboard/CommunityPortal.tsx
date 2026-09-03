@@ -508,9 +508,26 @@ export default function CommunityPortal() {
       reporting_user: activeUser.name
     };
 
+    if (isOffline || !navigator.onLine) {
+      // OFFLINE SMS FALLBACK
+      setTimeout(() => {
+        setIsSOSActive(false);
+        showToast("No Internet. Falling back to SMS SOS...", "error");
+        
+        // Construct SMS body
+        const smsBody = `DISASTERLINK SOS\nName: ${payload.reporting_user}\nBrgy: ${payload.reporting_barangay}\nLoc: ${payload.exact_location}\nLat: ${payload.latitude}, Lng: ${payload.longitude}`;
+        const encodedBody = encodeURIComponent(smsBody);
+        
+        // Default LGU Hotline (Fallback)
+        const hotline = "09171112222"; 
+        
+        // Trigger native SMS composer
+        window.location.href = `sms:${hotline}?body=${encodedBody}`;
+      }, 2000);
+      return;
+    }
+
     try {
-      // With our new global OfflineSyncManager, axiosInstance will automatically queue this
-      // request in IndexedDB if navigator.onLine is false, and return a mock success response!
       const response = await axiosInstance.post("/incidents", payload);
       
       if (response.data && response.data.id) {
@@ -525,19 +542,17 @@ export default function CommunityPortal() {
       
       setTimeout(() => {
         setIsSOSActive(false);
-        if (response.data?.offline) {
-           showToast("No Signal: SOS queued locally! It will auto-sync when connection restores.", "error");
-        } else {
-           showToast("Emergency Dispatch Notified. Admin alerted.", "success");
-        }
+        showToast("Emergency Dispatch Notified. Admin alerted.", "success");
       }, 4000);
       
     } catch (error) {
       console.warn("Failed to transmit SOS to backend", error);
       setTimeout(() => {
         setIsSOSActive(false);
-        showToast("SOS Transmission Failed. Please try again.", "error");
-      }, 4000);
+        showToast("No Internet. Falling back to SMS SOS...", "error");
+        const smsBody = `DISASTERLINK SOS\nName: ${payload.reporting_user}\nBrgy: ${payload.reporting_barangay}\nLoc: ${payload.exact_location}\nLat: ${payload.latitude}, Lng: ${payload.longitude}`;
+        window.location.href = `sms:09171112222?body=${encodeURIComponent(smsBody)}`;
+      }, 1000);
     }
   };
 
