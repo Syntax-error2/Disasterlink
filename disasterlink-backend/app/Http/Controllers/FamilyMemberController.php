@@ -66,6 +66,37 @@ class FamilyMemberController extends Controller
                 FamilyMember::where('user_id', $userId)
                             ->where('name', '!=', $name)
                             ->update(['status' => $status]);
+                            
+                // Dispatch Push Notification to family members (devices logged into this account)
+                if (!empty($authUser->fcm_token)) {
+                    try {
+                        $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
+                        $messaging = $factory->createMessaging();
+                        $notification = \Kreait\Firebase\Messaging\Notification::create('Family Safety Alert', "{$name} has marked themselves as SAFE.");
+                        
+                        $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                            'priority' => 'high',
+                            'notification' => [
+                                'channel_id' => 'general_announcements',
+                                'sound' => 'default',
+                                'default_vibrate_timings' => true,
+                            ],
+                        ]);
+
+                        $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()
+                            ->withNotification($notification)
+                            ->withAndroidConfig($config)
+                            ->withData([
+                                'title' => 'Family Safety Alert',
+                                'body' => "{$name} has marked themselves as SAFE.",
+                                'channel_id' => 'general_announcements'
+                            ]);
+                        
+                        $messaging->sendMulticast($cloudMessage, [$authUser->fcm_token]);
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Family Status Firebase Push Failed: ' . $e->getMessage());
+                    }
+                }
             }
             
             return response()->json($member, 200);

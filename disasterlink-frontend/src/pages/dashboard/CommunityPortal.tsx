@@ -1135,16 +1135,25 @@ function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTarge
 
             {evacCenters.map((evac:any) => {
                const percentage = (evac.current_occupants / evac.capacity) * 100;
-               const capColor = percentage >= 100 ? 'text-red-600' : percentage > 80 ? 'text-yellow-600' : 'text-green-600';
+               const isFull = percentage >= 100;
+               const capColor = isFull ? 'text-red-600' : percentage > 80 ? 'text-yellow-600' : 'text-green-600';
                return (
               <Marker key={evac.id} position={[evac.lat, evac.lng]} icon={evacIcon}>
                  <Popup className="custom-popup">
                     <div className="font-bold mb-1 text-zinc-900">{evac.name}</div>
                     <div className={`text-xs font-bold mb-2 ${capColor}`}>{evac.current_occupants} / {evac.capacity} Occupants</div>
-                    <button onClick={() => {
-                        showToast(`Routing to ${evac.name}`);
-                        setTargetRoute([evac.lat, evac.lng]);
-                    }} className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded transition-colors">Navigate</button>
+                    <button 
+                      disabled={isFull}
+                      onClick={() => {
+                        if (!isFull) {
+                          showToast(`Routing to ${evac.name}`);
+                          setTargetRoute([evac.lat, evac.lng]);
+                        }
+                      }} 
+                      className={`text-xs font-bold w-full py-2 rounded transition-colors ${isFull ? 'bg-red-100 text-red-500 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                    >
+                      {isFull ? 'FULL CAPACITY' : 'Navigate'}
+                    </button>
                  </Popup>
               </Marker>
             )})}
