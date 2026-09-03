@@ -14,6 +14,7 @@ export default function EmergencyAlerts() {
   const [message, setMessage] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [isDispatching, setIsDispatching] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
 
   const { user } = useAuth();
@@ -39,6 +40,26 @@ export default function EmergencyAlerts() {
   useEffect(() => {
     fetchHistory();
   }, []);
+
+  const handleAIPredict = async () => {
+    setIsAiLoading(true);
+    try {
+      // Pass force_rain=1 to demonstrate the feature if no real rain is currently falling in Binalbagan
+      const res = await axiosInstance.get('/ai/flood-prediction?force_rain=1');
+      if (res.data.risk_level === 'HIGH') {
+        setTitle("TARGETED EVACUATION: FLOOD RISK");
+        setMessage(res.data.ai_recommendation);
+        setTargetArea(res.data.target_area);
+        showToast("AI Risk Assessment complete. High risk detected. Alert auto-drafted.", "error");
+      } else {
+        showToast("AI indicates LOW risk. No automated alert drafted.", "success");
+      }
+    } catch (e: any) {
+      showToast("AI Prediction failed.", "error");
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handleDispatch = async () => {
     if (!title.trim() || !message.trim()) return;
@@ -101,9 +122,21 @@ export default function EmergencyAlerts() {
             </div>
             
             <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/50 pb-4">
-              <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-500 text-lg font-black uppercase tracking-wide">
-                <Activity className="h-5 w-5" /> Transmission Uplink
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-500 text-lg font-black uppercase tracking-wide">
+                  <Activity className="h-5 w-5" /> Transmission Uplink
+                </CardTitle>
+                <Button 
+                  onClick={handleAIPredict} 
+                  disabled={isAiLoading}
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 font-bold"
+                >
+                  {isAiLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Activity className="h-4 w-4 mr-2" />}
+                  AI Flood Prediction
+                </Button>
+              </div>
               <CardDescription className="text-xs font-semibold text-zinc-500">Target mass communication to registered devices.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5 pt-5 relative z-10">
@@ -118,6 +151,12 @@ export default function EmergencyAlerts() {
                   {barangays.map(b => <option key={b} value={`Brgy. ${b} Only`}>Brgy. {b} Only</option>)}
                   <option value="Identified Low-Lying Zones">Identified Low-Lying Zones</option>
                   <option value="Coastal Areas">Coastal Areas</option>
+                  {![
+                    "All Barangays (Municipality Wide)", 
+                    ...barangays.map(b => `Brgy. ${b} Only`), 
+                    "Identified Low-Lying Zones", 
+                    "Coastal Areas"
+                  ].includes(targetArea) && <option value={targetArea}>{targetArea}</option>}
                 </select>
               </div>
               <div className="space-y-1.5">

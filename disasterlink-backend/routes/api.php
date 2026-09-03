@@ -95,6 +95,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::put('/evacuation-centers/{id}', [EvacuationCenterController::class, 'update'])->middleware('role:admin');
 
     // ==========================================
+    // AI PREDICTIONS API
+    // ==========================================
+    Route::get('/ai/flood-prediction', [App\Http\Controllers\DisasterPredictionController::class, 'analyzeRisk'])->middleware('role:admin');
+
+    // ==========================================
     // DASHBOARD STATS API
     // ==========================================
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
