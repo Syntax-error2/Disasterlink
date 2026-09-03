@@ -245,7 +245,12 @@ class MonitorDisasters extends Command
             if (!empty($tokens)) {
                 $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
                 $messaging = $factory->createMessaging();
-                $notification = \Kreait\Firebase\Messaging\Notification::create($title, $message);
+                
+                // Clean emoji from title to prevent Android notification parse corruption
+                $cleanTitle = str_replace(['🚨', '🌧️', '🌀'], '', $title);
+                $cleanTitle = trim($cleanTitle);
+
+                $notification = \Kreait\Firebase\Messaging\Notification::create($cleanTitle, $message);
                 $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
                     'priority' => 'high',
                     'notification' => [
@@ -257,10 +262,20 @@ class MonitorDisasters extends Command
                 ]);
                 $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()
                     ->withNotification($notification)
-                    ->withAndroidConfig($config);
+                    ->withAndroidConfig($config)
+                    ->withData([
+                        'title' => $cleanTitle,
+                        'body' => $message,
+                        'channel_id' => 'emergency_alerts'
+                    ]);
                 
-                $messaging->sendMulticast($cloudMessage, $tokens);
-                $this->info("FCM Sent to " . count($tokens) . " devices.");
+                $report = $messaging->sendMulticast($cloudMessage, $tokens);
+                $this->info("FCM Sent to " . count($tokens) . " devices. Success: " . $report->successes()->count() . ", Failures: " . $report->failures()->count());
+                if ($report->failures()->count() > 0) {
+                    foreach ($report->failures() as $failure) {
+                        \Illuminate\Support\Facades\Log::error('Firebase Token Failure: ' . $failure->error()->getMessage());
+                    }
+                }
             }
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Firebase Push Failed: ' . $e->getMessage());
