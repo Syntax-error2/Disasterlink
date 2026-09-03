@@ -80,7 +80,7 @@ class BroadcastController extends Controller
             if (!empty($tokens)) {
                 $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
                 $messaging = $factory->createMessaging();
-                $notification = \Kreait\Firebase\Messaging\Notification::create('🚨 ' . $title, $message);
+                $notification = \Kreait\Firebase\Messaging\Notification::create('EMERGENCY ALERT: ' . $title, $message);
                 
                 $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
                     'priority' => 'high',
@@ -94,7 +94,12 @@ class BroadcastController extends Controller
 
                 $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()
                     ->withNotification($notification)
-                    ->withAndroidConfig($config);
+                    ->withAndroidConfig($config)
+                    ->withData([
+                        'title' => 'EMERGENCY ALERT: ' . $title,
+                        'body' => $message,
+                        'channel_id' => 'emergency_alerts'
+                    ]);
                 
                 $report = $messaging->sendMulticast($cloudMessage, $tokens);
                 \Illuminate\Support\Facades\Log::info('Firebase Push Report. Success: ' . $report->successes()->count() . ', Failures: ' . $report->failures()->count());
@@ -159,7 +164,7 @@ class BroadcastController extends Controller
             if (!empty($tokens)) {
                 $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
                 $messaging = $factory->createMessaging();
-                $notification = \Kreait\Firebase\Messaging\Notification::create('🚨 ' . $title, $message);
+                $notification = \Kreait\Firebase\Messaging\Notification::create('LOCAL ALERT: ' . $title, $message);
                 
                 $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
                     'priority' => 'high',
@@ -173,7 +178,12 @@ class BroadcastController extends Controller
 
                 $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()
                     ->withNotification($notification)
-                    ->withAndroidConfig($config);
+                    ->withAndroidConfig($config)
+                    ->withData([
+                        'title' => 'LOCAL ALERT: ' . $title,
+                        'body' => $message,
+                        'channel_id' => 'emergency_alerts'
+                    ]);
                 
                 $messaging->sendMulticast($cloudMessage, $tokens);
             }
