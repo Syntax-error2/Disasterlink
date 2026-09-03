@@ -66,6 +66,13 @@ export default function ResponderMobile() {
   const [resolvedIds, setResolvedIds] = useState<number[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // DAMAGE REPORT STATE
+  const [showDamageReport, setShowDamageReport] = useState(false);
+  const [damageDescription, setDamageDescription] = useState("");
+  const [damagePhoto, setDamagePhoto] = useState<File | null>(null);
+  const [isSubmittingDamage, setIsSubmittingDamage] = useState(false);
+  const damageFileInputRef = useRef<HTMLInputElement>(null);
+
   // Real-time responder location (defaults to a central point until GPS locks)
   const [responderLocation, setResponderLocation] = useState<[number, number]>(MAP_CENTER);
 
@@ -302,6 +309,36 @@ export default function ResponderMobile() {
   // RESPONDER PROFILE & LOGOUT
   // ==========================================
 
+  const handleSubmitDamage = async () => {
+    if (!damageDescription.trim()) {
+      showToast("Please provide a description of the damage.", "warning");
+      return;
+    }
+    setIsSubmittingDamage(true);
+    try {
+      // Typically you'd use FormData here to upload the image, but for this mock we'll just send JSON
+      const payload = {
+        name: user?.name || "Responder Unit",
+        phone: user?.phone || "N/A",
+        incident_type: "Infrastructure Damage",
+        reporting_barangay: user?.assigned_barangay || "Unknown",
+        exact_location: "Responder GPS Lock",
+        latitude: responderLocation[0].toString(),
+        longitude: responderLocation[1].toString(),
+        description: damageDescription
+      };
+      await axiosInstance.post('/incidents', payload);
+      showToast("Damage Report submitted to Command Center.", "success");
+      setShowDamageReport(false);
+      setDamageDescription("");
+      setDamagePhoto(null);
+    } catch (error) {
+      showToast("Failed to submit damage report.", "alert");
+    } finally {
+      setIsSubmittingDamage(false);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -449,6 +486,17 @@ export default function ResponderMobile() {
                   <Marker position={responderLocation} icon={responderIcon} />
                   <Circle center={responderLocation} radius={300} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1, stroke: false }} />
                 </MapContainer>
+                
+                {/* Damage Report Button */}
+                <div className="absolute bottom-4 left-4 right-4 z-[400]">
+                  <button 
+                    onClick={() => setShowDamageReport(true)}
+                    className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black tracking-widest uppercase py-4 rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-colors active:scale-95 border border-orange-500/50"
+                  >
+                    <AlertTriangle className="h-5 w-5" />
+                    Submit Damage Report
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -676,6 +724,93 @@ export default function ResponderMobile() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* DAMAGE REPORT MODAL */}
+      <AnimatePresence>
+        {showDamageReport && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[600] bg-zinc-950/90 backdrop-blur-md flex flex-col justify-end p-4"
+          >
+            <motion.div 
+              initial={{ y: 200, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 200, opacity: 0 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto"
+            >
+              <button 
+                onClick={() => { setShowDamageReport(false); setDamagePhoto(null); setDamageDescription(""); }} 
+                className="absolute top-4 right-4 text-zinc-400 hover:text-white"
+              >
+                <ArrowLeft className="h-6 w-6 rotate-180" />
+              </button>
+              
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-orange-500/20 p-3 rounded-full text-orange-500">
+                  <AlertTriangle className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white">Damage Report</h3>
+                  <p className="text-xs text-zinc-400 font-mono">GPS Locked: {responderLocation[0].toFixed(5)}, {responderLocation[1].toFixed(5)}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1 block">Damage Description</label>
+                  <textarea 
+                    value={damageDescription}
+                    onChange={(e) => setDamageDescription(e.target.value)}
+                    placeholder="Describe the infrastructure damage (e.g., Collapsed bridge, downed power lines, blocked road...)"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-orange-500/50 min-h-[120px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1 block">Photographic Evidence</label>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    capture="environment"
+                    ref={damageFileInputRef}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        setDamagePhoto(e.target.files[0]);
+                      }
+                    }}
+                    className="hidden" 
+                  />
+                  
+                  {damagePhoto ? (
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="h-5 w-5 text-emerald-500" />
+                        <span className="text-sm font-bold text-emerald-500 truncate">{damagePhoto.name}</span>
+                      </div>
+                      <button onClick={() => setDamagePhoto(null)} className="text-zinc-500 hover:text-red-400"><LogOut className="h-4 w-4" /></button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => damageFileInputRef.current?.click()}
+                      className="w-full bg-zinc-950 border border-dashed border-zinc-700 hover:border-orange-500/50 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 transition-colors group"
+                    >
+                      <Camera className="h-8 w-8 text-zinc-500 group-hover:text-orange-500 transition-colors" />
+                      <span className="text-sm font-bold text-zinc-400 group-hover:text-orange-400">Capture Scene Photo</span>
+                    </button>
+                  )}
+                </div>
+                
+                <button 
+                  onClick={handleSubmitDamage}
+                  disabled={isSubmittingDamage || !damageDescription}
+                  className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-black tracking-widest uppercase py-4 rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-all active:scale-95 mt-6"
+                >
+                  {isSubmittingDamage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                  {isSubmittingDamage ? "Transmitting..." : "Submit to Command"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* CHANGE PASSWORD MODAL */}
       <AnimatePresence>

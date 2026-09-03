@@ -59,6 +59,10 @@ Route::get('/cron', function () {
     return response()->json(['message' => 'No log file']); 
 });
 
+Route::get('/debug/tokens', function () {
+    return response()->json(\App\Models\User::whereNotNull('fcm_token')->get(['id', 'name', 'lgu_id', 'fcm_token']));
+});
+
 use App\Http\Controllers\IncidentReportController;
 use App\Http\Controllers\EvacuationCenterController;
 use App\Http\Controllers\DashboardController;
@@ -88,6 +92,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // ==========================================
     Route::get('/evacuation-centers', [EvacuationCenterController::class, 'index']);
     Route::post('/evacuation-centers', [EvacuationCenterController::class, 'store'])->middleware('role:admin');
+    Route::put('/evacuation-centers/{id}', [EvacuationCenterController::class, 'update'])->middleware('role:admin');
 
     // ==========================================
     // DASHBOARD STATS API
