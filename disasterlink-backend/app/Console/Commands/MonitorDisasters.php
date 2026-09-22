@@ -17,7 +17,7 @@ class MonitorDisasters extends Command
         $latitude = 10.1866; // Binalbagan Lat
         $longitude = 122.8587; // Binalbagan Lng
         
-        $localThreatMsg = null;
+        $localThreats = [];
         $cycloneMsg = null;
         $localSeverity = 0;
         $cycloneSeverity = 5;
@@ -25,9 +25,9 @@ class MonitorDisasters extends Command
         if ($demo) {
             $this->info("Running in DEMO mode: {$demo}");
             switch ($demo) {
-                case 'rain-red': $localThreatMsg = "🔴 PAGASA RED RAINFALL WARNING: Severe flooding expected in low-lying areas of Binalbagan."; $localSeverity = 5; break;
-                case 'volcano': $localThreatMsg = "🌋 VOLCANIC ALERT: PHIVOLCS has raised the alert status for Kanlaon Volcano (Sulfur Dioxide emissions detected)."; $localSeverity = 5; break;
-                case 'earthquake': $localThreatMsg = "⚠️ EARTHQUAKE DETECTED: A strong earthquake has struck near Negros Occidental."; $localSeverity = 5; break;
+                case 'rain-red': $localThreats[] = "🔴 PAGASA RED RAINFALL WARNING: Severe flooding expected in low-lying areas of Binalbagan."; $localSeverity = 5; break;
+                case 'volcano': $localThreats[] = "🌋 VOLCANIC ALERT: PHIVOLCS has raised the alert status for Kanlaon Volcano (Sulfur Dioxide emissions detected)."; $localSeverity = 5; break;
+                case 'earthquake': $localThreats[] = "⚠️ EARTHQUAKE DETECTED: A strong earthquake has struck near Negros Occidental."; $localSeverity = 5; break;
                 case 'clear': Cache::forget('active_broadcast'); $this->info("Cleared alerts."); return Command::SUCCESS;
             }
         } else {
@@ -42,8 +42,8 @@ class MonitorDisasters extends Command
                         $lon = $coords[0]; $lat = $coords[1];
                         if ($lat > 9.0 && $lat < 11.5 && $lon > 122.0 && $lon < 124.0) {
                             $mag = $q['properties']['mag'];
-                            $localThreatMsg = "⚠️ EARTHQUAKE DETECTED: Magnitude {$mag} earthquake detected near Negros. Expect aftershocks. Stay away from damaged structures.";
-                            $localSeverity = 5;
+                            $localThreats[] = "⚠️ EARTHQUAKE DETECTED: Magnitude {$mag} earthquake detected near Negros. Expect aftershocks. Stay away from damaged structures.";
+                            $localSeverity = max($localSeverity, 5);
                             break;
                         }
                     }
@@ -53,60 +53,56 @@ class MonitorDisasters extends Command
             }
 
             // 2. Check PHIVOLCS Kanlaon
-            if (!$localThreatMsg) {
-                $this->info("Checking PHIVOLCS Kanlaon status...");
-                try {
-                    $phivolcs = Http::withOptions([
-                        'verify' => false,
-                        'curl' => [CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0]
-                    ])->timeout(10)->get('https://www.phivolcs.dost.gov.ph/');
-                    
-                    if ($phivolcs->successful()) {
-                        $body = $phivolcs->body();
-                        // Check for elevated alert level OR sulfur dioxide (asupre) emissions near Kanlaon
-                        if (preg_match('/Kanlaon Volcano Bulletin.*Alert Level [2345]/sU', $body) || 
-                            preg_match('/Kanlaon.*(?:sulfur dioxide|SO2|asupre|emissions)/siU', $body)) {
-                            $localThreatMsg = "🌋 VOLCANIC ALERT: PHIVOLCS detected abnormal activity/emissions at Kanlaon Volcano. Prepare for possible ashfall or evacuation.";
-                            $localSeverity = 5;
-                        }
+            $this->info("Checking PHIVOLCS Kanlaon status...");
+            try {
+                $phivolcs = Http::withOptions([
+                    'verify' => false,
+                    'curl' => [CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0]
+                ])->timeout(10)->get('https://www.phivolcs.dost.gov.ph/');
+                
+                if ($phivolcs->successful()) {
+                    $body = $phivolcs->body();
+                    // Check for elevated alert level OR sulfur dioxide (asupre) emissions near Kanlaon
+                    if (preg_match('/Kanlaon Volcano Bulletin.*Alert Level [2345]/sU', $body) || 
+                        preg_match('/Kanlaon.*(?:sulfur dioxide|SO2|asupre|emissions)/siU', $body)) {
+                        $localThreats[] = "🌋 VOLCANIC ALERT: PHIVOLCS detected abnormal activity/emissions at Kanlaon Volcano. Prepare for possible ashfall or evacuation.";
+                        $localSeverity = max($localSeverity, 5);
                     }
-                } catch (\Exception $e) {
-                    $this->warn("Phivolcs check failed: " . $e->getMessage());
                 }
+            } catch (\Exception $e) {
+                $this->warn("Phivolcs check failed: " . $e->getMessage());
             }
 
             // 3. Check Open-Meteo Rain
-            if (!$localThreatMsg) {
-                $this->info("Checking Open-Meteo Weather...");
-                try {
-                    $weather = Http::timeout(5)->get("https://api.open-meteo.com/v1/forecast", [
-                        'latitude' => $latitude,
-                        'longitude' => $longitude,
-                        'current' => ['precipitation', 'precipitation_probability'],
-                    ]);
+            $this->info("Checking Open-Meteo Weather...");
+            try {
+                $weather = Http::timeout(5)->get("https://api.open-meteo.com/v1/forecast", [
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                    'current' => ['precipitation', 'precipitation_probability'],
+                ]);
+                
+                if ($weather->successful()) {
+                    $current = $weather->json()['current'];
+                    $precipitation = $current['precipitation'] ?? 0;
+                    $prob = $current['precipitation_probability'] ?? 0;
                     
-                    if ($weather->successful()) {
-                        $current = $weather->json()['current'];
-                        $precipitation = $current['precipitation'] ?? 0;
-                        $prob = $current['precipitation_probability'] ?? 0;
-                        
-                        if ($precipitation > 30.0) {
-                            $localThreatMsg = "🔴 PAGASA RED RAINFALL WARNING: {$precipitation} mm/hr detected. Severe flooding expected in Binalbagan.";
-                            $localSeverity = 5;
-                        } elseif ($precipitation > 15.0) {
-                            $localThreatMsg = "🟠 PAGASA ORANGE RAINFALL WARNING: {$precipitation} mm/hr detected. Flooding is threatening Binalbagan.";
-                            $localSeverity = 4;
-                        } elseif ($precipitation > 7.5) {
-                            $localThreatMsg = "🟡 PAGASA YELLOW RAINFALL WARNING: {$precipitation} mm/hr detected. Flooding is possible in Binalbagan.";
-                            $localSeverity = 3;
-                        } elseif ($prob > 80) {
-                            $localThreatMsg = "🌧️ HEAVY RAIN ADVISORY: {$prob}% chance of heavy rain in Binalbagan. Please bring an umbrella and stay safe.";
-                            $localSeverity = 2;
-                        }
+                    if ($precipitation > 30.0) {
+                        $localThreats[] = "🔴 PAGASA RED RAINFALL WARNING: {$precipitation} mm/hr detected. Severe flooding expected in Binalbagan.";
+                        $localSeverity = max($localSeverity, 5);
+                    } elseif ($precipitation > 15.0) {
+                        $localThreats[] = "🟠 PAGASA ORANGE RAINFALL WARNING: {$precipitation} mm/hr detected. Flooding is threatening Binalbagan.";
+                        $localSeverity = max($localSeverity, 4);
+                    } elseif ($precipitation > 7.5) {
+                        $localThreats[] = "🟡 PAGASA YELLOW RAINFALL WARNING: {$precipitation} mm/hr detected. Flooding is possible in Binalbagan.";
+                        $localSeverity = max($localSeverity, 3);
+                    } elseif ($prob > 80) {
+                        $localThreats[] = "🌧️ HEAVY RAIN ADVISORY: {$prob}% chance of heavy rain in Binalbagan. Please bring an umbrella and stay safe.";
+                        $localSeverity = max($localSeverity, 2);
                     }
-                } catch (\Exception $e) {
-                    $this->warn("Open-Meteo check failed: " . $e->getMessage());
                 }
+            } catch (\Exception $e) {
+                $this->warn("Open-Meteo check failed: " . $e->getMessage());
             }
             
             // 4. Check PAGASA Tropical Cyclone (Independent of Local Threats)
@@ -197,7 +193,8 @@ class MonitorDisasters extends Command
         }
 
         // Process Local Threat Push Notification & Dashboard Broadcast
-        if ($localThreatMsg) {
+        if (!empty($localThreats)) {
+            $localThreatMsg = implode("\n\n", $localThreats);
             $lastLocalPush = Cache::get('last_push_time_local', 0);
             $lastLocalSeverity = Cache::get('last_push_severity_local', 0);
             $timeSinceLastLocalPush = time() - $lastLocalPush;
@@ -241,8 +238,8 @@ class MonitorDisasters extends Command
     private function sendPushNotification($title, $message)
     {
         try {
-            $tokens = \App\Models\User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
-            if (!empty($tokens)) {
+            $userQuery = \App\Models\User::whereNotNull('fcm_token');
+            if ($userQuery->count() > 0) {
                 $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
                 $messaging = $factory->createMessaging();
                 
@@ -269,13 +266,18 @@ class MonitorDisasters extends Command
                         'channel_id' => 'emergency_alerts'
                     ]);
                 
-                $report = $messaging->sendMulticast($cloudMessage, $tokens);
-                $this->info("FCM Sent to " . count($tokens) . " devices. Success: " . $report->successes()->count() . ", Failures: " . $report->failures()->count());
-                if ($report->failures()->count() > 0) {
-                    foreach ($report->failures() as $failure) {
-                        \Illuminate\Support\Facades\Log::error('Firebase Token Failure: ' . $failure->error()->getMessage());
+                $userQuery->chunk(500, function ($users) use ($messaging, $cloudMessage) {
+                    $tokens = $users->pluck('fcm_token')->toArray();
+                    if (!empty($tokens)) {
+                        $report = $messaging->sendMulticast($cloudMessage, $tokens);
+                        $this->info("FCM batch sent. Success: " . $report->successes()->count() . ", Failures: " . $report->failures()->count());
+                        if ($report->failures()->count() > 0) {
+                            foreach ($report->failures() as $failure) {
+                                \Illuminate\Support\Facades\Log::error('Firebase Token Failure: ' . $failure->error()->getMessage());
+                            }
+                        }
                     }
-                }
+                });
             }
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Firebase Push Failed: ' . $e->getMessage());

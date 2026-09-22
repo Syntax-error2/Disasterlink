@@ -33,17 +33,13 @@ class DailyWeatherSummary extends Command
     public function handle()
     {
         $now = \Carbon\Carbon::now('Asia/Manila');
-        // We only want to send this during the 8 PM hour (20:00 - 20:59)
-        // if ($now->hour !== 20) {
-        //     $this->info("It's not 8 PM yet. Current hour: {$now->hour}");
-        //     return Command::SUCCESS;
-        // }
+        // Since we schedule this ->dailyAt('20:00'), we no longer need the hour check.
 
         $cacheKey = 'daily_weather_sent_' . $now->format('Y-m-d');
-        // if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
-        //     $this->info("Daily digest already sent for today.");
-        //     return Command::SUCCESS;
-        // }
+        if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+            $this->info("Daily digest already sent for today.");
+            return Command::SUCCESS;
+        }
 
         $lgus = \App\Models\Lgu::all();
         $factory = (new Factory)->withServiceAccount(base_path('firebase_credentials.json'));
@@ -82,10 +78,10 @@ class DailyWeatherSummary extends Command
 
                     $messageText = "🌙 {$tonightText} {$tomorrowText} {$heatText}";
 
-                    $tokens = \App\Models\User::where('lgu_id', $lgu->id)->whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
+                    $userQuery = \App\Models\User::where('lgu_id', $lgu->id)->whereNotNull('fcm_token');
                     
-                    if (!empty($tokens)) {
-                        $notification = Notification::create("🌤️ Daily Weather Digest - {$lgu->name}", $messageText);
+                    if ($userQuery->count() > 0) {
+                        $notification = Notification::create("Daily Weather Digest - {$lgu->name}", $messageText);
                         
                         $config = AndroidConfig::fromArray([
                             'priority' => 'normal',
@@ -97,15 +93,25 @@ class DailyWeatherSummary extends Command
 
                         $cloudMessage = CloudMessage::new()
                             ->withNotification($notification)
-                            ->withAndroidConfig($config);
+                            ->withAndroidConfig($config)
+                            ->withData([
+                                'title' => "Daily Weather Digest - {$lgu->name}",
+                                'body' => $messageText,
+                                'channel_id' => 'general_announcements'
+                            ]);
                         
-                        $report = $messaging->sendMulticast($cloudMessage, $tokens);
-                        $this->info("Daily Digest pushed. Success: " . $report->successes()->count() . ", Failures: " . $report->failures()->count());
-                        if ($report->failures()->count() > 0) {
-                            foreach ($report->failures() as $failure) {
-                                $this->error('Firebase Token Failure: ' . $failure->error()->getMessage());
+                        $userQuery->chunk(500, function ($users) use ($messaging, $cloudMessage) {
+                            $tokens = $users->pluck('fcm_token')->toArray();
+                            if (!empty($tokens)) {
+                                $report = $messaging->sendMulticast($cloudMessage, $tokens);
+                                $this->info("Daily Digest pushed batch. Success: " . $report->successes()->count() . ", Failures: " . $report->failures()->count());
+                                if ($report->failures()->count() > 0) {
+                                    foreach ($report->failures() as $failure) {
+                                        $this->error('Firebase Token Failure: ' . $failure->error()->getMessage());
+                                    }
+                                }
                             }
-                        }
+                        });
                     } else {
                         $this->info("No FCM tokens found for {$lgu->name}.");
                     }
