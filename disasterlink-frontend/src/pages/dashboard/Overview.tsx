@@ -442,7 +442,7 @@ export default function Overview() {
 
             <MapContainer center={MAP_CENTER} zoom={13} className="h-full w-full" zoomControl={false} attributionControl={false}>
               {/* Dark mode enterprise map tiles (CartoDB Dark Matter) */}
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" className="dark-tiles" attribution="&amp;copy; OpenStreetMap"/>
               
               <MapUpdater center={MAP_CENTER} />
               

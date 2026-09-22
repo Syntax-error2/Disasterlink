@@ -173,6 +173,11 @@
   outline: none !important;
 }
 
+/* OpenStreetMap Dark Mode Filter */
+.dark-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
 /* Hide the Leaflet Routing Machine white instruction box completely when hide class is used */
 .hide-leaflet-routing .leaflet-routing-container {
   display: none !important;

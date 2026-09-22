@@ -516,8 +516,7 @@ export default function RepresentativeMobile() {
                       key={`full-map-${userLoc[0]}-${userLoc[1]}-${isMapExpanded ? 'expanded' : 'collapsed'}`}
                     >
                       <TileLayer
-                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" className="dark-tiles" attribution="&amp;copy; OpenStreetMap"
                       />
                       <Circle center={userLoc} radius={800} pathOptions={{ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.1 }} />
                       <Marker position={userLoc} icon={repIcon} />
@@ -640,8 +639,7 @@ export default function RepresentativeMobile() {
                       key={`alert-map-${incident.id}`}
                     >
                       <TileLayer
-                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" className="dark-tiles" attribution="&amp;copy; OpenStreetMap"
                       />
                       <Marker position={[Number(incident.latitude), Number(incident.longitude)]} icon={incidentAlertIcon} />
                       <Marker position={userLoc} icon={repIcon} />

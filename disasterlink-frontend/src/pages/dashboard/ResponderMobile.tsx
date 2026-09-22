@@ -481,7 +481,7 @@ export default function ResponderMobile() {
                   <span className="text-[10px] font-mono text-zinc-500">AWAITING ORDERS</span>
                 </div>
                 <MapContainer center={responderLocation} zoom={15} zoomControl={false} scrollWheelZoom={false} dragging={false} className="h-full w-full z-0">
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" className="dark-tiles" attribution="&amp;copy; OpenStreetMap"/>
                   <MapUpdater center={responderLocation} />
                   <Marker position={responderLocation} icon={responderIcon} />
                   <Circle center={responderLocation} radius={300} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1, stroke: false }} />
@@ -525,7 +525,7 @@ export default function ResponderMobile() {
                   zoom={16} zoomControl={false} scrollWheelZoom={isMapExpanded} dragging={isMapExpanded} className="h-full w-full"
                   key={`full-map-${incident?.id}-${isMapExpanded ? 'expanded' : 'collapsed'}`}
                 >
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" className="dark-tiles" attribution="&amp;copy; OpenStreetMap"/>
                   <MapUpdater center={incident.latitude && incident.longitude ? [parseFloat(incident.latitude), parseFloat(incident.longitude)] : responderLocation} />
                   <Marker 
                     position={incident.latitude && incident.longitude ? [parseFloat(incident.latitude), parseFloat(incident.longitude)] : responderLocation} 

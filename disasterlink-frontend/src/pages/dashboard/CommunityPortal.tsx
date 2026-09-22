@@ -1105,7 +1105,7 @@ function MapView({ showToast, evacCenters, liveResponders, targetRoute, setTarge
             <MapFlyTo center={center} />
             <LayersControl position="bottomleft">
               <LayersControl.BaseLayer checked name="Dark Matter (Ops Default)">
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" className="dark-tiles" attribution="&amp;copy; OpenStreetMap"/>
               </LayersControl.BaseLayer>
               <LayersControl.BaseLayer name="High-Res Satellite">
                 <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
