@@ -89,6 +89,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::put('/incidents/{id}', [IncidentReportController::class, 'update'])->middleware('role:admin,responder');
     Route::delete('/incidents/{id}', [IncidentReportController::class, 'destroy'])->middleware('role:admin');
     Route::post('/incidents/{id}/verify', [IncidentReportController::class, 'verify'])->middleware('role:admin,responder');
+    Route::get('/broadcast/history', [App\Http\Controllers\BroadcastController::class, 'history']);
     Route::get('/broadcast', [App\Http\Controllers\BroadcastController::class, 'get']);
     Route::post('/broadcast', [App\Http\Controllers\BroadcastController::class, 'store'])->middleware('role:admin');
 

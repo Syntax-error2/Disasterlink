@@ -21,7 +21,7 @@ class IncidentReportController extends Controller
             $incidents = \Illuminate\Support\Facades\Cache::remember('incidents_lgu_' . $lguId, 600, function () use ($lguId) {
                 // Select specific columns to dramatically reduce JSON payload size and speed up rendering
                 $query = IncidentReport::with('user:id,name,phone')
-                    ->select(['id', 'user_id', 'reporting_barangay', 'incident_type', 'severity_level', 'exact_location', 'latitude', 'longitude', 'status', 'created_at', 'verifications', 'image_path']);
+                    ->select(['id', 'user_id', 'reporting_barangay', 'incident_type', 'severity_level', 'exact_location', 'latitude', 'longitude', 'status', 'created_at', 'verifications', 'image_path', 'details', 'image_data']);
                 
                 if ($lguId !== 'guest' && $lguId !== null) {
                     $query->where('lgu_id', $lguId);

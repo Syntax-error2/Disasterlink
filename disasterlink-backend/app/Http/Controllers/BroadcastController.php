@@ -49,7 +49,7 @@ class BroadcastController extends Controller
     {
         $message = $request->input('message');
         $targetArea = $request->input('target_area', 'All Barangays (Municipality Wide)');
-        $title = explode(' - ', $message)[0] ?? 'EMERGENCY ALERT';
+        $title = $request->input('title') ?? (explode(' - ', $message)[0] ?? 'EMERGENCY ALERT');
         
         $broadcast = \App\Models\Broadcast::create([
             'lgu_id' => auth()->check() ? auth()->user()->lgu_id : null,
@@ -137,6 +137,19 @@ class BroadcastController extends Controller
         $lguId = auth()->check() ? auth()->user()->lgu_id : 'guest';
         Cache::forget("active_broadcast_{$lguId}");
         return response()->json(['success' => true]);
+    }
+
+    public function history()
+    {
+        $lguId = auth()->check() ? auth()->user()->lgu_id : 'guest';
+        $history = \App\Models\Broadcast::when($lguId !== 'guest', function($q) use ($lguId) {
+            $q->where('lgu_id', $lguId)->orWhereNull('lgu_id');
+        })
+        ->orderBy('created_at', 'desc')
+        ->limit(50)
+        ->get();
+
+        return response()->json($history);
     }
 }
 
