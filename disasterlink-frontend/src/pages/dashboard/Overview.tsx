@@ -146,6 +146,76 @@ export default function Overview() {
   const [trendData, setTrendData] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  
+  // Real stats
+  const [timeRange, setTimeRange] = useState<"24H" | "7D" | "30D">("24H");
+  const [avgResponse, setAvgResponse] = useState("0m 0s");
+  const [resolutionRate, setResolutionRate] = useState(0);
+
+  // Re-calculate trends and metrics when data or timeframe changes
+  useEffect(() => {
+    if (!rawIncidents || rawIncidents.length === 0) return;
+
+    const now = new Date();
+    const generatedTrends = [];
+    let intervalHours = 4; // 24H -> 6 points of 4h
+    let points = 6;
+    let format = { hour: '2-digit' } as Intl.DateTimeFormatOptions;
+    
+    if (timeRange === "7D") {
+      intervalHours = 24; // 1 day per point
+      points = 6; // 7 days (last 6 days + today)
+      format = { month: 'short', day: 'numeric' };
+    } else if (timeRange === "30D") {
+      intervalHours = 24 * 5; // 5 days per point
+      points = 5; // 6 points total
+      format = { month: 'short', day: 'numeric' };
+    }
+
+    for (let i = points; i >= 0; i--) {
+      const intervalEnd = new Date(now.getTime() - i * intervalHours * 60 * 60 * 1000);
+      const intervalStart = new Date(intervalEnd.getTime() - intervalHours * 60 * 60 * 1000);
+      
+      const inInterval = rawIncidents.filter((inc: any) => {
+        const t = new Date(inc.created_at).getTime();
+        return t >= intervalStart.getTime() && t <= intervalEnd.getTime();
+      });
+      
+      generatedTrends.push({
+        time: intervalEnd.toLocaleDateString(undefined, format) + (timeRange === "24H" ? ' ' + intervalEnd.toLocaleTimeString(undefined, format) : ''),
+        reported: inInterval.length,
+        resolved: inInterval.filter((inc: any) => inc.status === 'Resolved').length,
+        critical: inInterval.filter((inc: any) => inc.severity_level === 'Critical').length
+      });
+    }
+    
+    // Quick fix: format 24H to just show time
+    if (timeRange === '24H') {
+      generatedTrends.forEach(t => t.time = t.time.split(' ')[1] + (t.time.includes('AM') ? ' AM' : (t.time.includes('PM') ? ' PM' : '')));
+    }
+
+    setTrendData(generatedTrends);
+
+    // Calculate real Avg Response & Resolution Rate
+    const total = rawIncidents.length;
+    const resolved = rawIncidents.filter(i => i.status === 'Resolved');
+    setResolutionRate(total > 0 ? Math.round((resolved.length / total) * 100) : 0);
+
+    let totalWaitTimeMs = 0;
+    resolved.forEach(r => {
+       const start = new Date(r.created_at).getTime();
+       const end = new Date(r.updated_at).getTime();
+       totalWaitTimeMs += (end - start);
+    });
+    
+    if (resolved.length > 0) {
+       const avgMs = totalWaitTimeMs / resolved.length;
+       const mins = Math.floor(avgMs / 60000);
+       const secs = Math.floor((avgMs % 60000) / 1000);
+       setAvgResponse(`${mins}m ${secs}s`);
+    }
+
+  }, [rawIncidents, timeRange]);
 
   const fetchDashboardData = async () => {
     setIsRefreshing(true);
@@ -172,27 +242,6 @@ export default function Overview() {
         type: inc.status === 'Resolved' ? 'success' : (inc.severity_level === 'Critical' ? 'critical' : 'info')
       }));
       setRecentActivity(activity);
-
-      // Process Trends dynamically (Group last 24h into 4h intervals)
-      const now = new Date();
-      const generatedTrends = [];
-      for (let i = 6; i >= 0; i--) {
-        const intervalEnd = new Date(now.getTime() - i * 4 * 60 * 60 * 1000);
-        const intervalStart = new Date(intervalEnd.getTime() - 4 * 60 * 60 * 1000);
-        
-        const inInterval = dbIncidents.filter((inc: any) => {
-          const t = new Date(inc.created_at).getTime();
-          return t >= intervalStart.getTime() && t <= intervalEnd.getTime();
-        });
-        
-        generatedTrends.push({
-          time: intervalEnd.toLocaleTimeString([], { hour: '2-digit' }),
-          reported: inInterval.length,
-          resolved: inInterval.filter((inc: any) => inc.status === 'Resolved').length,
-          critical: inInterval.filter((inc: any) => inc.severity_level === 'Critical').length
-        });
-      }
-      setTrendData(generatedTrends);
 
       // 2. Fetch Real Teams
       try {
@@ -619,9 +668,9 @@ export default function Overview() {
           <div className="flex justify-between items-center mb-4">
              <h3 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em]">Incident Activity</h3>
              <div className="flex bg-[#0B0D10] rounded text-[9px] font-bold border border-[#292D34]">
-                <button className="px-2 py-1 bg-red-500/20 text-red-400 rounded-sm">24H</button>
-                <button className="px-2 py-1 text-zinc-500 hover:text-white">7D</button>
-                <button className="px-2 py-1 text-zinc-500 hover:text-white">30D</button>
+                <button onClick={() => setTimeRange("24H")} className={`px-2 py-1 rounded-sm transition-colors ${timeRange === "24H" ? "bg-red-500/20 text-red-400" : "text-zinc-500 hover:text-white"}`}>24H</button>
+                <button onClick={() => setTimeRange("7D")} className={`px-2 py-1 rounded-sm transition-colors ${timeRange === "7D" ? "bg-red-500/20 text-red-400" : "text-zinc-500 hover:text-white"}`}>7D</button>
+                <button onClick={() => setTimeRange("30D")} className={`px-2 py-1 rounded-sm transition-colors ${timeRange === "30D" ? "bg-red-500/20 text-red-400" : "text-zinc-500 hover:text-white"}`}>30D</button>
              </div>
           </div>
           
@@ -646,11 +695,11 @@ export default function Overview() {
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#292D34] mt-auto">
              <div>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Avg Response Time</p>
-                <p className="text-lg font-black text-white">4m 32s</p>
+                <p className="text-lg font-black text-white">{avgResponse}</p>
              </div>
              <div>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Resolution Rate</p>
-                <p className="text-lg font-black text-white flex items-end gap-1">92% <span className="text-[10px] text-green-500 mb-1 flex items-center"><Activity className="h-3 w-3" /> +8%</span></p>
+                <p className="text-lg font-black text-white flex items-end gap-1">{resolutionRate}% <span className="text-[10px] text-green-500 mb-1 flex items-center"><Activity className="h-3 w-3" /> Real</span></p>
              </div>
           </div>
         </div>
