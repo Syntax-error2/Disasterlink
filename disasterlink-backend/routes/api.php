@@ -48,6 +48,11 @@ Route::get('/cron/test-weather', function () {
     return response()->json(['output' => \Illuminate\Support\Facades\Artisan::output()]);
 });
 
+Route::get('/cron/test-demo', function () {
+    \Illuminate\Support\Facades\Artisan::call('disaster:monitor', ['--demo' => 'rain-red']);
+    return response()->json(['output' => \Illuminate\Support\Facades\Artisan::output()]);
+});
+
 Route::get('/cron', function () { 
     $logPath = storage_path('logs/laravel.log');
     if (file_exists($logPath)) {
