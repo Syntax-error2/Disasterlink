@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
 use App\Models\EvacuationCenter;
+use App\Jobs\SendPushNotificationJob;
 
 class EvacuationCenterController extends Controller
 {
@@ -48,41 +48,14 @@ class EvacuationCenterController extends Controller
         // AI LOGISTICS ALERT: Check if > 85% full
         $occupancyRate = $center->current_occupants / $center->capacity;
         if ($occupancyRate > 0.85) {
-            try {
-                $tokens = \App\Models\User::whereNotNull('fcm_token')
-                    ->whereIn('role', ['admin', 'logistics', 'dswd'])
-                    ->pluck('fcm_token')->toArray();
-                
-                if (!empty($tokens)) {
-                    $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
-                    $messaging = $factory->createMessaging();
-                    $notification = \Kreait\Firebase\Messaging\Notification::create(
-                        'LOGISTICS ALERT: Evacuation Center Near Capacity', 
-                        "{$center->name} is at " . round($occupancyRate * 100) . "% capacity. Dispatch relief goods immediately!"
-                    );
-                    
-                    $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                        'priority' => 'high',
-                        'notification' => [
-                            'channel_id' => 'emergency_alerts',
-                            'sound' => 'default',
-                            'default_vibrate_timings' => true,
-                        ],
-                    ]);
-
-                    $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()
-                        ->withNotification($notification)
-                        ->withAndroidConfig($config)
-                        ->withData([
-                            'title' => 'LOGISTICS ALERT',
-                            'body' => "{$center->name} is at " . round($occupancyRate * 100) . "% capacity.",
-                            'channel_id' => 'emergency_alerts'
-                        ]);
-                    
-                    $messaging->sendMulticast($cloudMessage, $tokens);
-                }
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Logistics Firebase Push Failed: ' . $e->getMessage());
+            $tokens = \App\Models\User::whereNotNull('fcm_token')
+                ->whereIn('role', ['admin', 'logistics', 'dswd'])
+                ->pluck('fcm_token')->toArray();
+            
+            if (!empty($tokens)) {
+                $title = 'LOGISTICS ALERT: Evacuation Center Near Capacity';
+                $body = "{$center->name} is at " . round($occupancyRate * 100) . "% capacity. Dispatch relief goods immediately!";
+                dispatch(new SendPushNotificationJob($tokens, $title, $body));
             }
         }
 

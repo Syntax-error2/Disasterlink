@@ -4,46 +4,32 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
-use Kreait\Firebase\Factory;
-use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification;
-use Kreait\Firebase\Messaging\AndroidConfig;
+use App\Models\Lgu;
+use App\Models\User;
+use App\Jobs\SendPushNotificationJob;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class DailyWeatherSummary extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'disasterlink:daily-weather-summary';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Send daily evening weather and heat index digest via FCM';
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
     public function handle()
     {
-        $now = \Carbon\Carbon::now('Asia/Manila');
-        // Since we schedule this ->dailyAt('20:00'), we no longer need the hour check.
-
+        $now = Carbon::now('Asia/Manila');
         $cacheKey = 'daily_weather_sent_' . $now->format('Y-m-d');
-        if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+        if (Cache::has($cacheKey)) {
             $this->info("Daily digest already sent for today.");
             return Command::SUCCESS;
         }
 
-        $lgus = \App\Models\Lgu::all();
-        $factory = (new Factory)->withServiceAccount(base_path('firebase_credentials.json'));
-        $messaging = $factory->createMessaging();
+        try {
+            $lgus = Lgu::all();
+        } catch (\Exception $e) {
+            $this->error("Database connection failed. Cannot fetch LGUs.");
+            return Command::FAILURE;
+        }
 
         foreach ($lgus as $lgu) {
             $latitude = $lgu->latitude;
@@ -77,41 +63,13 @@ class DailyWeatherSummary extends Command
                     $heatText = $heatIndex ? "PAGASA Heat Index: {$heatIndex}°C." : "";
 
                     $messageText = "🌙 {$tonightText} {$tomorrowText} {$heatText}";
+                    $title = "Daily Weather Digest - {$lgu->name}";
 
-                    $userQuery = \App\Models\User::where('lgu_id', $lgu->id)->whereNotNull('fcm_token');
+                    $tokens = User::where('lgu_id', $lgu->id)->whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
                     
-                    if ($userQuery->count() > 0) {
-                        $notification = Notification::create("Daily Weather Digest - {$lgu->name}", $messageText);
-                        
-                        $config = AndroidConfig::fromArray([
-                            'priority' => 'normal',
-                            'notification' => [
-                                'channel_id' => 'general_announcements',
-                                'sound' => 'default',
-                            ],
-                        ]);
-
-                        $cloudMessage = CloudMessage::new()
-                            ->withNotification($notification)
-                            ->withAndroidConfig($config)
-                            ->withData([
-                                'title' => "Daily Weather Digest - {$lgu->name}",
-                                'body' => $messageText,
-                                'channel_id' => 'general_announcements'
-                            ]);
-                        
-                        $userQuery->chunk(500, function ($users) use ($messaging, $cloudMessage) {
-                            $tokens = $users->pluck('fcm_token')->toArray();
-                            if (!empty($tokens)) {
-                                $report = $messaging->sendMulticast($cloudMessage, $tokens);
-                                $this->info("Daily Digest pushed batch. Success: " . $report->successes()->count() . ", Failures: " . $report->failures()->count());
-                                if ($report->failures()->count() > 0) {
-                                    foreach ($report->failures() as $failure) {
-                                        $this->error('Firebase Token Failure: ' . $failure->error()->getMessage());
-                                    }
-                                }
-                            }
-                        });
+                    if (!empty($tokens)) {
+                        dispatch(new SendPushNotificationJob($tokens, $title, $messageText, 'general_announcements'));
+                        $this->info("Dispatched Daily Digest for {$lgu->name}.");
                     } else {
                         $this->info("No FCM tokens found for {$lgu->name}.");
                     }
@@ -123,7 +81,7 @@ class DailyWeatherSummary extends Command
             }
         }
 
-        \Illuminate\Support\Facades\Cache::put($cacheKey, true, now()->addDays(1));
+        Cache::put($cacheKey, true, now()->addDays(1));
 
         return Command::SUCCESS;
     }

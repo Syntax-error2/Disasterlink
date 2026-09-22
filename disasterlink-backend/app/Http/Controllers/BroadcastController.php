@@ -70,51 +70,16 @@ class BroadcastController extends Controller
         }
         
         // 2. FIREBASE PUSH NOTIFICATIONS
-        try {
-            $tokens = \App\Models\User::whereNotNull('fcm_token')
-                ->when(auth()->check(), function ($query) {
-                    $query->where('lgu_id', auth()->user()->lgu_id);
-                })
-                ->pluck('fcm_token')->toArray();
-            
-            if (!empty($tokens)) {
-                $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
-                $messaging = $factory->createMessaging();
-                $notification = \Kreait\Firebase\Messaging\Notification::create('EMERGENCY ALERT: ' . $title, $message);
-                
-                $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                    'priority' => 'high',
-                    'notification' => [
-                        'channel_id' => 'emergency_alerts',
-                        'sound' => 'default',
-                        'default_vibrate_timings' => true,
-                        'default_light_settings' => true,
-                    ],
-                ]);
-
-                $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()
-                    ->withNotification($notification)
-                    ->withAndroidConfig($config)
-                    ->withData([
-                        'title' => 'EMERGENCY ALERT: ' . $title,
-                        'body' => $message,
-                        'channel_id' => 'emergency_alerts'
-                    ]);
-                
-                $report = $messaging->sendMulticast($cloudMessage, $tokens);
-                \Illuminate\Support\Facades\Log::info('Firebase Push Report. Success: ' . $report->successes()->count() . ', Failures: ' . $report->failures()->count());
-                if ($report->failures()->count() > 0) {
-                    foreach ($report->failures() as $failure) {
-                        \Illuminate\Support\Facades\Log::error('Firebase Token Failure: ' . $failure->error()->getMessage());
-                    }
-                }
-            } else {
-                \Illuminate\Support\Facades\Log::warning('Firebase Push Skipped: No FCM tokens found for LGU.');
-            }
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Firebase Push Failed: ' . $e->getMessage());
-            // WE NO LONGER RETURN 500 ERROR HERE. We catch and continue to SMS!
-            $broadcast->update(['status' => 'FCM FAILED - SMS SENT']);
+        $tokens = \App\Models\User::whereNotNull('fcm_token')
+            ->when(auth()->check(), function ($query) {
+                $query->where('lgu_id', auth()->user()->lgu_id);
+            })
+            ->pluck('fcm_token')->toArray();
+        
+        if (!empty($tokens)) {
+            dispatch(new \App\Jobs\SendPushNotificationJob($tokens, 'EMERGENCY ALERT: ' . $title, $message));
+        } else {
+            \Illuminate\Support\Facades\Log::warning('Firebase Push Skipped: No FCM tokens found for LGU.');
         }
 
         // 3. SMS FALLBACK
@@ -151,44 +116,17 @@ class BroadcastController extends Controller
         }
         
         // Firebase Push Notifications for Local Broadcast
-        try {
-            $tokens = \App\Models\User::whereNotNull('fcm_token')
-                ->where('lgu_id', auth()->user()->lgu_id)
-                ->where(function ($query) use ($barangay) {
-                    $query->where('barangay', 'LIKE', '%' . $barangay . '%')
-                          ->orWhere('assigned_barangay', 'LIKE', '%' . $barangay . '%');
-                })
-                ->pluck('fcm_token')
-                ->toArray();
-            
-            if (!empty($tokens)) {
-                $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path('firebase_credentials.json'));
-                $messaging = $factory->createMessaging();
-                $notification = \Kreait\Firebase\Messaging\Notification::create('LOCAL ALERT: ' . $title, $message);
-                
-                $config = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                    'priority' => 'high',
-                    'notification' => [
-                        'channel_id' => 'emergency_alerts',
-                        'sound' => 'default',
-                        'default_vibrate_timings' => true,
-                        'default_light_settings' => true,
-                    ],
-                ]);
-
-                $cloudMessage = \Kreait\Firebase\Messaging\CloudMessage::new()
-                    ->withNotification($notification)
-                    ->withAndroidConfig($config)
-                    ->withData([
-                        'title' => 'LOCAL ALERT: ' . $title,
-                        'body' => $message,
-                        'channel_id' => 'emergency_alerts'
-                    ]);
-                
-                $messaging->sendMulticast($cloudMessage, $tokens);
-            }
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Local Firebase Push Failed: ' . $e->getMessage());
+        $tokens = \App\Models\User::whereNotNull('fcm_token')
+            ->where('lgu_id', auth()->user()->lgu_id)
+            ->where(function ($query) use ($barangay) {
+                $query->where('barangay', 'LIKE', '%' . $barangay . '%')
+                      ->orWhere('assigned_barangay', 'LIKE', '%' . $barangay . '%');
+            })
+            ->pluck('fcm_token')
+            ->toArray();
+        
+        if (!empty($tokens)) {
+            dispatch(new \App\Jobs\SendPushNotificationJob($tokens, 'LOCAL ALERT: ' . $title, $message));
         }
         
         return response()->json(['message' => 'Local broadcast dispatch completed.']);
