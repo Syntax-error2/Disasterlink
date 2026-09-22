@@ -263,7 +263,7 @@ export default function CommunityPortal() {
         const ecLat = parseFloat(ec.lat) || (10.1866 + (Math.random() * 0.02 - 0.01));
         const ecLng = parseFloat(ec.lng) || (122.8587 + (Math.random() * 0.02 - 0.01));
         const capacity = ec.capacity || 1000;
-        const current_occupants = ec.current_occupants || Math.floor(Math.random() * 800);
+        const current_occupants = ec.current_occupants ?? 0;
         const distance = getDistanceInMeters(lat, lng, ecLat, ecLng);
         const percentage = Math.round((current_occupants / capacity) * 100);
         
@@ -843,16 +843,7 @@ function HomeView({ showToast, userStatus, setUserStatus, alerts, evacCenters, u
             setUserStatus("Safe"); 
             try {
               await axiosInstance.post('/family/status', { name: (getActiveUser()?.name) || 'Citizen', status: 'Safe' });
-              if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(async (position) => {
-                  await axiosInstance.post('/responder/ping', { 
-                    unit_name: ((getActiveUser()?.name) || 'Citizen') + " (Marked Safe)",
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                    status: 'Safe'
-                  });
-                }, () => {}, { enableHighAccuracy: true });
-              }
+
               showToast("Your status has been updated to Safe.", "success"); 
             } catch (error) {
               console.error("Failed to sync status", error);

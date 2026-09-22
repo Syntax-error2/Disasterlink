@@ -74,7 +74,7 @@ export default function IncidentReports() {
 
   const handleOpenDispatch = (incident: any) => {
     // Dynamically auto-suggest responder units based on the classified hazard category
-    const hazard = incident.incident_type.toLowerCase();
+    const hazard = incident.incident_type?.toLowerCase() || '';
     
     // We try to match team category to hazard if possible, otherwise use the first team
     const bestTeam = deploymentTeams.find(t => 
@@ -406,15 +406,19 @@ export default function IncidentReports() {
                       {r.status === 'Direct to LDRRMO' ? 'Directed to LDRRMO' : r.status}
                     </TableCell>
                     <TableCell className="text-right px-6">
-                      {!r.status.includes("Dispatched") && !r.status.includes("Resolved") ? (
+                      {!r.status?.includes("Dispatched") && !r.status?.includes("Resolved") ? (
                         <div className="flex justify-end gap-2">
                           <Button onClick={() => handleOpenDispatch(r)} size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs font-bold shadow-md flex items-center gap-1.5">
                             <ShieldAlert className="h-3.5 w-3.5" /> Deploy Responder
                           </Button>
                         </div>
+                      ) : r.status?.includes("Dispatched") ? (
+                        <Button onClick={() => handleUpdateStatus(r.id, "Resolved")} variant="outline" size="sm" className="h-8 text-xs border-blue-500/30 text-blue-500 bg-blue-500/10 ml-auto hover:bg-blue-500 hover:text-white">
+                          <CheckCircle className="h-3 w-3 mr-1" /> Mark Resolved
+                        </Button>
                       ) : (
                         <Button variant="outline" size="sm" disabled className="h-8 text-xs border-emerald-500/30 text-emerald-500 bg-emerald-500/10 ml-auto">
-                          <CheckCircle className="h-3 w-3 mr-1" /> {r.status.includes("Dispatched") ? "Dispatched" : "Resolved"}
+                          <CheckCircle className="h-3 w-3 mr-1" /> Resolved
                         </Button>
                       )}
                     </TableCell>

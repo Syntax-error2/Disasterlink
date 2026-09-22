@@ -28,7 +28,7 @@ export default function EmergencyAlerts() {
 
   const fetchHistory = async () => {
     try {
-      const res = await axiosInstance.get('/broadcast');
+      const res = await axiosInstance.get('/broadcast/history');
       if (Array.isArray(res.data)) {
         setHistory(res.data);
       }
@@ -44,8 +44,8 @@ export default function EmergencyAlerts() {
   const handleAIPredict = async () => {
     setIsAiLoading(true);
     try {
-      // Pass force_rain=1 to demonstrate the feature if no real rain is currently falling in Binalbagan
-      const res = await axiosInstance.get('/ai/flood-prediction?force_rain=1');
+      // Call the live flood prediction endpoint
+      const res = await axiosInstance.get('/ai/flood-prediction');
       if (res.data.risk_level === 'HIGH') {
         setTitle("TARGETED EVACUATION: FLOOD RISK");
         setMessage(res.data.ai_recommendation);
@@ -68,7 +68,8 @@ export default function EmergencyAlerts() {
     
     try {
       await axiosInstance.post("/broadcast", { 
-        message: title + " - " + message,
+        title: title,
+        message: message,
         target_area: targetArea 
       });
       
