@@ -438,7 +438,7 @@ export default function GisDashboard() {
               
               {/* Live Weather Overlays (Prepared for OpenWeather) */}
               {activeLayers.weatherRadar && (
-                  <TileLayer url="https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=9fd7a449d055dba26a982a3220f32aa2" opacity={0.5}/>
+                  <TileLayer url="https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=9fd7a449d055dba26a982a3220f32aa2" opacity={1.0}/>
               )}
 
             <ZoomControl position="bottomright" />
