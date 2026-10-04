@@ -34,38 +34,68 @@ class DisasterPredictionController extends Controller
                 'Bi-ao' => 15.5
             ];
             
-            // 3. AI Risk Assessment Logic
             $forceRain = $request->query('force_rain', false);
-            
-            if ($precipitation > 5.0 || $forceRain) {
-                // Find vulnerable barangays (Elevation < 5m)
-                $vulnerable = [];
-                foreach ($barangayElevations as $brgy => $elevation) {
-                    if ($elevation < 5.0) {
-                        $vulnerable[] = $brgy;
-                    }
+            if ($forceRain) {
+                $precipitation = max(15.0, $precipitation);
+            }
+
+            // 3. True AI Risk Assessment via Gemini
+            $apiKey = env('GEMINI_API_KEY');
+            if (!$apiKey) {
+                // Fallback to basic logic if no key
+                if ($precipitation > 5.0) {
+                    $vulnerable = array_keys(array_filter($barangayElevations, fn($e) => $e < 5.0));
+                    return response()->json([
+                        'risk_level' => 'HIGH',
+                        'precipitation_mm' => $precipitation,
+                        'vulnerable_barangays' => $vulnerable,
+                        'ai_recommendation' => "AI ALERT: Heavy rain detected. Target: " . implode(', ', $vulnerable),
+                        'suggested_action' => 'TARGETED_EVACUATION',
+                        'target_area' => implode(', ', $vulnerable)
+                    ]);
                 }
-                
-                $targetArea = implode(', ', $vulnerable);
-                $message = "AI ALERT: Heavy rain detected. Barangays " . $targetArea . " are identified as low-elevation (high flood risk). Dispatching targeted pre-emptive evacuation alert specifically to residents in these areas.";
-                
                 return response()->json([
-                    'risk_level' => 'HIGH',
-                    'precipitation_mm' => $forceRain ? 12.5 : $precipitation,
-                    'vulnerable_barangays' => $vulnerable,
-                    'ai_recommendation' => $message,
-                    'suggested_action' => 'TARGETED_EVACUATION',
-                    'target_area' => $targetArea
+                    'risk_level' => 'LOW',
+                    'precipitation_mm' => $precipitation,
+                    'vulnerable_barangays' => [],
+                    'ai_recommendation' => "Low precipitation. No immediate risk.",
+                    'suggested_action' => 'MONITOR'
                 ]);
             }
-            
-            return response()->json([
-                'risk_level' => 'LOW',
-                'precipitation_mm' => $precipitation,
-                'vulnerable_barangays' => [],
-                'ai_recommendation' => "Current precipitation is low. No immediate flood risk detected for low-elevation areas.",
-                'suggested_action' => 'MONITOR'
+
+            // Call Gemini
+            $prompt = "You are an expert disaster risk analyst for a Philippine municipality.
+Current Weather Precipitation: {$precipitation} mm.
+Barangay Elevations (meters above sea level): " . json_encode($barangayElevations) . "
+Given the precipitation and elevations, assess the flood risk. If precipitation > 5mm, risk is usually HIGH for elevations < 5m.
+Return ONLY a valid JSON object with NO markdown wrapping, containing these exact keys:
+- risk_level (HIGH, MODERATE, or LOW)
+- vulnerable_barangays (array of strings, e.g., ['Progreso', 'San Jose'])
+- ai_recommendation (string, clear alert or monitoring message)
+- suggested_action (TARGETED_EVACUATION, STANDBY, or MONITOR)
+- target_area (string, comma separated barangays or 'None')
+";
+
+            $aiResponse = Http::post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                'contents' => [
+                    ['parts' => [['text' => $prompt]]]
+                ],
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json',
+                    'temperature' => 0.1
+                ]
             ]);
+
+            if ($aiResponse->successful()) {
+                $content = $aiResponse->json('candidates.0.content.parts.0.text');
+                $aiData = json_decode($content, true);
+                if ($aiData) {
+                    $aiData['precipitation_mm'] = $precipitation;
+                    return response()->json($aiData);
+                }
+            }
+
+            throw new \Exception('Failed to parse AI response');
             
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to analyze risk: ' . $e->getMessage()], 500);
