@@ -317,7 +317,7 @@ export default function DashboardLayout() {
       </aside>
 
       {/* MAIN CONTENT WRAPPER */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-full relative">
         
         {/* TOP COMMAND BAR */}
         <header className="h-[72px] border-b border-[#292D34] bg-[#111115]/80 backdrop-blur-xl flex items-center justify-between px-6 shrink-0 z-30">
@@ -368,7 +368,7 @@ export default function DashboardLayout() {
                 <BellRing className="h-5 w-5" />
                 {unreadCount > 0 && (
                   <span className="absolute top-2 right-2 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                   </span>
                 )}

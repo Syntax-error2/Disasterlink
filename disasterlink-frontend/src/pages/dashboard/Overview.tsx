@@ -49,7 +49,7 @@ const createCustomIcon = (colorClass: string, isSOS = false) => {
     className: "bg-transparent",
     html: `
       <div class="relative flex items-center justify-center h-8 w-8">
-        ${isSOS ? '<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>' : ''}
+        ${isSOS ? '' : ''}
         <div class="relative flex items-center justify-center h-8 w-8 rounded-full ${colorClass} border-2 border-[#15181D] shadow-lg shadow-black/50 z-10">
           ${isSOS ? '<span class="text-[9px] font-black text-white">SOS</span>' : '<div class="h-2.5 w-2.5 bg-white rounded-full"></div>'}
         </div>
