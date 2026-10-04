@@ -461,13 +461,13 @@ export default function GisDashboard() {
               
               </LayersControl>
               
-              {/* Animated Live Weather Radar (RainViewer) */}
-              {activeLayers.weatherRadar && radarFrames.length > 0 && (
+              {/* Live Weather Radar (OpenWeatherMap) */}
+              {activeLayers.weatherRadar && (
                   <TileLayer 
-                    key="rainviewer"
-                    url={`https://tilecache.rainviewer.com/v2/radar/${radarFrames[currentFrameIdx]}/256/{z}/{x}/{y}/2/1_1.png`}
-                    opacity={0.8}
-                    maxNativeZoom={12}
+                    key="openweathermap"
+                    url="https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=9fd7a449d055dba26a982a3220f32aa2"
+                    opacity={1.0}
+                    maxNativeZoom={8}
                     maxZoom={22}
                   />
               )}
@@ -506,9 +506,7 @@ export default function GisDashboard() {
               </Polygon>
             ))}
 
-            {activeLayers.floodRisk && (
-              <TileLayer url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png" opacity={0.5} maxNativeZoom={15} maxZoom={22} />
-            )}
+            {/* Removed OpenTopoMap to prevent zoom errors. Flood zones are now purely polygons. */}
             
             {/* Real-time moving/pulsing Flood Susceptibility Zones */}
             {activeLayers.floodRisk && (
@@ -657,7 +655,7 @@ export default function GisDashboard() {
               <span>10.1866° N, 122.8587° E</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1.5"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500"></div> OpenWeather API Connected</span>
+              <span className="flex items-center gap-1.5"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500"></div> GIS Services Active</span>
               <span>Scale: 1:25,000</span>
             </div>
           </div>
