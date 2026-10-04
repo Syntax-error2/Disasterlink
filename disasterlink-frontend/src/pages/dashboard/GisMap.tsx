@@ -82,6 +82,10 @@ export default function GisDashboard() {
   const [aiPredictions, setAiPredictions] = useState<any[]>([]);
   const [incomingSOS, setIncomingSOS] = useState<any>(null);
 
+  // RainViewer Animation State
+  const [radarFrames, setRadarFrames] = useState<number[]>([]);
+  const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
+
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 5000);
@@ -173,9 +177,20 @@ export default function GisDashboard() {
       } catch (e) {}
     };
 
+    const fetchRadar = async () => {
+      try {
+        const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+        const data = await res.json();
+        if (data && data.radar && data.radar.past) {
+          setRadarFrames(data.radar.past.map((frame: any) => frame.time));
+        }
+      } catch(e) {}
+    };
+
     fetchEvacCenters();
     fetchResponders();
     fetchAiPredictions();
+    fetchRadar();
     
     // Real-time Fleet Tracking via WebSockets
     const responderChannel = echo.channel('responders');
@@ -199,6 +214,16 @@ export default function GisDashboard() {
        echo.leaveChannel('responders'); // Clean up websocket
     };
   }, []);
+
+  useEffect(() => {
+    let interval: any;
+    if (activeLayers.weatherRadar && radarFrames.length > 0) {
+      interval = setInterval(() => {
+        setCurrentFrameIdx((prev) => (prev + 1) % radarFrames.length);
+      }, 1000); // Change frame every 1 second
+    }
+    return () => clearInterval(interval);
+  }, [activeLayers.weatherRadar, radarFrames]);
 
   const toggleLayer = (layer: keyof typeof activeLayers) => {
     setActiveLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
@@ -436,10 +461,15 @@ export default function GisDashboard() {
               
               </LayersControl>
               
-              {/* Live Weather Overlays (Prepared for OpenWeather) */}
-              {activeLayers.weatherRadar && (
-                  <TileLayer url="https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=9fd7a449d055dba26a982a3220f32aa2" opacity={1.0}/>
-              )}
+              {/* Animated Live Weather Radar (RainViewer) */}
+              {activeLayers.weatherRadar && radarFrames.map((frame, idx) => (
+                  <TileLayer 
+                    key={frame}
+                    url={`https://tilecache.rainviewer.com/v2/radar/${frame}/256/{z}/{x}/{y}/2/1_1.png`}
+                    opacity={idx === currentFrameIdx ? 0.8 : 0}
+                    className="transition-opacity duration-300"
+                  />
+              ))}
 
             <ZoomControl position="bottomright" />
 
@@ -479,9 +509,27 @@ export default function GisDashboard() {
               <TileLayer url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png" opacity={0.5} />
             )}
             
-            {activeLayers.floodRisk && liveIncidents.filter((i:any) => i.type?.includes('Flood')).map(inc => (
-              <Circle key={`risk-${inc.id}`} center={[inc.lat, inc.lng]} radius={1200} pathOptions={{ fillColor: '#06b6d4', color: '#06b6d4', fillOpacity: 0.15, weight: 1, dashArray: '5, 5' }} />
-            ))}
+            {/* Real-time moving/pulsing Flood Susceptibility Zones */}
+            {activeLayers.floodRisk && (
+              <>
+                <Polygon 
+                  positions={[[10.1915, 122.8610], [10.1915, 122.8645], [10.1885, 122.8645], [10.1885, 122.8610]]}
+                  pathOptions={{ fillColor: '#06b6d4', color: '#06b6d4', fillOpacity: 0.3, weight: 2, className: 'animate-pulse' }}
+                >
+                  <Popup>High Flood Susceptibility Zone (Enclaro)</Popup>
+                </Polygon>
+                <Polygon 
+                  positions={[[10.1785, 122.8510], [10.1785, 122.8745], [10.1685, 122.8745], [10.1685, 122.8510]]}
+                  pathOptions={{ fillColor: '#0ea5e9', color: '#0ea5e9', fillOpacity: 0.2, weight: 2, className: 'animate-pulse' }}
+                >
+                  <Popup>Moderate Flood Susceptibility Zone (San Jose)</Popup>
+                </Polygon>
+                
+                {liveIncidents.filter((i:any) => i.type?.includes('Flood')).map(inc => (
+                  <Circle key={`risk-${inc.id}`} center={[inc.lat, inc.lng]} radius={1200} pathOptions={{ fillColor: '#06b6d4', color: '#06b6d4', fillOpacity: 0.15, weight: 1, dashArray: '5, 5', className: 'animate-ping' }} />
+                ))}
+              </>
+            )}
 
             {/* Marker Layers */}
             {activeLayers.infrastructure && infrastructureNodes.map(node => (
