@@ -260,8 +260,8 @@ export default function CommunityPortal() {
            rawData = FALLBACK_EVAC_CENTERS;
       }
       const mapped = rawData.map((ec: any) => {
-        const ecLat = parseFloat(ec.lat) || (10.1866 + (Math.random() * 0.02 - 0.01));
-        const ecLng = parseFloat(ec.lng) || (122.8587 + (Math.random() * 0.02 - 0.01));
+        const ecLat = parseFloat(ec.lat) || 10.1866;
+        const ecLng = parseFloat(ec.lng) || 122.8587;
         const capacity = ec.capacity || 1000;
         const current_occupants = ec.current_occupants ?? 0;
         const distance = getDistanceInMeters(lat, lng, ecLat, ecLng);
@@ -1240,9 +1240,8 @@ function ReportView({ showToast, user, refreshMyReports, setActiveTab, isOffline
 
               if (predictions.length > 0) {
                  confidence = Math.floor(predictions[0].probability * 100);
-                 if(confidence < 50) confidence = Math.floor(Math.random() * 20) + 70; // bump low confidence for demo
               } else {
-                 confidence = Math.floor(Math.random() * 11) + 88;
+                 confidence = 0;
               }
 
               setAnalyzing(false);
