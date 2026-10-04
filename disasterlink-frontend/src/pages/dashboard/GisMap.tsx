@@ -67,7 +67,7 @@ export default function GisDashboard() {
     responders: false,
     floodRisk: false,
     weatherRadar: false,
-    aiPredictions: true,
+    aiPredictions: false,
     infrastructure: true
   });
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
@@ -468,6 +468,8 @@ export default function GisDashboard() {
                     url={`https://tilecache.rainviewer.com/v2/radar/${frame}/256/{z}/{x}/{y}/2/1_1.png`}
                     opacity={idx === currentFrameIdx ? 0.8 : 0}
                     className="transition-opacity duration-300"
+                    maxNativeZoom={13}
+                    maxZoom={18}
                   />
               ))}
 
@@ -506,7 +508,7 @@ export default function GisDashboard() {
             ))}
 
             {activeLayers.floodRisk && (
-              <TileLayer url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png" opacity={0.5} />
+              <TileLayer url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png" opacity={0.5} maxNativeZoom={17} maxZoom={18} />
             )}
             
             {/* Real-time moving/pulsing Flood Susceptibility Zones */}
