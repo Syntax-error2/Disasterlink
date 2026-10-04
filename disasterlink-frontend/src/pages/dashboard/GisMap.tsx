@@ -434,13 +434,12 @@ export default function GisDashboard() {
                 <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
               </LayersControl.BaseLayer>
               
+              </LayersControl>
+              
               {/* Live Weather Overlays (Prepared for OpenWeather) */}
               {activeLayers.weatherRadar && (
-                <LayersControl.Overlay checked name="Live Precipitation Radar">
                   <TileLayer url="https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=9fd7a449d055dba26a982a3220f32aa2" opacity={0.5}/>
-                </LayersControl.Overlay>
               )}
-            </LayersControl>
 
             <ZoomControl position="bottomright" />
 
@@ -476,6 +475,10 @@ export default function GisDashboard() {
               </Polygon>
             ))}
 
+            {activeLayers.floodRisk && (
+              <TileLayer url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png" opacity={0.5} />
+            )}
+            
             {activeLayers.floodRisk && liveIncidents.filter((i:any) => i.type?.includes('Flood')).map(inc => (
               <Circle key={`risk-${inc.id}`} center={[inc.lat, inc.lng]} radius={1200} pathOptions={{ fillColor: '#06b6d4', color: '#06b6d4', fillOpacity: 0.15, weight: 1, dashArray: '5, 5' }} />
             ))}
