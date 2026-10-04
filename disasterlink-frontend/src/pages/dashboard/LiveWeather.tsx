@@ -491,27 +491,7 @@ export default function LiveWeather() {
       updateHazards(wind, totalRain24h, data.current.apparent_temperature || 0, currentPrecipProb);
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (error) {
-      console.warn("Failed to fetch live weather data. Engaging high-fidelity fallback:", error);
-      
-      // --- REALISTIC FALLBACK FOR PRESENTATION ---
-      const mockWeather = {
-        current: { temperature_2m: 31.5, apparent_temperature: 37.2, relative_humidity_2m: 82, wind_speed_10m: 14.5, surface_pressure: 1010, precipitation_probability: 25 },
-        hourly: { time: [], precipitation: [] }
-      };
-      setWeather(mockWeather as any);
-      
-      const mockChartData = Array.from({length: 24}).map((_, i) => {
-        const d = new Date();
-        d.setHours(d.getHours() + i);
-        return {
-          time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          rain: Math.random() > 0.7 ? Math.random() * 5 : 0, // Random bursts of rain
-          prob: Math.random() > 0.5 ? Math.floor(Math.random() * 100) : 0
-        };
-      });
-      setChartData(mockChartData);
-      
-      updateHazards(mockWeather.current.wind_speed_10m, 12.5, mockWeather.current.apparent_temperature, mockWeather.current.precipitation_probability);
+      console.warn("Failed to fetch live weather data.", error);
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } finally {
       setLoading(false);

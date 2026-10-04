@@ -11,6 +11,12 @@ export default function AdminTeamManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', category: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState<{msg: string, type: 'success'|'error'} | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 5000);
+  };
 
   useEffect(() => {
     fetchTeams();
@@ -22,6 +28,7 @@ export default function AdminTeamManagement() {
       setTeams(res.data);
     } catch (e) {
       console.error(e);
+      showToast("Failed to fetch teams", "error");
     } finally {
       setLoading(false);
     }
@@ -35,9 +42,10 @@ export default function AdminTeamManagement() {
       setTeams([...teams, res.data]);
       setIsModalOpen(false);
       setFormData({ name: '', category: '' });
-    } catch (e) {
+      showToast("Team created successfully", "success");
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to create team");
+      showToast(e.response?.data?.message || "Failed to create team", "error");
     } finally {
       setSubmitting(false);
     }
@@ -48,14 +56,22 @@ export default function AdminTeamManagement() {
     try {
       await axiosInstance.delete(`/teams/${id}`);
       setTeams(teams.filter(t => t.id !== id));
-    } catch (e) {
+      showToast("Team deleted successfully", "success");
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to delete team");
+      showToast(e.response?.data?.message || "Failed to delete team", "error");
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 relative">
+      {/* CUSTOM TOAST NOTIFICATION */}
+      {toast && (
+        <div className={`absolute top-0 right-0 z-[2000] px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500' : 'bg-red-500/10 border-red-500/50 text-red-500'} backdrop-blur-md`}>
+          <span className="font-semibold">{toast.msg}</span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Deployment Teams</h1>

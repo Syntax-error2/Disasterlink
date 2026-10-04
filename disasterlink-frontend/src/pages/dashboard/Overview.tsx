@@ -282,7 +282,7 @@ export default function Overview() {
         setWeatherData({
           temp: wData.current.temperature_2m.toFixed(0),
           feelsLike: wData.current.apparent_temperature.toFixed(0),
-          prob: wData.current.precipitation_probability !== undefined ? wData.current.precipitation_probability : Math.floor(Math.random() * 30),
+          prob: wData.current.precipitation_probability !== undefined ? wData.current.precipitation_probability : 0,
           wind: wData.current.wind_speed_10m.toFixed(1),
           humidity: wData.current.relative_humidity_2m,
           condition

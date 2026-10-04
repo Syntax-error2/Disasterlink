@@ -15,6 +15,13 @@ export default function AdminUserManagement() {
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const [toast, setToast] = useState<{msg: string, type: 'success'|'error'} | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 5000);
+  };
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -25,6 +32,7 @@ export default function AdminUserManagement() {
       setUsers(res.data);
     } catch (e) {
       console.error(e);
+      showToast("Failed to fetch users", "error");
     } finally {
       setLoading(false);
     }
@@ -37,9 +45,10 @@ export default function AdminUserManagement() {
       const res = await axiosInstance.post('/admin/users', formData);
       setUsers([res.data.user, ...users]);
       setGeneratedPassword(res.data.generated_password);
-    } catch (e) {
+      showToast("User created successfully", "success");
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to create user");
+      showToast(e.response?.data?.message || "Failed to create user", "error");
     } finally {
       setSubmitting(false);
     }
@@ -54,7 +63,14 @@ export default function AdminUserManagement() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 relative">
+      {/* CUSTOM TOAST NOTIFICATION */}
+      {toast && (
+        <div className={`absolute top-0 right-0 z-[2000] px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500' : 'bg-red-500/10 border-red-500/50 text-red-500'} backdrop-blur-md`}>
+          <span className="font-semibold">{toast.msg}</span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Personnel Clearance</h1>
@@ -98,7 +114,7 @@ export default function AdminUserManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-blue-500"><Edit2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-blue-500" onClick={() => showToast("Edit user coming soon", "error")}><Edit2 className="h-4 w-4" /></Button>
                     </td>
                   </tr>
                 ))}
@@ -130,7 +146,7 @@ export default function AdminUserManagement() {
                     </button>
                   </div>
                 </div>
-                <Button onClick={() => { setIsModalOpen(false); setGeneratedPassword(null); }} className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold">Done</Button>
+                <Button onClick={() => { setIsModalOpen(false); setGeneratedPassword(null); fetchUsers(); }} className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold">Done</Button>
               </div>
             ) : (
               <form onSubmit={handleCreateUser} className="space-y-4">

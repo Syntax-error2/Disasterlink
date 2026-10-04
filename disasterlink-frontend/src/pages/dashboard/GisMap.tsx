@@ -102,8 +102,8 @@ export default function GisDashboard() {
        let lat = parseFloat(inc.latitude);
        let lng = parseFloat(inc.longitude);
        if (lat === null || lat === undefined || isNaN(lat) || lng === null || lng === undefined || isNaN(lng)) {
-          lat = MAP_CENTER[0] + (Math.random() - 0.5) * 0.02;
-          lng = MAP_CENTER[1] + (Math.random() - 0.5) * 0.02;
+          lat = MAP_CENTER[0];
+          lng = MAP_CENTER[1];
        }
        return {
           id: `INC-${inc.id}`,
@@ -116,7 +116,7 @@ export default function GisDashboard() {
           time: new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           reporter: "Civilian Report",
           image: inc.image_path || inc.image_data || null,
-          confidence: Math.floor(Math.random() * 11) + 88
+          confidence: inc.ai_confidence || 95
        };
     });
     setLiveIncidents(mapped);
@@ -146,8 +146,8 @@ export default function GisDashboard() {
         }
         const withCoords = rawData.map((ec: any) => ({
           ...ec,
-          lat: parseFloat(ec.lat) || (10.1866 + (Math.random() * 0.02 - 0.01)),
-          lng: parseFloat(ec.lng) || (122.8587 + (Math.random() * 0.02 - 0.01)),
+          lat: parseFloat(ec.lat) || 10.1866,
+          lng: parseFloat(ec.lng) || 122.8587,
           dist: "1.2km"
         }));
         setEvacCenters(withCoords);
@@ -661,7 +661,17 @@ export default function GisDashboard() {
                       <Camera className="h-3 w-3" /> {selectedIncident.brgy} Node
                     </div>
                     {selectedIncident.image && (
-                      <button onClick={()=>alert('AI Verification confirmed.')} className="bg-white text-zinc-900 text-[10px] font-bold px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await axiosInstance.post(`/incidents/${selectedIncident.id.replace('INC-', '')}/verify`);
+                            showToast('AI Verification confirmed.', 'success');
+                          } catch (e: any) {
+                            showToast(e.response?.data?.message || 'Failed to verify incident.', 'error');
+                          }
+                        }} 
+                        className="bg-white text-zinc-900 text-[10px] font-bold px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
                         Verify
                       </button>
                     )}
